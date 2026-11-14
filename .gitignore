@@ -1,5 +1,7 @@
 .superpowers/
 .agents/
+docs/superpowers/
+infra/
 node_modules/
 .next/
 .env

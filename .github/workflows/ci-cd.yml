@@ -1,4 +1,4 @@
-name: CI / CD (Vira Chave)
+name: CI (Vira Chave)
 
 on:
   push:
@@ -24,18 +24,3 @@ jobs:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/virachave?schema=public"
           AUTH_SECRET: "ci-build-secret-placeholder"
         run: npm run build
-
-  deploy:
-    needs: ci
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: self-hosted
-    steps:
-      - name: Update checkout and redeploy containers
-        run: |
-          cd /opt/virachave
-          git fetch origin main
-          git checkout main
-          git pull --ff-only origin main
-          cd infra/server
-          docker compose up -d --build
-          docker compose exec -T app npx prisma migrate deploy
