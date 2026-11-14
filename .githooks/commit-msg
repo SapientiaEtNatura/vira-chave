@@ -1,0 +1,9 @@
+#!/usr/bin/env sh
+commit_msg_file="$1"
+first_line="$(head -n 1 "$commit_msg_file")"
+
+if ! printf '%s\n' "$first_line" | grep -Eq '^(feat|fix|docs|chore|refactor|test|ci|build|style)(\([a-z0-9._-]+\))?!?: .+'; then
+  echo "Erro: mensagem de commit fora do padrao Conventional Commits (ADR-005)." >&2
+  echo "Exemplo: feat(descobrir): adicionar questionario inicial" >&2
+  exit 1
+fi

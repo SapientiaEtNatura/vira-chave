@@ -1,0 +1,11 @@
+.git
+.gitignore
+.superpowers
+node_modules
+.next
+.env
+.env.*
+uploads
+playwright-report
+test-results
+README.md

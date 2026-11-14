@@ -1,0 +1,41 @@
+name: CI / CD (Vira Chave)
+
+on:
+  push:
+    branches: [main, feat/*]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npx vitest run
+      - env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/virachave?schema=public"
+          AUTH_SECRET: "ci-build-secret-placeholder"
+        run: npm run build
+
+  deploy:
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: self-hosted
+    steps:
+      - name: Update checkout and redeploy containers
+        run: |
+          cd /opt/virachave
+          git fetch origin main
+          git checkout main
+          git pull --ff-only origin main
+          cd infra/server
+          docker compose up -d --build
+          docker compose exec -T app npx prisma migrate deploy

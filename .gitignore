@@ -1,6 +1,10 @@
 .superpowers/
+.agents/
 node_modules/
 .next/
 .env
 uploads/
+playwright-report/
+test-results/
+*.tsbuildinfo
 
