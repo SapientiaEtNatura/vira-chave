@@ -5,14 +5,20 @@ cd /opt/virachave
 
 if [ ! -f .env ] || ! grep -q 'POSTGRES_PASSWORD=.' .env; then
   PG_PASS="$(openssl rand -hex 16)"
+  AUTH_SEC="$(openssl rand -hex 32)"
   cat > .env <<EOF
 POSTGRES_USER=virachave
 POSTGRES_PASSWORD=${PG_PASS}
 POSTGRES_DB=virachave
 DATABASE_URL=postgresql://virachave:${PG_PASS}@db:5432/virachave?schema=public
+AUTH_SECRET=${AUTH_SEC}
 EOF
   chmod 600 .env
   echo "POSTGRES_ENV=created"
+elif ! grep -q 'AUTH_SECRET=.' .env; then
+  AUTH_SEC="$(openssl rand -hex 32)"
+  echo "AUTH_SECRET=${AUTH_SEC}" >> .env
+  echo "AUTH_SECRET=appended"
 fi
 
 if [ ! -f .htpasswd ] || ! grep -q '^virachave:.' .htpasswd; then
