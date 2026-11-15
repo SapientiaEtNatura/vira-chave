@@ -103,7 +103,7 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
               <li
                 key={stage.key}
                 data-journey-step
-                className={`relative flex items-center justify-between gap-3 ${stage.stepOffset}`}
+                className="relative flex items-center justify-between gap-3"
               >
                 {!isLast ? (
                   <span

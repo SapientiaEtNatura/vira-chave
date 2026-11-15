@@ -78,6 +78,50 @@ const INITIAL_SCORES: Record<string, number> = Object.fromEntries(
   AREAS.map((area) => [area.slug, area.initialScore]),
 );
 
+const PRESET_PROFILES: Array<{
+  id: string;
+  label: string;
+  scores?: Record<string, number>;
+}> = [
+  { id: "auto", label: "Dinâmico" },
+  {
+    id: "tech",
+    label: "Tech & Dados",
+    scores: {
+      comunicacao: 60,
+      design: 76,
+      negocios: 64,
+      saude: 55,
+      sustentabilidade: 58,
+      tecnologia: 92,
+    },
+  },
+  {
+    id: "criativo",
+    label: "Comunicação",
+    scores: {
+      comunicacao: 90,
+      design: 88,
+      negocios: 72,
+      saude: 52,
+      sustentabilidade: 66,
+      tecnologia: 64,
+    },
+  },
+  {
+    id: "impacto",
+    label: "Impacto & Saúde",
+    scores: {
+      comunicacao: 74,
+      design: 56,
+      negocios: 78,
+      saude: 89,
+      sustentabilidade: 91,
+      tecnologia: 58,
+    },
+  },
+];
+
 function nextRandomScore(current: number): number {
   const delta = Math.floor(Math.random() * 35) - 17;
   const candidate = Math.max(42, Math.min(96, current + delta));
@@ -93,6 +137,7 @@ export function AffinityPreviewCard() {
   const displayValuesRef = useRef<Record<string, number>>({ ...INITIAL_SCORES });
 
   const [scores, setScores] = useState<Record<string, number>>(INITIAL_SCORES);
+  const [activePreset, setActivePreset] = useState<string>("auto");
   const [isVisible, setIsVisible] = useState(false);
   const [prefersReduced, setPrefersReduced] = useState(false);
 
@@ -127,7 +172,7 @@ export function AffinityPreviewCard() {
   }, []);
 
   useEffect(() => {
-    if (!isVisible || prefersReduced) {
+    if (!isVisible || prefersReduced || activePreset !== "auto") {
       return;
     }
 
@@ -144,7 +189,7 @@ export function AffinityPreviewCard() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [isVisible, prefersReduced]);
+  }, [isVisible, prefersReduced, activePreset]);
 
   useEffect(() => {
     if (prefersReduced) {
@@ -204,8 +249,40 @@ export function AffinityPreviewCard() {
     score: scores[area.slug] ?? area.initialScore,
   }));
 
+  function handleSelectPreset(preset: (typeof PRESET_PROFILES)[number]) {
+    setActivePreset(preset.id);
+    if (preset.scores) {
+      setScores(preset.scores);
+    }
+  }
+
   return (
     <div ref={rootRef} className="space-y-4">
+      <div
+        className="flex flex-wrap items-center gap-1.5"
+        role="group"
+        aria-label="Simular perfis de afinidade"
+      >
+        {PRESET_PROFILES.map((preset) => {
+          const isActive = activePreset === preset.id;
+          return (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => handleSelectPreset(preset)}
+              aria-pressed={isActive}
+              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                isActive
+                  ? "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-muted)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]"
+              }`}
+            >
+              {preset.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div
         className="h-60 w-full"
         role="img"

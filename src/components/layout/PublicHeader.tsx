@@ -9,6 +9,8 @@ import { BrandLogo, ButtonLink } from "@/components/ui";
 
 const PUBLIC_LINKS = [
   { href: "/#como-funciona", label: "Como funciona" },
+  { href: "/#na-pratica", label: "Na prática" },
+  { href: "/#para-quem", label: "Para quem" },
   { href: "/privacidade", label: "Privacidade" },
 ];
 
