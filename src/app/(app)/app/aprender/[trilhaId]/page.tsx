@@ -1,11 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Role } from "@prisma/client";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   TrackCoursesClient,
   type TrackCourseItemView,
 } from "@/components/aprender/TrackCoursesClient";
+import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 
@@ -66,38 +66,29 @@ export default async function TrilhaDetailPage({
   return (
     <div className="space-y-6">
       <div>
-        <Link
+        <ButtonLink
           href="/app/aprender"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 transition hover:text-indigo-700"
+          variant="ghost"
+          size="sm"
+          leftIcon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />}
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          <span>Voltar para trilhas</span>
-        </Link>
+          Voltar para trilhas
+        </ButtonLink>
       </div>
 
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-            <BookOpen className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                {track.macroArea.name}
-              </span>
-              <span className="text-xs font-medium text-slate-500">
-                Etapa 2 · Aprender
-              </span>
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              {track.title}
-            </h1>
-            <p className="max-w-3xl text-sm text-slate-600">
-              {track.description}
-            </p>
+      <Card>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="brand">{track.macroArea.name}</Badge>
           </div>
+          <PageHeader
+            stage="APRENDER"
+            stageLabel="Etapa 2 · Aprender"
+            title={track.title}
+            subtitle={track.description}
+          />
         </div>
-      </header>
+      </Card>
 
       <TrackCoursesClient initialCourses={initialCourses} />
     </div>

@@ -8,13 +8,26 @@ import {
   Eye,
   EyeOff,
   FileText,
+  FolderKanban,
   Link2,
   Pencil,
   Plus,
   ShieldCheck,
   Trash2,
-  Upload,
 } from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Button,
+  ButtonLink,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  FileUploadField,
+  FormField,
+  Input,
+  Textarea,
+} from "@/components/ui";
 
 export interface PortfolioEvidenceItem {
   id: string;
@@ -88,6 +101,12 @@ export function PortfolioManagerClient({
   const [editExternalUrl, setEditExternalUrl] = useState("");
   const [editBusy, setEditBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Confirmação de exclusão
+  const [deleteTarget, setDeleteTarget] = useState<PortfolioProjectItem | null>(
+    null,
+  );
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const shareUrl =
     generatedToken && typeof window !== "undefined"
@@ -261,15 +280,13 @@ export function PortfolioManagerClient({
     }
   }
 
-  async function handleDeleteProject(projectId: string) {
-    const confirmed = window.confirm(
-      "Tem certeza que deseja excluir este projeto e seus arquivos anexados?",
-    );
-    if (!confirmed) return;
+  async function handleConfirmDeleteProject() {
+    if (!deleteTarget) return;
 
+    setDeleteBusy(true);
     setActionError(null);
     try {
-      const response = await fetch(`/api/portfolio/projects/${projectId}`, {
+      const response = await fetch(`/api/portfolio/projects/${deleteTarget.id}`, {
         method: "DELETE",
       });
       const data = await response.json();
@@ -277,26 +294,29 @@ export function PortfolioManagerClient({
         setActionError(data.error || "Não foi possível excluir o projeto.");
         return;
       }
-      setProjects((prev) => prev.filter((item) => item.id !== projectId));
+      setProjects((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+      setDeleteTarget(null);
     } catch {
       setActionError("Erro de conexão ao excluir o projeto.");
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
   return (
     <div className="space-y-6">
       {/* Seção de Link Compartilhável */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <Card as="section">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+          <div className="space-y-1.5">
+            <Badge variant="success">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Privado por padrão · Zero PII</span>
-            </div>
-            <h2 className="text-lg font-semibold text-slate-900">
+              <span>Privado por padrão · Seus dados pessoais nunca aparecem</span>
+            </Badge>
+            <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
               Link Compartilhável do Portfólio
             </h2>
-            <p className="max-w-2xl text-sm text-slate-600">
+            <p className="max-w-2xl text-sm text-[var(--ink-secondary)]">
               Somente projetos marcados como visíveis ({sharedCount} de{" "}
               {projects.length}) aparecem no link público. E-mail, escola e
               turma nunca são exibidos.
@@ -304,68 +324,64 @@ export function PortfolioManagerClient({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="button"
+              variant="primary"
               onClick={handleGenerateShareLink}
-              disabled={shareBusy}
-              className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
+              loading={shareBusy}
+              leftIcon={<Link2 className="h-4 w-4" aria-hidden="true" />}
             >
-              <Link2 className="h-4 w-4" aria-hidden="true" />
-              <span>
-                {hasActiveLink
-                  ? "Gerar novo link"
-                  : "Gerar link compartilhável"}
-              </span>
-            </button>
+              {hasActiveLink
+                ? "Gerar novo link"
+                : "Gerar link compartilhável"}
+            </Button>
 
             {hasActiveLink && (
-              <button
+              <Button
                 type="button"
+                variant="danger"
                 onClick={handleRevokeShareLink}
                 disabled={shareBusy}
-                className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:opacity-60"
+                leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
               >
-                <Trash2 className="h-4 w-4" aria-hidden="true" />
-                <span>Revogar link</span>
-              </button>
+                Revogar link
+              </Button>
             )}
           </div>
         </div>
 
         {shareError && (
-          <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+          <Alert variant="danger" className="mt-3">
             {shareError}
-          </p>
+          </Alert>
         )}
 
         {shareUrl ? (
-          <div className="mt-4 flex flex-col gap-2 rounded-xl border border-indigo-200 bg-indigo-50/70 p-3 sm:flex-row sm:items-center sm:justify-between">
-            <code className="break-all text-xs font-medium text-indigo-900 sm:text-sm">
+          <div className="mt-4 flex flex-col gap-2 rounded-xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <code className="break-all font-mono text-xs font-medium text-[var(--ink-primary)] sm:text-sm">
               {shareUrl}
             </code>
             <div className="flex shrink-0 items-center gap-2">
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={handleCopyLink}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-indigo-700 shadow-sm ring-1 ring-indigo-200 transition hover:bg-indigo-100"
-              >
-                {copied ? (
-                  <>
+                leftIcon={
+                  copied ? (
                     <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Copiado</span>
-                  </>
-                ) : (
-                  <>
+                  ) : (
                     <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Copiar link</span>
-                  </>
-                )}
-              </button>
+                  )
+                }
+              >
+                {copied ? "Copiado" : "Copiar link"}
+              </Button>
               <a
                 href={shareUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-indigo-700"
+                className="inline-flex min-h-11 sm:min-h-9 items-center gap-1 rounded-lg bg-[var(--brand-primary)] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[var(--brand-primary-hover)]"
               >
                 <span>Abrir</span>
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
@@ -373,7 +389,7 @@ export function PortfolioManagerClient({
             </div>
           </div>
         ) : hasActiveLink ? (
-          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+          <Alert variant="info" className="mt-4">
             Você possui um link ativo
             {shareCreatedAt
               ? ` criado em ${new Date(shareCreatedAt).toLocaleDateString("pt-BR")}`
@@ -381,234 +397,220 @@ export function PortfolioManagerClient({
             . Por segurança, o token completo só é exibido no momento da geração;
             gere um novo link se precisar copiá-lo novamente (o anterior será
             revogado).
-          </p>
+          </Alert>
         ) : (
-          <p className="mt-4 text-xs text-slate-500">
+          <p className="mt-4 text-xs text-[var(--ink-muted)]">
             Nenhum link ativo no momento. Seu portfólio está totalmente privado.
           </p>
         )}
-      </section>
+      </Card>
 
       {/* Cabeçalho da Lista + Botão Novo Projeto */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold text-slate-900">
+        <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
           Meus Projetos ({projects.length})
         </h2>
-        <button
+        <Button
           type="button"
+          variant={showCreateForm ? "outline" : "primary"}
           onClick={() => setShowCreateForm((prev) => !prev)}
-          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+          leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
         >
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          <span>{showCreateForm ? "Cancelar" : "Novo projeto"}</span>
-        </button>
+          {showCreateForm ? "Cancelar" : "Novo projeto"}
+        </Button>
       </div>
 
       {/* Formulário de Criação */}
       {showCreateForm && (
-        <form
-          onSubmit={handleCreateProject}
-          className="space-y-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
-        >
-          <h3 className="text-base font-semibold text-slate-900">
-            Adicionar projeto ao portfólio
-          </h3>
+        <Card as="div">
+          <form onSubmit={handleCreateProject} className="space-y-4">
+            <h3 className="font-display text-base font-semibold text-[var(--ink-primary)]">
+              Adicionar projeto ao portfólio
+            </h3>
 
-          {createError && (
-            <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-              {createError}
-            </p>
-          )}
+            {createError && <Alert variant="danger">{createError}</Alert>}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label
-                htmlFor="new-project-title"
-                className="block text-sm font-medium text-slate-700"
-              >
-                Título do projeto *
-              </label>
-              <input
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField
                 id="new-project-title"
-                type="text"
+                label="Título do projeto"
                 required
-                minLength={2}
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex.: App de coleta seletiva no bairro"
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="new-project-url"
-                className="block text-sm font-medium text-slate-700"
               >
-                Link externo (opcional)
-              </label>
-              <input
+                <Input
+                  type="text"
+                  required
+                  minLength={2}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Ex.: App de coleta seletiva no bairro"
+                />
+              </FormField>
+
+              <FormField
                 id="new-project-url"
-                type="url"
-                value={externalUrl}
-                onChange={(e) => setExternalUrl(e.target.value)}
-                placeholder="https://..."
-                className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
+                label="Link externo (opcional)"
+              >
+                <Input
+                  type="url"
+                  value={externalUrl}
+                  onChange={(e) => setExternalUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              </FormField>
             </div>
-          </div>
 
-          <div>
-            <label
-              htmlFor="new-project-summary"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Resumo curto (opcional)
-            </label>
-            <input
+            <FormField
               id="new-project-summary"
-              type="text"
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="Se deixar em branco, será gerado a partir da reflexão."
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="new-project-reflection"
-              className="block text-sm font-medium text-slate-700"
+              label="Resumo curto (opcional)"
             >
-              O que você construiu e aprendeu? *
-            </label>
-            <textarea
-              id="new-project-reflection"
-              required
-              minLength={10}
-              rows={3}
-              value={reflection}
-              onChange={(e) => setReflection(e.target.value)}
-              placeholder="Conte o problema que resolveu, como testou sua ideia e o que aprendeu."
-              className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="new-project-file"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Evidência (PDF, PNG ou JPG até 5 MB — opcional)
-            </label>
-            <label
-              htmlFor="new-project-file"
-              className="mt-1 flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-sm text-slate-600 hover:border-indigo-400"
-            >
-              <Upload className="h-4 w-4 text-slate-500" aria-hidden="true" />
-              <span>
-                {file ? `${file.name} (${formatFileSize(file.size)})` : "Selecionar arquivo..."}
-              </span>
-              <input
-                id="new-project-file"
-                type="file"
-                accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                className="sr-only"
-                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              <Input
+                type="text"
+                value={summary}
+                onChange={(e) => setSummary(e.target.value)}
+                placeholder="Se deixar em branco, será gerado a partir da reflexão."
               />
-            </label>
-          </div>
+            </FormField>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input
-              type="checkbox"
-              checked={isIncludedInShare}
-              onChange={(e) => setIsIncludedInShare(e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-indigo-600"
-            />
-            <span>Incluir este projeto quando eu gerar um link compartilhável</span>
-          </label>
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="submit"
-              disabled={createBusy}
-              className="rounded-xl bg-indigo-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
+            <FormField
+              id="new-project-reflection"
+              label="O que você construiu e aprendeu?"
+              required
             >
-              {createBusy ? "Salvando..." : "Salvar projeto"}
-            </button>
-          </div>
-        </form>
+              <Textarea
+                required
+                minLength={10}
+                rows={3}
+                value={reflection}
+                onChange={(e) => setReflection(e.target.value)}
+                placeholder="Conte o problema que resolveu, como testou sua ideia e o que aprendeu."
+              />
+            </FormField>
+
+            <FileUploadField
+              id="new-project-file"
+              label="Evidência (opcional)"
+              hint="PDF, PNG ou JPG até 5 MB."
+              accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+              file={file}
+              onFileChange={setFile}
+            />
+
+            <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-[var(--ink-secondary)]">
+              <input
+                type="checkbox"
+                checked={isIncludedInShare}
+                onChange={(e) => setIsIncludedInShare(e.target.checked)}
+                className="h-4 w-4 rounded border-[var(--border-strong)] accent-[var(--brand-primary)]"
+              />
+              <span>
+                Incluir este projeto quando eu gerar um link compartilhável
+              </span>
+            </label>
+
+            <div className="flex justify-end gap-2">
+              <Button type="submit" variant="primary" loading={createBusy}>
+                {createBusy ? "Salvando..." : "Salvar projeto"}
+              </Button>
+            </div>
+          </form>
+        </Card>
       )}
 
-      {actionError && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
-          {actionError}
-        </p>
-      )}
+      {actionError && <Alert variant="danger">{actionError}</Alert>}
 
       {/* Lista de Projetos */}
       {projects.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">
-          Você ainda não tem projetos no portfólio. Crie um projeto acima ou
-          complete um desafio na etapa Experimentar.
-        </div>
+        <EmptyState
+          icon={<FolderKanban className="h-5 w-5" />}
+          title="Você ainda não tem projetos no portfólio."
+          description="Crie um projeto acima ou complete um desafio na etapa Experimentar."
+          action={
+            <ButtonLink href="/app/experimentar" variant="outline" size="sm">
+              Explorar desafios
+            </ButtonLink>
+          }
+        />
       ) : (
         <div className="space-y-4">
           {projects.map((project) => {
             const isEditing = editingId === project.id;
 
             return (
-              <article
-                key={project.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-              >
+              <Card key={project.id} as="article" padding="sm" className="p-5">
                 {isEditing ? (
-                  <div className="space-y-3">
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-900"
-                      placeholder="Título"
-                    />
-                    <input
-                      type="text"
-                      value={editSummary}
-                      onChange={(e) => setEditSummary(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700"
-                      placeholder="Resumo"
-                    />
-                    <textarea
-                      rows={3}
-                      value={editReflection}
-                      onChange={(e) => setEditReflection(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700"
-                      placeholder="Reflexão"
-                    />
-                    <input
-                      type="url"
-                      value={editExternalUrl}
-                      onChange={(e) => setEditExternalUrl(e.target.value)}
-                      className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-700"
-                      placeholder="https://..."
-                    />
+                  <div className="space-y-4">
+                    <FormField
+                      id={`edit-project-title-${project.id}`}
+                      label="Título do projeto"
+                      required
+                    >
+                      <Input
+                        type="text"
+                        required
+                        minLength={2}
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Título"
+                      />
+                    </FormField>
+
+                    <FormField
+                      id={`edit-project-summary-${project.id}`}
+                      label="Resumo curto (opcional)"
+                    >
+                      <Input
+                        type="text"
+                        value={editSummary}
+                        onChange={(e) => setEditSummary(e.target.value)}
+                        placeholder="Resumo"
+                      />
+                    </FormField>
+
+                    <FormField
+                      id={`edit-project-reflection-${project.id}`}
+                      label="O que você construiu e aprendeu?"
+                      required
+                    >
+                      <Textarea
+                        rows={3}
+                        required
+                        minLength={10}
+                        value={editReflection}
+                        onChange={(e) => setEditReflection(e.target.value)}
+                        placeholder="Reflexão"
+                      />
+                    </FormField>
+
+                    <FormField
+                      id={`edit-project-url-${project.id}`}
+                      label="Link externo (opcional)"
+                    >
+                      <Input
+                        type="url"
+                        value={editExternalUrl}
+                        onChange={(e) => setEditExternalUrl(e.target.value)}
+                        placeholder="https://..."
+                      />
+                    </FormField>
+
                     <div className="flex justify-end gap-2">
-                      <button
+                      <Button
                         type="button"
+                        variant="outline"
+                        size="sm"
                         onClick={() => setEditingId(null)}
-                        className="rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                       >
                         Cancelar
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
+                        variant="primary"
+                        size="sm"
                         onClick={() => handleSaveEdit(project.id)}
-                        disabled={editBusy}
-                        className="rounded-xl bg-indigo-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+                        loading={editBusy}
                       >
                         {editBusy ? "Salvando..." : "Salvar"}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -616,16 +618,16 @@ export function PortfolioManagerClient({
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-base font-semibold text-slate-900">
+                          <h3 className="font-display text-base font-semibold text-[var(--ink-primary)]">
                             {project.title}
                           </h3>
                           {project.challengeTitle && (
-                            <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                            <Badge variant="brand">
                               Desafio: {project.challengeTitle}
-                            </span>
+                            </Badge>
                           )}
                         </div>
-                        <p className="mt-1 text-sm text-slate-600">
+                        <p className="mt-1 text-sm text-[var(--ink-secondary)]">
                           {project.summary}
                         </p>
                       </div>
@@ -634,10 +636,10 @@ export function PortfolioManagerClient({
                         <button
                           type="button"
                           onClick={() => handleToggleShare(project)}
-                          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition ${
+                          className={`inline-flex min-h-11 sm:min-h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
                             project.isIncludedInShare
-                              ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                              ? "border-[var(--status-success-border)] bg-[var(--status-success-bg)] text-[var(--status-success-ink)] hover:opacity-90"
+                              : "border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-[var(--ink-secondary)] hover:bg-[var(--border-subtle)]/60"
                           }`}
                         >
                           {project.isIncludedInShare ? (
@@ -660,23 +662,23 @@ export function PortfolioManagerClient({
                           type="button"
                           onClick={() => startEditing(project)}
                           aria-label={`Editar ${project.title}`}
-                          className="rounded-lg border border-slate-200 p-1.5 text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          className="inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]"
                         >
                           <Pencil className="h-4 w-4" aria-hidden="true" />
                         </button>
 
                         <button
                           type="button"
-                          onClick={() => handleDeleteProject(project.id)}
+                          onClick={() => setDeleteTarget(project)}
                           aria-label={`Excluir ${project.title}`}
-                          className="rounded-lg border border-rose-200 p-1.5 text-rose-600 hover:bg-rose-50"
+                          className="inline-flex min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 cursor-pointer items-center justify-center rounded-lg border border-[var(--status-danger-border)] text-[var(--status-danger-ink)] transition-colors hover:bg-[var(--status-danger-bg)]"
                         >
                           <Trash2 className="h-4 w-4" aria-hidden="true" />
                         </button>
                       </div>
                     </div>
 
-                    <p className="mt-3 whitespace-pre-line rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
+                    <p className="mt-3 whitespace-pre-line rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 p-3 text-sm text-[var(--ink-secondary)]">
                       {project.reflection}
                     </p>
 
@@ -686,7 +688,7 @@ export function PortfolioManagerClient({
                           href={project.externalUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:underline"
+                          className="inline-flex min-h-11 sm:min-h-0 items-center gap-1.5 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
                         >
                           <ExternalLink
                             className="h-3.5 w-3.5"
@@ -702,10 +704,10 @@ export function PortfolioManagerClient({
                           href={`/api/files/${evidence.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                          className="inline-flex min-h-11 sm:min-h-8 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 px-2.5 py-1 text-xs font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface-subtle)]"
                         >
                           <FileText
-                            className="h-3.5 w-3.5 text-indigo-600"
+                            className="h-3.5 w-3.5 text-[var(--brand-primary)]"
                             aria-hidden="true"
                           />
                           <span>
@@ -717,11 +719,29 @@ export function PortfolioManagerClient({
                     </div>
                   </>
                 )}
-              </article>
+              </Card>
             );
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Excluir projeto?"
+        description={
+          deleteTarget
+            ? `Tem certeza que deseja excluir "${deleteTarget.title}" e seus arquivos anexados? Esta ação não pode ser desfeita.`
+            : undefined
+        }
+        confirmLabel="Excluir projeto"
+        cancelLabel="Cancelar"
+        variant="danger"
+        loading={deleteBusy}
+        onConfirm={handleConfirmDeleteProject}
+        onCancel={() => {
+          if (!deleteBusy) setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

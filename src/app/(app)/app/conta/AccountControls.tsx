@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { signOut } from "next-auth/react";
+import { Alert, Button, Card, FormField, Input } from "@/components/ui";
 
 export function AccountControls() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -91,59 +92,40 @@ export function AccountControls() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-slate-900">Alterar senha</h2>
-        <p className="mt-1 text-sm text-slate-600">
+      <Card as="section">
+        <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
+          Alterar senha
+        </h2>
+        <p className="mt-1 text-sm text-[var(--ink-secondary)]">
           Use uma senha forte com pelo menos 8 caracteres.
         </p>
 
         {passwordError && (
-          <div
-            role="alert"
-            className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-          >
+          <Alert variant="danger" className="mt-4">
             {passwordError}
-          </div>
+          </Alert>
         )}
 
         {passwordSuccess && (
-          <div
-            role="status"
-            className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
-          >
+          <Alert variant="success" className="mt-4">
             {passwordSuccess}
-          </div>
+          </Alert>
         )}
 
-        <form onSubmit={handlePasswordSubmit} className="mt-4 space-y-4 max-w-md">
-          <div>
-            <label
-              htmlFor="currentPassword"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Senha atual
-            </label>
-            <input
-              id="currentPassword"
+        <form onSubmit={handlePasswordSubmit} className="mt-4 max-w-md space-y-4">
+          <FormField id="currentPassword" label="Senha atual" required>
+            <Input
               name="currentPassword"
               type="password"
               required
               autoComplete="current-password"
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label
-              htmlFor="newPassword"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Nova senha
-            </label>
-            <input
-              id="newPassword"
+          <FormField id="newPassword" label="Nova senha" required>
+            <Input
               name="newPassword"
               type="password"
               required
@@ -151,19 +133,11 @@ export function AccountControls() {
               autoComplete="new-password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
-          </div>
+          </FormField>
 
-          <div>
-            <label
-              htmlFor="confirmPassword"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Confirmar nova senha
-            </label>
-            <input
-              id="confirmPassword"
+          <FormField id="confirmPassword" label="Confirmar nova senha" required>
+            <Input
               name="confirmPassword"
               type="password"
               required
@@ -171,25 +145,23 @@ export function AccountControls() {
               autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
-          </div>
+          </FormField>
 
-          <button
-            type="submit"
-            disabled={passwordLoading}
-            className="rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60"
-          >
+          <Button type="submit" variant="primary" loading={passwordLoading}>
             {passwordLoading ? "Salvando..." : "Atualizar senha"}
-          </button>
+          </Button>
         </form>
-      </section>
+      </Card>
 
-      <section className="rounded-2xl border border-red-200 bg-red-50/60 p-6 shadow-sm">
-        <h2 className="text-lg font-bold text-red-950">
+      <Card
+        as="section"
+        className="border-[var(--status-danger-border)] bg-[var(--status-danger-bg)]/50"
+      >
+        <h2 className="font-display text-lg font-bold text-[var(--status-danger-ink)]">
           Exclusão de Conta (LGPD)
         </h2>
-        <p className="mt-1 text-sm leading-relaxed text-red-900">
+        <p className="mt-1 text-sm leading-relaxed text-[var(--ink-secondary)]">
           Ao excluir sua conta, seus dados pessoais (nome, e-mail e senha),
           resultados do questionário, progresso nas trilhas, projetos do
           portfólio, arquivos enviados e links compartilháveis serão apagados de
@@ -199,21 +171,18 @@ export function AccountControls() {
         </p>
 
         {deleteError && (
-          <div
-            role="alert"
-            className="mt-4 rounded-lg border border-red-300 bg-white px-4 py-3 text-sm text-red-700"
-          >
+          <Alert variant="danger" className="mt-4">
             {deleteError}
-          </div>
+          </Alert>
         )}
 
-        <form onSubmit={handleDeleteAccount} className="mt-4 space-y-4 max-w-md">
-          <label className="flex items-start gap-2.5 text-sm text-red-950">
+        <form onSubmit={handleDeleteAccount} className="mt-4 max-w-md space-y-4">
+          <label className="flex min-h-11 cursor-pointer items-start gap-2.5 text-sm text-[var(--ink-primary)]">
             <input
               type="checkbox"
               checked={understoodDeletion}
               onChange={(e) => setUnderstoodDeletion(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+              className="mt-0.5 h-4 w-4 rounded border-[var(--status-danger-border)] accent-[var(--status-danger-solid)]"
             />
             <span>
               Entendo que esta ação é permanente e que todos os meus projetos e
@@ -221,35 +190,31 @@ export function AccountControls() {
             </span>
           </label>
 
-          <div>
-            <label
-              htmlFor="deleteConfirmation"
-              className="block text-sm font-medium text-red-950"
-            >
-              Digite <strong>EXCLUIR</strong> para confirmar
-            </label>
-            <input
-              id="deleteConfirmation"
+          <FormField
+            id="deleteConfirmation"
+            label="Digite EXCLUIR para confirmar"
+          >
+            <Input
               name="deleteConfirmation"
               type="text"
               value={confirmationText}
               onChange={(e) => setConfirmationText(e.target.value)}
               placeholder="EXCLUIR"
-              className="mt-1 w-full rounded-lg border border-red-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-200"
             />
-          </div>
+          </FormField>
 
-          <button
+          <Button
             type="submit"
+            variant="danger"
             disabled={!canDelete}
-            className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            loading={deleteLoading}
           >
             {deleteLoading
               ? "Excluindo conta..."
               : "Excluir minha conta permanentemente"}
-          </button>
+          </Button>
         </form>
-      </section>
+      </Card>
     </div>
   );
 }

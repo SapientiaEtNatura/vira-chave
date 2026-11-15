@@ -1,6 +1,14 @@
 import Link from "next/link";
 import { Role } from "@prisma/client";
 import { ArrowRight, BookOpen, CheckCircle2, Clock } from "lucide-react";
+import {
+  Badge,
+  ButtonLink,
+  Card,
+  EmptyState,
+  Progress,
+  StageBanner,
+} from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 
@@ -52,26 +60,12 @@ export default async function AprenderPage({
 
   return (
     <div className="space-y-6">
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-            <BookOpen className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
-              Etapa 2 · Aprender
-            </p>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Trilhas de Aprendizagem
-            </h1>
-          </div>
-        </div>
-        <p className="mt-3 max-w-3xl text-sm text-slate-600">
-          Explore trilhas curadas com cursos gratuitos de parceiros. Ao acessar um
-          curso, seu progresso passa para em andamento; ao terminar, registre um
-          mini-resumo do que aprendeu.
-        </p>
-      </header>
+      <StageBanner
+        stage="APRENDER"
+        stageLabel="Etapa 2 · Aprender"
+        title="Trilhas de Aprendizagem"
+        subtitle="Explore trilhas curadas com cursos gratuitos de parceiros. Ao acessar um curso, seu progresso passa para em andamento; ao terminar, registre um mini-resumo do que aprendeu."
+      />
 
       <nav
         aria-label="Filtrar trilhas por macroárea"
@@ -79,10 +73,10 @@ export default async function AprenderPage({
       >
         <Link
           href="/app/aprender"
-          className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+          className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
             !activeArea
-              ? "bg-indigo-600 text-white"
-              : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+              ? "border-transparent bg-[var(--brand-primary)] text-white"
+              : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)]"
           }`}
         >
           Todas as áreas
@@ -93,10 +87,10 @@ export default async function AprenderPage({
             <Link
               key={macroArea.id}
               href={`/app/aprender?area=${encodeURIComponent(macroArea.slug)}`}
-              className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+              className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
                 isActive
-                  ? "bg-indigo-600 text-white"
-                  : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  ? "border-transparent bg-[var(--brand-primary)] text-white"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)]"
               }`}
             >
               {macroArea.name}
@@ -106,22 +100,20 @@ export default async function AprenderPage({
       </nav>
 
       {tracks.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
-          <p className="text-sm font-medium text-slate-700">
-            Nenhuma trilha publicada encontrada para este filtro.
-          </p>
-          {activeArea && (
-            <Link
-              href="/app/aprender"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-700"
-            >
-              Ver todas as trilhas
-            </Link>
-          )}
-        </div>
+        <EmptyState
+          icon={<BookOpen className="h-5 w-5" />}
+          title="Nenhuma trilha publicada encontrada para este filtro."
+          action={
+            activeArea ? (
+              <ButtonLink href="/app/aprender" variant="outline" size="sm">
+                Ver todas as trilhas
+              </ButtonLink>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="grid gap-5 md:grid-cols-2">
-          {tracks.map((track) => {
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {tracks.map((track, index) => {
             const totalCourses = track.courses.length;
             const completedCourses = track.courses.filter(
               (course) => course.progress[0]?.status === "CONCLUIDO",
@@ -133,70 +125,100 @@ export default async function AprenderPage({
               totalCourses > 0
                 ? Math.round((completedCourses / totalCourses) * 100)
                 : 0;
+            const isCompleted = totalCourses > 0 && completedCourses === totalCourses;
+
+            const coverPalettes = [
+              {
+                bg: "bg-[var(--stage-discover-bg)]",
+                icon: "text-[var(--stage-discover-ink)]",
+              },
+              {
+                bg: "bg-[var(--stage-learn-bg)]",
+                icon: "text-[var(--stage-learn-ink)]",
+              },
+              {
+                bg: "bg-[var(--stage-experiment-bg)]",
+                icon: "text-[var(--stage-experiment-ink)]",
+              },
+              {
+                bg: "bg-[var(--stage-build-bg)]",
+                icon: "text-[var(--stage-build-ink)]",
+              },
+            ];
+            const palette = coverPalettes[index % coverPalettes.length];
 
             return (
-              <article
+              <Card
                 key={track.id}
-                className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:border-indigo-200"
+                as="article"
+                variant="interactive"
+                padding="sm"
+                className="flex flex-col justify-between overflow-hidden p-0 sm:p-0"
               >
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="inline-flex items-center rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700">
-                      {track.macroArea.name}
-                    </span>
-                    <span className="text-xs font-medium text-slate-500">
-                      {totalCourses} {totalCourses === 1 ? "curso" : "cursos"}
-                    </span>
-                  </div>
-
-                  <h2 className="text-lg font-bold text-slate-900">
-                    {track.title}
-                  </h2>
-                  <p className="text-sm text-slate-600">{track.description}</p>
-                </div>
-
-                <div className="mt-5 space-y-4 border-t border-slate-100 pt-4">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs font-medium text-slate-600">
-                      <span className="inline-flex items-center gap-1.5">
-                        {completedCourses > 0 ? (
-                          <CheckCircle2
-                            className="h-3.5 w-3.5 text-emerald-600"
-                            aria-hidden="true"
-                          />
-                        ) : inProgressCourses > 0 ? (
-                          <Clock
-                            className="h-3.5 w-3.5 text-amber-600"
-                            aria-hidden="true"
-                          />
-                        ) : null}
-                        {completedCourses} de {totalCourses} concluídos
-                      </span>
-                      <span className="font-semibold text-indigo-600">
-                        {percent}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        className="h-full rounded-full bg-indigo-600"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-
-                  <Link
-                    href={`/app/aprender/${track.id}`}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700"
+                <div>
+                  <div
+                    className={`relative flex h-28 items-center justify-center ${palette.bg}`}
                   >
-                    <span>
-                      {completedCourses > 0 || inProgressCourses > 0
-                        ? "Continuar trilha"
-                        : "Explorar trilha"}
+                    <span
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--bg-surface)] shadow-sm ${palette.icon}`}
+                    >
+                      <BookOpen className="h-5 w-5" aria-hidden="true" />
                     </span>
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
+                    {isCompleted ? (
+                      <span className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-full bg-[var(--stage-build-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--stage-build-ink)]">
+                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        Concluída
+                      </span>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2.5 p-5 pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Badge variant="neutral">{track.macroArea.name}</Badge>
+                      <span className="inline-flex items-center gap-1 font-mono text-xs font-medium text-[var(--ink-muted)]">
+                        <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+                        {totalCourses} {totalCourses === 1 ? "curso" : "cursos"}
+                      </span>
+                    </div>
+
+                    <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
+                      {track.title}
+                    </h2>
+                    <p className="line-clamp-2 text-sm leading-relaxed text-[var(--ink-secondary)]">
+                      {track.description}
+                    </p>
+                  </div>
                 </div>
-              </article>
+
+                <div className="space-y-3 px-5 pb-5 pt-2">
+                  <Progress
+                    value={completedCourses}
+                    max={totalCourses || 1}
+                    tone="learn"
+                    label={`Progresso em ${track.title}: ${completedCourses} de ${totalCourses} cursos concluídos`}
+                  />
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <span className="text-xs font-medium text-[var(--ink-muted)] tabular-nums">
+                      {percent}% concluída
+                    </span>
+
+                    <Link
+                      href={`/app/aprender/${track.id}`}
+                      className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-hover)]"
+                    >
+                      <span>
+                        {isCompleted
+                          ? "Revisar"
+                          : completedCourses > 0 || inProgressCourses > 0
+                            ? "Continuar"
+                            : "Começar trilha"}
+                      </span>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </div>
+                </div>
+              </Card>
             );
           })}
         </div>

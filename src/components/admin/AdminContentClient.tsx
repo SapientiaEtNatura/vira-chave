@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   BookOpen,
   Compass,
@@ -12,6 +12,18 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  ConfirmDialog,
+  EmptyState,
+  FormField,
+  Input,
+  Select,
+  Textarea,
+} from "@/components/ui";
 
 export interface AdminMacroArea {
   id: string;
@@ -55,7 +67,25 @@ export interface AdminChallenge {
   macroArea: { id: string; name: string; slug: string };
 }
 
-type ContentTab = "macroAreas" | "questions" | "tracks" | "courseItems" | "challenges";
+type ContentTab =
+  | "macroAreas"
+  | "questions"
+  | "tracks"
+  | "courseItems"
+  | "challenges";
+
+type ContentKind =
+  | "macroArea"
+  | "question"
+  | "track"
+  | "courseItem"
+  | "challenge";
+
+interface PendingDelete {
+  kind: ContentKind;
+  id: string;
+  label: string;
+}
 
 interface AdminContentClientProps {
   initialMacroAreas: AdminMacroArea[];
@@ -63,6 +93,24 @@ interface AdminContentClientProps {
   initialTracks: AdminTrack[];
   initialCourseItems: AdminCourseItem[];
   initialChallenges: AdminChallenge[];
+}
+
+function buildWeightsState(
+  areas: AdminMacroArea[],
+  existing?: Record<string, number>,
+): Record<string, string> {
+  const next: Record<string, string> = {};
+  if (existing) {
+    for (const [slug, value] of Object.entries(existing)) {
+      next[slug] = String(value);
+    }
+  }
+  for (const area of areas) {
+    if (next[area.slug] === undefined) {
+      next[area.slug] = "0";
+    }
+  }
+  return next;
 }
 
 export function AdminContentClient({
@@ -73,15 +121,22 @@ export function AdminContentClient({
   initialChallenges,
 }: AdminContentClientProps) {
   const [activeTab, setActiveTab] = useState<ContentTab>("macroAreas");
-  const [macroAreas, setMacroAreas] = useState<AdminMacroArea[]>(initialMacroAreas);
-  const [questions, setQuestions] = useState<AdminDiscoveryQuestion[]>(initialQuestions);
+  const [macroAreas, setMacroAreas] =
+    useState<AdminMacroArea[]>(initialMacroAreas);
+  const [questions, setQuestions] =
+    useState<AdminDiscoveryQuestion[]>(initialQuestions);
   const [tracks, setTracks] = useState<AdminTrack[]>(initialTracks);
-  const [courseItems, setCourseItems] = useState<AdminCourseItem[]>(initialCourseItems);
-  const [challenges, setChallenges] = useState<AdminChallenge[]>(initialChallenges);
+  const [courseItems, setCourseItems] =
+    useState<AdminCourseItem[]>(initialCourseItems);
+  const [challenges, setChallenges] =
+    useState<AdminChallenge[]>(initialChallenges);
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(
+    null,
+  );
 
   // MacroArea form state
   const [editingMacroId, setEditingMacroId] = useState<string | null>(null);
@@ -90,21 +145,35 @@ export function AdminContentClient({
   const [macroDescription, setMacroDescription] = useState("");
 
   // Question form state
-  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
+  const [editingQuestionId, setEditingQuestionId] = useState<string | null>(
+    null,
+  );
   const [questionPrompt, setQuestionPrompt] = useState("");
-  const [questionOrder, setQuestionOrder] = useState("1");
-  const [questionWeightsText, setQuestionWeightsText] = useState("{}");
+  const [questionOrder, setQuestionOrder] = useState(() => {
+    const maxOrder = initialQuestions.reduce(
+      (max, q) => Math.max(max, q.order),
+      0,
+    );
+    return String(maxOrder + 1);
+  });
+  const [questionWeights, setQuestionWeights] = useState<
+    Record<string, string>
+  >(() => buildWeightsState(initialMacroAreas));
 
   // Track form state
   const [editingTrackId, setEditingTrackId] = useState<string | null>(null);
-  const [trackMacroId, setTrackMacroId] = useState(initialMacroAreas[0]?.id ?? "");
+  const [trackMacroId, setTrackMacroId] = useState(
+    initialMacroAreas[0]?.id ?? "",
+  );
   const [trackTitle, setTrackTitle] = useState("");
   const [trackDescription, setTrackDescription] = useState("");
   const [trackPublished, setTrackPublished] = useState(true);
 
   // CourseItem form state
   const [editingCourseId, setEditingCourseId] = useState<string | null>(null);
-  const [courseTrackId, setCourseTrackId] = useState(initialTracks[0]?.id ?? "");
+  const [courseTrackId, setCourseTrackId] = useState(
+    initialTracks[0]?.id ?? "",
+  );
   const [courseTitle, setCourseTitle] = useState("");
   const [courseProvider, setCourseProvider] = useState("");
   const [courseUrl, setCourseUrl] = useState("");
@@ -117,11 +186,23 @@ export function AdminContentClient({
   });
 
   // Challenge form state
-  const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
-  const [challengeMacroId, setChallengeMacroId] = useState(initialMacroAreas[0]?.id ?? "");
+  const [editingChallengeId, setEditingChallengeId] = useState<string | null>(
+    null,
+  );
+  const [challengeMacroId, setChallengeMacroId] = useState(
+    initialMacroAreas[0]?.id ?? "",
+  );
   const [challengeTitle, setChallengeTitle] = useState("");
   const [challengeDescription, setChallengeDescription] = useState("");
   const [challengePublished, setChallengePublished] = useState(true);
+
+  const macroAreaNameBySlug = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const area of macroAreas) {
+      map.set(area.slug, area.name);
+    }
+    return map;
+  }, [macroAreas]);
 
   function clearMessages() {
     setError(null);
@@ -220,28 +301,24 @@ export function AdminContentClient({
       setMacroAreas((prev) => [...prev, payload.item]);
       if (!trackMacroId) setTrackMacroId(payload.item.id);
       if (!challengeMacroId) setChallengeMacroId(payload.item.id);
+      setQuestionWeights((prev) => ({
+        ...prev,
+        [payload.item.slug]: prev[payload.item.slug] ?? "0",
+      }));
       setFeedback("Macroárea criada.");
     }
     resetMacroForm();
   }
 
-  async function handleDelete(
-    kind: "macroArea" | "question" | "track" | "courseItem" | "challenge",
-    id: string,
-  ) {
-    if (
-      typeof window !== "undefined" &&
-      !window.confirm(
-        "Tem certeza que deseja excluir este registro? Registros vinculados também podem ser removidos.",
-      )
-    ) {
-      return;
-    }
+  async function handleConfirmDelete() {
+    if (!pendingDelete) return;
+    const { kind, id } = pendingDelete;
 
     const payload = await sendContentRequest<{ deleted: boolean }>("DELETE", {
       kind,
       id,
     });
+    setPendingDelete(null);
     if (!payload?.deleted) return;
 
     if (kind === "macroArea") {
@@ -276,22 +353,23 @@ export function AdminContentClient({
     setQuestionPrompt("");
     const maxOrder = list.reduce((max, q) => Math.max(max, q.order), 0);
     setQuestionOrder(String(maxOrder + 1));
-    setQuestionWeightsText("{}");
+    setQuestionWeights(buildWeightsState(macroAreas));
   }
 
   async function handleQuestionSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    let parsedWeights: Record<string, number>;
-    try {
-      const raw = JSON.parse(questionWeightsText) as unknown;
-      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-        setError("Pesos por área devem ser um objeto JSON (ex: {\"tecnologia-dados\": 3}).");
+    const parsedWeights: Record<string, number> = {};
+
+    for (const [slug, rawValue] of Object.entries(questionWeights)) {
+      const trimmed = rawValue.trim();
+      const numeric = trimmed === "" ? 0 : Number(trimmed);
+      if (!Number.isInteger(numeric) || numeric < 0 || numeric > 10) {
+        setError(
+          `O peso de "${macroAreaNameBySlug.get(slug) ?? slug}" deve ser um número inteiro entre 0 e 10.`,
+        );
         return;
       }
-      parsedWeights = raw as Record<string, number>;
-    } catch {
-      setError("JSON inválido no campo de pesos por área.");
-      return;
+      parsedWeights[slug] = numeric;
     }
 
     const payload = await sendContentRequest<{ item: AdminDiscoveryQuestion }>(
@@ -313,20 +391,21 @@ export function AdminContentClient({
     );
     if (!payload?.item) return;
 
+    let updatedList: AdminDiscoveryQuestion[];
     if (editingQuestionId) {
-      setQuestions((prev) =>
-        prev
-          .map((q) => (q.id === payload.item.id ? payload.item : q))
-          .sort((a, b) => a.order - b.order),
-      );
+      updatedList = questions
+        .map((q) => (q.id === payload.item.id ? payload.item : q))
+        .sort((a, b) => a.order - b.order);
+      setQuestions(updatedList);
       setFeedback("Pergunta atualizada.");
     } else {
-      setQuestions((prev) =>
-        [...prev, payload.item].sort((a, b) => a.order - b.order),
+      updatedList = [...questions, payload.item].sort(
+        (a, b) => a.order - b.order,
       );
+      setQuestions(updatedList);
       setFeedback("Pergunta criada.");
     }
-    resetQuestionForm();
+    resetQuestionForm(updatedList);
   }
 
   // Track handlers
@@ -482,32 +561,75 @@ export function AdminContentClient({
     resetChallengeForm();
   }
 
-  const tabs: { id: ContentTab; label: string; count: number; icon: typeof Layers }[] = [
-    { id: "macroAreas", label: "MacroÁreas", count: macroAreas.length, icon: Layers },
-    { id: "questions", label: "Perguntas do Descobrir", count: questions.length, icon: Compass },
-    { id: "tracks", label: "Trilhas", count: tracks.length, icon: BookOpen },
-    { id: "courseItems", label: "Cursos Externos", count: courseItems.length, icon: Sparkles },
-    { id: "challenges", label: "Desafios Práticos", count: challenges.length, icon: Rocket },
+  const tabs: {
+    id: ContentTab;
+    label: string;
+    count: number;
+    icon: typeof Layers;
+  }[] = [
+    {
+      id: "macroAreas",
+      label: "MacroÁreas",
+      count: macroAreas.length,
+      icon: Layers,
+    },
+    {
+      id: "questions",
+      label: "Perguntas do Descobrir",
+      count: questions.length,
+      icon: Compass,
+    },
+    {
+      id: "tracks",
+      label: "Trilhas",
+      count: tracks.length,
+      icon: BookOpen,
+    },
+    {
+      id: "courseItems",
+      label: "Cursos Externos",
+      count: courseItems.length,
+      icon: Sparkles,
+    },
+    {
+      id: "challenges",
+      label: "Desafios Práticos",
+      count: challenges.length,
+      icon: Rocket,
+    },
   ];
+
+  const legacyQuestionSlugs = useMemo(() => {
+    const knownSlugs = new Set(macroAreas.map((area) => area.slug));
+    return Object.keys(questionWeights).filter((slug) => !knownSlugs.has(slug));
+  }, [macroAreas, questionWeights]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
+      <div
+        role="tablist"
+        aria-label="Seções de curadoria de conteúdo"
+        className="flex flex-wrap gap-2 border-b border-[var(--border-subtle)] pb-3"
+      >
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
+              id={`tab-${tab.id}`}
+              role="tab"
               type="button"
+              aria-selected={isActive}
+              aria-controls={`panel-${tab.id}`}
               onClick={() => {
                 clearMessages();
                 setActiveTab(tab.id);
               }}
-              className={`inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition ${
+              className={`inline-flex min-h-11 items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-colors cursor-pointer ${
                 isActive
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-100"
+                  ? "bg-[var(--brand-primary)] text-white shadow-xs"
+                  : "border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)]"
               }`}
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
@@ -515,8 +637,8 @@ export function AdminContentClient({
               <span
                 className={`rounded-full px-2 py-0.5 text-xs ${
                   isActive
-                    ? "bg-indigo-500 text-white"
-                    : "bg-slate-100 text-slate-600"
+                    ? "bg-white/20 text-white"
+                    : "bg-[var(--bg-surface-subtle)] text-[var(--ink-muted)]"
                 }`}
               >
                 {tab.count}
@@ -526,694 +648,837 @@ export function AdminContentClient({
         })}
       </div>
 
-      {error && (
-        <div
-          role="alert"
-          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-          {error}
-        </div>
-      )}
-
-      {feedback && (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-          {feedback}
-        </div>
-      )}
+      {error ? <Alert variant="danger">{error}</Alert> : null}
+      {feedback ? <Alert variant="success">{feedback}</Alert> : null}
 
       {activeTab === "macroAreas" && (
-        <section className="grid gap-6 lg:grid-cols-3">
-          <form
-            onSubmit={handleMacroSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 lg:col-span-1"
-          >
-            <h2 className="text-base font-bold text-slate-900">
-              {editingMacroId ? "Editar MacroÁrea" : "Nova MacroÁrea"}
-            </h2>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Nome
-              </label>
-              <input
-                type="text"
-                required
-                value={macroName}
-                onChange={(e) => setMacroName(e.target.value)}
-                placeholder="Ex: Tecnologia e Dados"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Slug
-              </label>
-              <input
-                type="text"
-                required
-                value={macroSlug}
-                onChange={(e) => setMacroSlug(e.target.value)}
-                placeholder="tecnologia-dados"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Descrição
-              </label>
-              <textarea
-                required
-                rows={3}
-                value={macroDescription}
-                onChange={(e) => setMacroDescription(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                {editingMacroId ? "Salvar" : "Criar"}
-              </button>
-              {editingMacroId && (
-                <button
-                  type="button"
-                  onClick={resetMacroForm}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        <section
+          id="panel-macroAreas"
+          role="tabpanel"
+          aria-labelledby="tab-macroAreas"
+          className="grid gap-6 lg:grid-cols-3"
+        >
+          <Card as="div" padding="md" className="h-fit lg:col-span-1">
+            <form onSubmit={handleMacroSubmit} className="space-y-4">
+              <h2 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                {editingMacroId ? "Editar MacroÁrea" : "Nova MacroÁrea"}
+              </h2>
+
+              <FormField id="macro-name" label="Nome" required>
+                <Input
+                  type="text"
+                  required
+                  value={macroName}
+                  onChange={(e) => setMacroName(e.target.value)}
+                  placeholder="Ex: Tecnologia e Dados"
+                />
+              </FormField>
+
+              <FormField id="macro-slug" label="Slug" required>
+                <Input
+                  type="text"
+                  required
+                  value={macroSlug}
+                  onChange={(e) => setMacroSlug(e.target.value)}
+                  placeholder="tecnologia-dados"
+                />
+              </FormField>
+
+              <FormField id="macro-description" label="Descrição" required>
+                <Textarea
+                  required
+                  rows={3}
+                  value={macroDescription}
+                  onChange={(e) => setMacroDescription(e.target.value)}
+                />
+              </FormField>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={busy}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="min-h-11 flex-1"
                 >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
+                  {editingMacroId ? "Salvar" : "Criar"}
+                </Button>
+                {editingMacroId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetMacroForm}
+                    className="min-h-11"
+                  >
+                    Cancelar
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          </Card>
 
           <div className="space-y-3 lg:col-span-2">
-            {macroAreas.map((area) => (
-              <div
-                key={area.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-slate-900">{area.name}</h3>
-                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-600">
-                      {area.slug}
-                    </span>
+            {macroAreas.length === 0 ? (
+              <EmptyState
+                icon={<Layers className="h-6 w-6" />}
+                title="Nenhuma MacroÁrea cadastrada"
+                description="Crie a primeira MacroÁrea ao lado para organizar perguntas, trilhas e desafios."
+              />
+            ) : (
+              macroAreas.map((area) => (
+                <Card
+                  key={area.id}
+                  padding="sm"
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-bold text-[var(--ink-primary)]">
+                        {area.name}
+                      </h3>
+                      <Badge variant="neutral" className="font-mono">
+                        {area.slug}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-[var(--ink-secondary)]">
+                      {area.description}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">{area.description}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingMacroId(area.id);
-                      setMacroName(area.name);
-                      setMacroSlug(area.slug);
-                      setMacroDescription(area.description);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDelete("macroArea", area.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Excluir
-                  </button>
-                </div>
-              </div>
-            ))}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                      onClick={() => {
+                        setEditingMacroId(area.id);
+                        setMacroName(area.name);
+                        setMacroSlug(area.slug);
+                        setMacroDescription(area.description);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      disabled={busy}
+                      leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                      onClick={() =>
+                        setPendingDelete({
+                          kind: "macroArea",
+                          id: area.id,
+                          label: area.name,
+                        })
+                      }
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </section>
       )}
 
       {activeTab === "questions" && (
-        <section className="grid gap-6 lg:grid-cols-3">
-          <form
-            onSubmit={handleQuestionSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 lg:col-span-1"
-          >
-            <h2 className="text-base font-bold text-slate-900">
-              {editingQuestionId ? "Editar Pergunta" : "Nova Pergunta do Descobrir"}
-            </h2>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Ordem
-              </label>
-              <input
-                type="number"
-                min={1}
-                required
-                value={questionOrder}
-                onChange={(e) => setQuestionOrder(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Enunciado
-              </label>
-              <textarea
-                required
-                rows={3}
-                value={questionPrompt}
-                onChange={(e) => setQuestionPrompt(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Pesos por MacroÁrea (JSON)
-              </label>
-              <textarea
-                required
-                rows={3}
-                value={questionWeightsText}
-                onChange={(e) => setQuestionWeightsText(e.target.value)}
-                placeholder='{"tecnologia-dados": 3, "design-criacao": 1}'
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-xs text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                {editingQuestionId ? "Salvar" : "Criar"}
-              </button>
-              {editingQuestionId && (
-                <button
-                  type="button"
-                  onClick={resetQuestionForm}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        <section
+          id="panel-questions"
+          role="tabpanel"
+          aria-labelledby="tab-questions"
+          className="grid gap-6 lg:grid-cols-3"
+        >
+          <Card as="div" padding="md" className="h-fit lg:col-span-1">
+            <form onSubmit={handleQuestionSubmit} className="space-y-4">
+              <h2 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                {editingQuestionId
+                  ? "Editar pergunta"
+                  : "Nova pergunta do Descobrir"}
+              </h2>
+
+              <FormField id="question-order" label="Ordem" required>
+                <Input
+                  type="number"
+                  min={1}
+                  required
+                  value={questionOrder}
+                  onChange={(e) => setQuestionOrder(e.target.value)}
+                />
+              </FormField>
+
+              <FormField id="question-prompt" label="Enunciado" required>
+                <Textarea
+                  required
+                  rows={3}
+                  value={questionPrompt}
+                  onChange={(e) => setQuestionPrompt(e.target.value)}
+                />
+              </FormField>
+
+              <div className="space-y-2.5 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3.5">
+                <div>
+                  <p className="text-sm font-medium text-[var(--ink-primary)]">
+                    Pesos por MacroÁrea
+                  </p>
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    Defina de 0 a 10 o quanto esta pergunta pontua para cada
+                    MacroÁrea.
+                  </p>
+                </div>
+
+                {macroAreas.length === 0 ? (
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    Cadastre ao menos uma MacroÁrea para configurar pesos.
+                  </p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                    {macroAreas.map((area) => (
+                      <FormField
+                        key={area.id}
+                        id={`question-weight-${area.slug}`}
+                        label={area.name}
+                      >
+                        <Input
+                          type="number"
+                          min={0}
+                          max={10}
+                          step={1}
+                          value={questionWeights[area.slug] ?? "0"}
+                          onChange={(e) =>
+                            setQuestionWeights((prev) => ({
+                              ...prev,
+                              [area.slug]: e.target.value,
+                            }))
+                          }
+                        />
+                      </FormField>
+                    ))}
+                  </div>
+                )}
+
+                {legacyQuestionSlugs.length > 0 ? (
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    Chaves legadas preservadas ao salvar:{" "}
+                    {legacyQuestionSlugs.join(", ")}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={busy}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="min-h-11 flex-1"
                 >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
+                  {editingQuestionId ? "Salvar" : "Criar"}
+                </Button>
+                {editingQuestionId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => resetQuestionForm()}
+                    className="min-h-11"
+                  >
+                    Cancelar
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          </Card>
 
           <div className="space-y-3 lg:col-span-2">
-            {questions.map((question) => (
-              <div
-                key={question.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-start sm:justify-between"
-              >
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-bold text-indigo-700">
-                      #{question.order}
-                    </span>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {question.prompt}
-                    </p>
-                  </div>
-                  <pre className="mt-2 rounded bg-slate-50 p-2 text-xs text-slate-600 overflow-x-auto">
-                    {JSON.stringify(question.weightsByArea)}
-                  </pre>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingQuestionId(question.id);
-                      setQuestionOrder(String(question.order));
-                      setQuestionPrompt(question.prompt);
-                      setQuestionWeightsText(
-                        JSON.stringify(question.weightsByArea, null, 2),
-                      );
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+            {questions.length === 0 ? (
+              <EmptyState
+                icon={<Compass className="h-6 w-6" />}
+                title="Nenhuma pergunta cadastrada"
+                description="Adicione perguntas para compor a etapa Descobrir dos estudantes."
+              />
+            ) : (
+              questions.map((question) => {
+                const activeWeights = Object.entries(
+                  question.weightsByArea,
+                ).filter(([, weight]) => weight > 0);
+
+                return (
+                  <Card
+                    key={question.id}
+                    padding="sm"
+                    className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between"
                   >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDelete("question", question.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Excluir
-                  </button>
-                </div>
-              </div>
-            ))}
+                    <div className="min-w-0 space-y-2">
+                      <div className="flex items-start gap-2">
+                        <Badge variant="brand">#{question.order}</Badge>
+                        <p className="text-sm font-semibold text-[var(--ink-primary)]">
+                          {question.prompt}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {activeWeights.length === 0 ? (
+                          <span className="text-xs text-[var(--ink-muted)]">
+                            Sem pesos atribuídos
+                          </span>
+                        ) : (
+                          activeWeights.map(([slug, weight]) => (
+                            <Badge key={slug} variant="neutral">
+                              {macroAreaNameBySlug.get(slug) ?? slug}: {weight}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                        onClick={() => {
+                          setEditingQuestionId(question.id);
+                          setQuestionOrder(String(question.order));
+                          setQuestionPrompt(question.prompt);
+                          setQuestionWeights(
+                            buildWeightsState(
+                              macroAreas,
+                              question.weightsByArea,
+                            ),
+                          );
+                        }}
+                      >
+                        Editar
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        disabled={busy}
+                        leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                        onClick={() =>
+                          setPendingDelete({
+                            kind: "question",
+                            id: question.id,
+                            label: `Pergunta #${question.order}`,
+                          })
+                        }
+                      >
+                        Excluir
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })
+            )}
           </div>
         </section>
       )}
 
       {activeTab === "tracks" && (
-        <section className="grid gap-6 lg:grid-cols-3">
-          <form
-            onSubmit={handleTrackSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 lg:col-span-1"
-          >
-            <h2 className="text-base font-bold text-slate-900">
-              {editingTrackId ? "Editar Trilha" : "Nova Trilha"}
-            </h2>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                MacroÁrea
-              </label>
-              <select
-                required
-                value={trackMacroId}
-                onChange={(e) => setTrackMacroId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="" disabled>
-                  Selecione...
-                </option>
-                {macroAreas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Título
-              </label>
-              <input
-                type="text"
-                required
-                value={trackTitle}
-                onChange={(e) => setTrackTitle(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Descrição
-              </label>
-              <textarea
-                required
-                rows={3}
-                value={trackDescription}
-                onChange={(e) => setTrackDescription(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={trackPublished}
-                onChange={(e) => setTrackPublished(e.target.checked)}
-                className="rounded border-slate-300"
-              />
-              Publicada para estudantes
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                {editingTrackId ? "Salvar" : "Criar"}
-              </button>
-              {editingTrackId && (
-                <button
-                  type="button"
-                  onClick={resetTrackForm}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        <section
+          id="panel-tracks"
+          role="tabpanel"
+          aria-labelledby="tab-tracks"
+          className="grid gap-6 lg:grid-cols-3"
+        >
+          <Card as="div" padding="md" className="h-fit lg:col-span-1">
+            <form onSubmit={handleTrackSubmit} className="space-y-4">
+              <h2 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                {editingTrackId ? "Editar trilha" : "Nova trilha"}
+              </h2>
+
+              <FormField id="track-macro-area" label="MacroÁrea" required>
+                <Select
+                  required
+                  value={trackMacroId}
+                  onChange={(e) => setTrackMacroId(e.target.value)}
                 >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
+                  <option value="" disabled>
+                    Selecione...
+                  </option>
+                  {macroAreas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+
+              <FormField id="track-title" label="Título" required>
+                <Input
+                  type="text"
+                  required
+                  value={trackTitle}
+                  onChange={(e) => setTrackTitle(e.target.value)}
+                />
+              </FormField>
+
+              <FormField id="track-description" label="Descrição" required>
+                <Textarea
+                  required
+                  rows={3}
+                  value={trackDescription}
+                  onChange={(e) => setTrackDescription(e.target.value)}
+                />
+              </FormField>
+
+              <label
+                htmlFor="track-published"
+                className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-[var(--ink-secondary)]"
+              >
+                <input
+                  id="track-published"
+                  type="checkbox"
+                  checked={trackPublished}
+                  onChange={(e) => setTrackPublished(e.target.checked)}
+                  className="h-4 w-4 rounded border-[var(--border-strong)] accent-[var(--brand-primary)]"
+                />
+                <span>Publicada para estudantes</span>
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={busy}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="min-h-11 flex-1"
+                >
+                  {editingTrackId ? "Salvar" : "Criar"}
+                </Button>
+                {editingTrackId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetTrackForm}
+                    className="min-h-11"
+                  >
+                    Cancelar
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          </Card>
 
           <div className="space-y-3 lg:col-span-2">
-            {tracks.map((track) => (
-              <div
-                key={track.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-bold text-slate-900">{track.title}</h3>
-                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                      {track.macroArea.name}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        track.published
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {track.published ? "Publicada" : "Rascunho"}
-                    </span>
+            {tracks.length === 0 ? (
+              <EmptyState
+                icon={<BookOpen className="h-6 w-6" />}
+                title="Nenhuma trilha cadastrada"
+                description="Crie uma trilha de aprendizagem para vincular cursos externos na etapa Aprender."
+              />
+            ) : (
+              tracks.map((track) => (
+                <Card
+                  key={track.id}
+                  padding="sm"
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-bold text-[var(--ink-primary)]">
+                        {track.title}
+                      </h3>
+                      <Badge variant="brand">{track.macroArea.name}</Badge>
+                      <Badge variant={track.published ? "success" : "neutral"}>
+                        {track.published ? "Publicada" : "Rascunho"}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-[var(--ink-secondary)]">
+                      {track.description}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">{track.description}</p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingTrackId(track.id);
-                      setTrackMacroId(track.macroAreaId);
-                      setTrackTitle(track.title);
-                      setTrackDescription(track.description);
-                      setTrackPublished(track.published);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDelete("track", track.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Excluir
-                  </button>
-                </div>
-              </div>
-            ))}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                      onClick={() => {
+                        setEditingTrackId(track.id);
+                        setTrackMacroId(track.macroAreaId);
+                        setTrackTitle(track.title);
+                        setTrackDescription(track.description);
+                        setTrackPublished(track.published);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      disabled={busy}
+                      leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                      onClick={() =>
+                        setPendingDelete({
+                          kind: "track",
+                          id: track.id,
+                          label: track.title,
+                        })
+                      }
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </section>
       )}
 
       {activeTab === "courseItems" && (
-        <section className="grid gap-6 lg:grid-cols-3">
-          <form
-            onSubmit={handleCourseSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 lg:col-span-1"
-          >
-            <h2 className="text-base font-bold text-slate-900">
-              {editingCourseId ? "Editar Curso Externo" : "Novo Curso Externo"}
-            </h2>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Trilha
-              </label>
-              <select
-                required
-                value={courseTrackId}
-                onChange={(e) => setCourseTrackId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="" disabled>
-                  Selecione...
-                </option>
-                {tracks.map((track) => (
-                  <option key={track.id} value={track.id}>
-                    {track.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Título do Curso
-              </label>
-              <input
-                type="text"
-                required
-                value={courseTitle}
-                onChange={(e) => setCourseTitle(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Provedor
-              </label>
-              <input
-                type="text"
-                required
-                value={courseProvider}
-                onChange={(e) => setCourseProvider(e.target.value)}
-                placeholder="Ex: Fundação Bradesco, Khan Academy"
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                URL Externa
-              </label>
-              <input
-                type="url"
-                required
-                value={courseUrl}
-                onChange={(e) => setCourseUrl(e.target.value)}
-                placeholder="https://..."
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Ordem na Trilha
-              </label>
-              <input
-                type="number"
-                min={1}
-                required
-                value={courseOrder}
-                onChange={(e) => setCourseOrder(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                {editingCourseId ? "Salvar" : "Adicionar"}
-              </button>
-              {editingCourseId && (
-                <button
-                  type="button"
-                  onClick={resetCourseForm}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        <section
+          id="panel-courseItems"
+          role="tabpanel"
+          aria-labelledby="tab-courseItems"
+          className="grid gap-6 lg:grid-cols-3"
+        >
+          <Card as="div" padding="md" className="h-fit lg:col-span-1">
+            <form onSubmit={handleCourseSubmit} className="space-y-4">
+              <h2 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                {editingCourseId
+                  ? "Editar curso externo"
+                  : "Novo curso externo"}
+              </h2>
+
+              <FormField id="course-track" label="Trilha" required>
+                <Select
+                  required
+                  value={courseTrackId}
+                  onChange={(e) => setCourseTrackId(e.target.value)}
                 >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
+                  <option value="" disabled>
+                    Selecione...
+                  </option>
+                  {tracks.map((track) => (
+                    <option key={track.id} value={track.id}>
+                      {track.title}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+
+              <FormField id="course-title" label="Título do curso" required>
+                <Input
+                  type="text"
+                  required
+                  value={courseTitle}
+                  onChange={(e) => setCourseTitle(e.target.value)}
+                />
+              </FormField>
+
+              <FormField id="course-provider" label="Provedor" required>
+                <Input
+                  type="text"
+                  required
+                  value={courseProvider}
+                  onChange={(e) => setCourseProvider(e.target.value)}
+                  placeholder="Ex: Fundação Bradesco, Khan Academy"
+                />
+              </FormField>
+
+              <FormField id="course-url" label="URL externa" required>
+                <Input
+                  type="url"
+                  required
+                  value={courseUrl}
+                  onChange={(e) => setCourseUrl(e.target.value)}
+                  placeholder="https://..."
+                />
+              </FormField>
+
+              <FormField id="course-order" label="Ordem na trilha" required>
+                <Input
+                  type="number"
+                  min={1}
+                  required
+                  value={courseOrder}
+                  onChange={(e) => setCourseOrder(e.target.value)}
+                />
+              </FormField>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={busy}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="min-h-11 flex-1"
+                >
+                  {editingCourseId ? "Salvar" : "Adicionar"}
+                </Button>
+                {editingCourseId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => resetCourseForm()}
+                    className="min-h-11"
+                  >
+                    Cancelar
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          </Card>
 
           <div className="space-y-3 lg:col-span-2">
-            {courseItems.map((course) => (
-              <div
-                key={course.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-700">
-                      #{course.order}
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900">{course.title}</h3>
-                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                      {course.track.title}
-                    </span>
+            {courseItems.length === 0 ? (
+              <EmptyState
+                icon={<Sparkles className="h-6 w-6" />}
+                title="Nenhum curso externo cadastrado"
+                description="Adicione cursos externos gratuitos às trilhas de aprendizagem."
+              />
+            ) : (
+              courseItems.map((course) => (
+                <Card
+                  key={course.id}
+                  padding="sm"
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="neutral">#{course.order}</Badge>
+                      <h3 className="text-sm font-bold text-[var(--ink-primary)]">
+                        {course.title}
+                      </h3>
+                      <Badge variant="brand">{course.track.title}</Badge>
+                    </div>
+                    <p className="mt-1 text-xs text-[var(--ink-secondary)]">
+                      Provedor:{" "}
+                      <span className="font-semibold">
+                        {course.providerName}
+                      </span>
+                    </p>
+                    <a
+                      href={course.externalUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 break-all text-xs text-[var(--brand-primary)] hover:underline"
+                    >
+                      <span>{course.externalUrl}</span>
+                      <ExternalLink
+                        className="h-3 w-3 shrink-0"
+                        aria-hidden="true"
+                      />
+                    </a>
                   </div>
-                  <p className="mt-1 text-xs text-slate-600">
-                    Provedor: <span className="font-semibold">{course.providerName}</span>
-                  </p>
-                  <a
-                    href={course.externalUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 inline-flex items-center gap-1 text-xs text-indigo-600 hover:underline"
-                  >
-                    <span>{course.externalUrl}</span>
-                    <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                  </a>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingCourseId(course.id);
-                      setCourseTrackId(course.trackId);
-                      setCourseTitle(course.title);
-                      setCourseProvider(course.providerName);
-                      setCourseUrl(course.externalUrl);
-                      setCourseOrder(String(course.order));
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDelete("courseItem", course.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Excluir
-                  </button>
-                </div>
-              </div>
-            ))}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                      onClick={() => {
+                        setEditingCourseId(course.id);
+                        setCourseTrackId(course.trackId);
+                        setCourseTitle(course.title);
+                        setCourseProvider(course.providerName);
+                        setCourseUrl(course.externalUrl);
+                        setCourseOrder(String(course.order));
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      disabled={busy}
+                      leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                      onClick={() =>
+                        setPendingDelete({
+                          kind: "courseItem",
+                          id: course.id,
+                          label: course.title,
+                        })
+                      }
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </section>
       )}
 
       {activeTab === "challenges" && (
-        <section className="grid gap-6 lg:grid-cols-3">
-          <form
-            onSubmit={handleChallengeSubmit}
-            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4 lg:col-span-1"
-          >
-            <h2 className="text-base font-bold text-slate-900">
-              {editingChallengeId ? "Editar Desafio" : "Novo Desafio Prático"}
-            </h2>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                MacroÁrea
-              </label>
-              <select
-                required
-                value={challengeMacroId}
-                onChange={(e) => setChallengeMacroId(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              >
-                <option value="" disabled>
-                  Selecione...
-                </option>
-                {macroAreas.map((area) => (
-                  <option key={area.id} value={area.id}>
-                    {area.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Título
-              </label>
-              <input
-                type="text"
-                required
-                value={challengeTitle}
-                onChange={(e) => setChallengeTitle(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase text-slate-600">
-                Descrição
-              </label>
-              <textarea
-                required
-                rows={4}
-                value={challengeDescription}
-                onChange={(e) => setChallengeDescription(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none"
-              />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                checked={challengePublished}
-                onChange={(e) => setChallengePublished(e.target.checked)}
-                className="rounded border-slate-300"
-              />
-              Publicado para estudantes
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-50"
-              >
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                {editingChallengeId ? "Salvar" : "Criar"}
-              </button>
-              {editingChallengeId && (
-                <button
-                  type="button"
-                  onClick={resetChallengeForm}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        <section
+          id="panel-challenges"
+          role="tabpanel"
+          aria-labelledby="tab-challenges"
+          className="grid gap-6 lg:grid-cols-3"
+        >
+          <Card as="div" padding="md" className="h-fit lg:col-span-1">
+            <form onSubmit={handleChallengeSubmit} className="space-y-4">
+              <h2 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                {editingChallengeId
+                  ? "Editar desafio"
+                  : "Novo desafio prático"}
+              </h2>
+
+              <FormField id="challenge-macro-area" label="MacroÁrea" required>
+                <Select
+                  required
+                  value={challengeMacroId}
+                  onChange={(e) => setChallengeMacroId(e.target.value)}
                 >
-                  Cancelar
-                </button>
-              )}
-            </div>
-          </form>
+                  <option value="" disabled>
+                    Selecione...
+                  </option>
+                  {macroAreas.map((area) => (
+                    <option key={area.id} value={area.id}>
+                      {area.name}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+
+              <FormField id="challenge-title" label="Título" required>
+                <Input
+                  type="text"
+                  required
+                  value={challengeTitle}
+                  onChange={(e) => setChallengeTitle(e.target.value)}
+                />
+              </FormField>
+
+              <FormField id="challenge-description" label="Descrição" required>
+                <Textarea
+                  required
+                  rows={4}
+                  value={challengeDescription}
+                  onChange={(e) => setChallengeDescription(e.target.value)}
+                />
+              </FormField>
+
+              <label
+                htmlFor="challenge-published"
+                className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-[var(--ink-secondary)]"
+              >
+                <input
+                  id="challenge-published"
+                  type="checkbox"
+                  checked={challengePublished}
+                  onChange={(e) => setChallengePublished(e.target.checked)}
+                  className="h-4 w-4 rounded border-[var(--border-strong)] accent-[var(--brand-primary)]"
+                />
+                <span>Publicado para estudantes</span>
+              </label>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={busy}
+                  leftIcon={<Plus className="h-4 w-4" />}
+                  className="min-h-11 flex-1"
+                >
+                  {editingChallengeId ? "Salvar" : "Criar"}
+                </Button>
+                {editingChallengeId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetChallengeForm}
+                    className="min-h-11"
+                  >
+                    Cancelar
+                  </Button>
+                ) : null}
+              </div>
+            </form>
+          </Card>
 
           <div className="space-y-3 lg:col-span-2">
-            {challenges.map((challenge) => (
-              <div
-                key={challenge.id}
-                className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-sm font-bold text-slate-900">
-                      {challenge.title}
-                    </h3>
-                    <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
-                      {challenge.macroArea.name}
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        challenge.published
-                          ? "bg-emerald-50 text-emerald-700"
-                          : "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {challenge.published ? "Publicado" : "Rascunho"}
-                    </span>
+            {challenges.length === 0 ? (
+              <EmptyState
+                icon={<Rocket className="h-6 w-6" />}
+                title="Nenhum desafio cadastrado"
+                description="Crie desafios práticos para a etapa Experimentar dos estudantes."
+              />
+            ) : (
+              challenges.map((challenge) => (
+                <Card
+                  key={challenge.id}
+                  padding="sm"
+                  className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-bold text-[var(--ink-primary)]">
+                        {challenge.title}
+                      </h3>
+                      <Badge variant="brand">{challenge.macroArea.name}</Badge>
+                      <Badge
+                        variant={challenge.published ? "success" : "neutral"}
+                      >
+                        {challenge.published ? "Publicado" : "Rascunho"}
+                      </Badge>
+                    </div>
+                    <p className="mt-1 text-sm text-[var(--ink-secondary)]">
+                      {challenge.description}
+                    </p>
                   </div>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {challenge.description}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingChallengeId(challenge.id);
-                      setChallengeMacroId(challenge.macroAreaId);
-                      setChallengeTitle(challenge.title);
-                      setChallengeDescription(challenge.description);
-                      setChallengePublished(challenge.published);
-                    }}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => handleDelete("challenge", challenge.id)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-red-200 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
-                    Excluir
-                  </button>
-                </div>
-              </div>
-            ))}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      leftIcon={<Pencil className="h-3.5 w-3.5" />}
+                      onClick={() => {
+                        setEditingChallengeId(challenge.id);
+                        setChallengeMacroId(challenge.macroAreaId);
+                        setChallengeTitle(challenge.title);
+                        setChallengeDescription(challenge.description);
+                        setChallengePublished(challenge.published);
+                      }}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      size="sm"
+                      disabled={busy}
+                      leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                      onClick={() =>
+                        setPendingDelete({
+                          kind: "challenge",
+                          id: challenge.id,
+                          label: challenge.title,
+                        })
+                      }
+                    >
+                      Excluir
+                    </Button>
+                  </div>
+                </Card>
+              ))
+            )}
           </div>
         </section>
       )}
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="Confirmar exclusão"
+        description={
+          pendingDelete
+            ? `Tem certeza que deseja excluir "${pendingDelete.label}"? Registros vinculados também podem ser removidos.`
+            : undefined
+        }
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        variant="danger"
+        loading={busy}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   );
 }

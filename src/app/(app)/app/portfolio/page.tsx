@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
-import { FolderKanban } from "lucide-react";
 import { PortfolioManagerClient } from "@/components/portfolio/PortfolioManagerClient";
+import { StageBanner } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 
@@ -57,26 +57,12 @@ export default async function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-            <FolderKanban className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
-              Etapa 4 · Construir
-            </p>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Meu Portfólio
-            </h1>
-          </div>
-        </div>
-        <p className="mt-3 max-w-3xl text-sm text-slate-600">
-          Reúna seus projetos, reflexões e evidências em um só lugar. Seu
-          portfólio é privado por padrão e você decide o que entra no link
-          compartilhável.
-        </p>
-      </header>
+      <StageBanner
+        stage="CONSTRUIR"
+        stageLabel="Etapa 4 · Construir"
+        title="Meu Portfólio"
+        subtitle="Reúna seus projetos, reflexões e evidências em um só lugar. Seu portfólio é privado por padrão e você decide o que entra no link compartilhável."
+      />
 
       <PortfolioManagerClient
         initialProjects={serializedProjects}

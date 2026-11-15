@@ -1,7 +1,8 @@
 import { Role } from "@prisma/client";
+import { AdminInstitutionsClient } from "@/components/admin/AdminInstitutionsClient";
+import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
-import { AdminInstitutionsClient } from "@/components/admin/AdminInstitutionsClient";
 
 export const dynamic = "force-dynamic";
 
@@ -64,15 +65,18 @@ export default async function AdminInstitutionsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Instituições e Educadores
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Cadastre instituições parceiras, gerencie códigos institucionais e
-          acompanhe os educadores vinculados.
-        </p>
-      </div>
+      <Card padding="lg" className="space-y-3">
+        <Badge variant="brand">Administração</Badge>
+        <PageHeader
+          title="Instituições e Educadores"
+          subtitle="Cadastre instituições parceiras, gerencie códigos institucionais e acompanhe os educadores vinculados."
+          action={
+            <ButtonLink href="/admin/conteudo" variant="outline" size="sm">
+              Ir para Conteúdos
+            </ButtonLink>
+          }
+        />
+      </Card>
 
       <AdminInstitutionsClient
         initialInstitutions={serializedInstitutions}

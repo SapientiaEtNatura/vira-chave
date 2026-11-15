@@ -1,7 +1,8 @@
 import { Role } from "@prisma/client";
+import { AdminContentClient } from "@/components/admin/AdminContentClient";
+import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
-import { AdminContentClient } from "@/components/admin/AdminContentClient";
 
 export const dynamic = "force-dynamic";
 
@@ -47,15 +48,18 @@ export default async function AdminContentPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Curadoria de Conteúdo
-        </h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Gerencie MacroÁreas, perguntas do Descobrir, trilhas de aprendizagem, cursos
-          externos e desafios práticos da plataforma.
-        </p>
-      </div>
+      <Card padding="lg" className="space-y-3">
+        <Badge variant="brand">Administração</Badge>
+        <PageHeader
+          title="Curadoria de Conteúdo"
+          subtitle="Gerencie MacroÁreas, perguntas do Descobrir, trilhas de aprendizagem, cursos externos e desafios práticos da plataforma."
+          action={
+            <ButtonLink href="/admin/instituicoes" variant="outline" size="sm">
+              Ir para Instituições
+            </ButtonLink>
+          }
+        />
+      </Card>
 
       <AdminContentClient
         initialMacroAreas={macroAreas}

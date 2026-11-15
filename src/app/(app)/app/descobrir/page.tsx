@@ -1,6 +1,6 @@
 import { Role } from "@prisma/client";
-import { Compass } from "lucide-react";
 import { DiscoveryQuizClient } from "@/components/discovery/DiscoveryQuizClient";
+import { StageBanner } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 
@@ -75,25 +75,12 @@ export default async function DescobrirPage() {
 
   return (
     <div className="space-y-6">
-      <header className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
-            <Compass className="h-6 w-6" aria-hidden="true" />
-          </span>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
-              Etapa 1 · Descobrir
-            </p>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Descubra suas afinidades
-            </h1>
-          </div>
-        </div>
-        <p className="mt-3 max-w-3xl text-sm text-slate-600">
-          Responda ao questionário para mapear seus interesses nas 6 macroáreas do
-          Vira Chave e receber recomendações de trilhas para a sua jornada.
-        </p>
-      </header>
+      <StageBanner
+        stage="DESCOBRIR"
+        stageLabel="Etapa 1 · Descobrir"
+        title="Descubra suas afinidades"
+        subtitle="Responda ao questionário para mapear seus interesses nas 6 macroáreas do Vira Chave e receber recomendações de trilhas para a sua jornada."
+      />
 
       <DiscoveryQuizClient
         questions={questions}

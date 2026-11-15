@@ -3,6 +3,8 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { AuthSplitLayout } from "@/components/layout/AuthSplitLayout";
+import { Alert, Button, FormField, Input } from "@/components/ui";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -80,103 +82,98 @@ function ResetPasswordForm() {
   }
 
   return (
-    <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-slate-200">
-      <div className="mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
-          VIRA CHAVE
-        </p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900">
+    <div>
+      <div className="mb-6 space-y-1.5">
+        <h1 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
           {token ? "Definir nova senha" : "Recuperar senha"}
         </h1>
-        <p className="mt-1 text-sm text-slate-600">
+        <p className="text-sm text-[var(--ink-muted)]">
           {token
             ? "Escolha uma nova senha com pelo menos 8 caracteres."
             : "Informe seu e-mail cadastrado para receber o link de recuperação."}
         </p>
       </div>
 
-      {error && (
-        <div
-          role="alert"
-          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
+      {error ? (
+        <Alert variant="danger" className="mb-5">
           {error}
-        </div>
-      )}
+        </Alert>
+      ) : null}
 
-      {message && (
-        <div
-          role="status"
-          className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
-        >
+      {message ? (
+        <Alert variant="success" className="mb-5">
           {message}
-        </div>
-      )}
+        </Alert>
+      ) : null}
+
+      {!error && !message && !token ? (
+        <Alert variant="info" className="mb-5">
+          Por segurança, você receberá as instruções apenas se o e-mail já
+          estiver cadastrado na plataforma.
+        </Alert>
+      ) : null}
 
       {token ? (
         <form onSubmit={handleConfirmReset} className="space-y-4">
-          <div>
-            <label
-              htmlFor="newPassword"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Nova senha
-            </label>
-            <input
+          <FormField
+            id="newPassword"
+            label="Nova senha"
+            required
+            hint="Mínimo de 8 caracteres."
+          >
+            <Input
               id="newPassword"
               name="newPassword"
               type="password"
+              autoComplete="new-password"
               required
               minLength={8}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
-          </div>
+          </FormField>
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            variant="primary"
+            size="md"
+            loading={loading}
+            className="w-full"
           >
             {loading ? "Salvando..." : "Salvar nova senha"}
-          </button>
+          </Button>
         </form>
       ) : (
         <form onSubmit={handleRequestReset} className="space-y-4">
-          <div>
-            <label
-              htmlFor="email"
-              className="block text-sm font-medium text-slate-700"
-            >
-              E-mail
-            </label>
-            <input
+          <FormField id="email" label="E-mail" required>
+            <Input
               id="email"
               name="email"
               type="email"
+              autoComplete="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="voce@escola.br"
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200"
             />
-          </div>
+          </FormField>
 
-          <button
+          <Button
             type="submit"
-            disabled={loading}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
+            variant="primary"
+            size="md"
+            loading={loading}
+            className="w-full"
           >
             {loading ? "Enviando..." : "Enviar instruções"}
-          </button>
+          </Button>
         </form>
       )}
 
-      <div className="mt-6 border-t border-slate-200 pt-4 text-center text-sm text-slate-600">
+      <div className="mt-6 border-t border-[var(--border-subtle)] pt-4 text-center text-sm text-[var(--ink-secondary)]">
         <Link
           href="/login"
-          className="font-semibold text-indigo-600 hover:text-indigo-500"
+          className="inline-flex min-h-11 items-center font-semibold text-[var(--brand-primary)] underline-offset-4 hover:underline"
         >
           Voltar para o login
         </Link>
@@ -187,16 +184,17 @@ function ResetPasswordForm() {
 
 export default function RecuperarSenhaPage() {
   return (
-    <main className="min-h-screen bg-slate-50 flex items-center justify-center px-4 py-12">
+    <AuthSplitLayout
+      headline="Recupere seu acesso com tranquilidade."
+      description="Enviaremos instruções seguras para você definir uma nova senha e continuar sua jornada."
+    >
       <Suspense
         fallback={
-          <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-sm border border-slate-200 text-sm text-slate-600">
-            Carregando...
-          </div>
+          <p className="text-sm text-[var(--ink-muted)]">Carregando...</p>
         }
       >
         <ResetPasswordForm />
       </Suspense>
-    </main>
+    </AuthSplitLayout>
   );
 }

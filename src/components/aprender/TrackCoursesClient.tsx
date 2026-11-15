@@ -3,13 +3,24 @@
 import { useState } from "react";
 import type { ProgressStatus } from "@prisma/client";
 import {
+  BookOpen,
   CheckCircle2,
   Clock,
   ExternalLink,
   FileCheck2,
-  Loader2,
-  Upload,
 } from "lucide-react";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  FileUploadField,
+  FormField,
+  Progress,
+  Textarea,
+} from "@/components/ui";
+import type { BadgeVariant } from "@/components/ui";
 
 export interface TrackCourseItemView {
   id: string;
@@ -30,19 +41,19 @@ interface TrackCoursesClientProps {
 
 const STATUS_BADGES: Record<
   ProgressStatus,
-  { label: string; className: string }
+  { label: string; variant: BadgeVariant }
 > = {
   NAO_INICIADO: {
     label: "Não iniciado",
-    className: "bg-slate-100 text-slate-700 border-slate-200",
+    variant: "neutral",
   },
   EM_ANDAMENTO: {
     label: "Em andamento",
-    className: "bg-amber-50 text-amber-800 border-amber-200",
+    variant: "warning",
   },
   CONCLUIDO: {
     label: "Concluído",
-    className: "bg-emerald-50 text-emerald-800 border-emerald-200",
+    variant: "success",
   },
 };
 
@@ -197,28 +208,29 @@ export function TrackCoursesClient({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-medium text-slate-700">
+      <Card as="section" padding="sm" className="p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+          <p className="text-sm font-medium text-[var(--ink-secondary)]">
             Progresso na trilha: {completedCount} de {totalCourses} cursos
             concluídos
           </p>
-          <span className="text-sm font-semibold text-indigo-600">
+          <span className="font-mono text-sm font-semibold text-[var(--stage-learn-ink)] tabular-nums">
             {progressPercent}%
           </span>
         </div>
-        <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full rounded-full bg-indigo-600 transition-all duration-300"
-            style={{ width: `${progressPercent}%` }}
-          />
-        </div>
-      </section>
+        <Progress
+          value={completedCount}
+          max={totalCourses || 1}
+          tone="learn"
+          label={`Progresso na trilha: ${completedCount} de ${totalCourses} cursos concluídos`}
+        />
+      </Card>
 
       {courses.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-600">
-          Nenhum curso cadastrado nesta trilha ainda.
-        </div>
+        <EmptyState
+          icon={<BookOpen className="h-5 w-5" />}
+          title="Nenhum curso cadastrado nesta trilha ainda."
+        />
       ) : (
         <ol className="space-y-4">
           {courses.map((course) => {
@@ -228,19 +240,15 @@ export function TrackCoursesClient({
             const errorMsg = errorByCourse[course.id];
 
             return (
-              <li
-                key={course.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-              >
+              <li key={course.id}>
+                <Card as="article" padding="sm" className="p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-xs font-bold text-indigo-700">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--stage-learn-bg)] font-mono text-xs font-bold text-[var(--stage-learn-ink)]">
                         {course.order}
                       </span>
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge.className}`}
-                      >
+                      <Badge variant={badge.variant}>
                         {course.status === "CONCLUIDO" && (
                           <CheckCircle2
                             className="h-3.5 w-3.5"
@@ -251,28 +259,29 @@ export function TrackCoursesClient({
                           <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                         )}
                         {badge.label}
-                      </span>
+                      </Badge>
                       {course.certificateFileId && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                        <Badge variant="brand">
                           <FileCheck2
                             className="h-3.5 w-3.5"
                             aria-hidden="true"
                           />
                           Certificado anexado
-                        </span>
+                        </Badge>
                       )}
                     </div>
 
-                    <h2 className="text-lg font-semibold text-slate-900">
+                    <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
                       {course.title}
                     </h2>
-                    <p className="text-sm text-slate-600">
-                      Provedor: <span className="font-medium">{course.providerName}</span>
+                    <p className="text-sm text-[var(--ink-secondary)]">
+                      Provedor:{" "}
+                      <span className="font-medium">{course.providerName}</span>
                     </p>
 
                     {course.notes && course.status === "CONCLUIDO" && (
-                      <div className="mt-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="mt-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 text-sm text-[var(--ink-secondary)]">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
                           Seu resumo de aprendizagem
                         </p>
                         <p className="mt-1 whitespace-pre-line">{course.notes}</p>
@@ -281,60 +290,52 @@ export function TrackCoursesClient({
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => handleStartCourse(course)}
-                      disabled={startingId === course.id}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 hover:text-indigo-700 disabled:opacity-60"
-                    >
-                      {startingId === course.id ? (
-                        <Loader2
-                          className="h-4 w-4 animate-spin"
-                          aria-hidden="true"
-                        />
-                      ) : (
+                      loading={startingId === course.id}
+                      leftIcon={
                         <ExternalLink className="h-4 w-4" aria-hidden="true" />
-                      )}
-                      <span>Acessar curso</span>
-                    </button>
+                      }
+                    >
+                      Acessar curso
+                    </Button>
 
-                    <button
+                    <Button
                       type="button"
+                      variant="primary"
                       onClick={() =>
                         setOpenFormId(isFormOpen ? null : course.id)
                       }
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+                      leftIcon={
+                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                      }
                     >
-                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                      <span>
-                        {course.status === "CONCLUIDO"
-                          ? "Atualizar conclusão"
-                          : "Concluir"}
-                      </span>
-                    </button>
+                      {course.status === "CONCLUIDO"
+                        ? "Atualizar conclusão"
+                        : "Concluir"}
+                    </Button>
                   </div>
                 </div>
 
                 {errorMsg && !isFormOpen && (
-                  <p className="mt-3 text-sm font-medium text-rose-600">
+                  <Alert variant="danger" className="mt-3">
                     {errorMsg}
-                  </p>
+                  </Alert>
                 )}
 
                 {isFormOpen && (
                   <form
                     onSubmit={(e) => handleCompleteCourse(e, course)}
-                    className="mt-4 space-y-4 border-t border-slate-100 pt-4"
+                    className="mt-4 space-y-4 border-t border-[var(--border-subtle)] pt-4"
                   >
-                    <div>
-                      <label
-                        htmlFor={`notes-${course.id}`}
-                        className="block text-sm font-medium text-slate-800"
-                      >
-                        Mini-resumo do que você aprendeu *
-                      </label>
-                      <textarea
-                        id={`notes-${course.id}`}
+                    <FormField
+                      id={`notes-${course.id}`}
+                      label="Mini-resumo do que você aprendeu"
+                      required
+                    >
+                      <Textarea
                         rows={3}
                         required
                         minLength={5}
@@ -346,60 +347,26 @@ export function TrackCoursesClient({
                           }))
                         }
                         placeholder="Descreva em poucas linhas os principais conceitos ou práticas que você aprendeu neste curso..."
-                        className="mt-1.5 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
                       />
-                    </div>
+                    </FormField>
 
                     <div className="space-y-2">
-                      <label
-                        htmlFor={`file-${course.id}`}
-                        className="block text-sm font-medium text-slate-800"
-                      >
-                        Certificado (opcional — PDF, PNG ou JPG, máx. 5 MB)
-                      </label>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <label
-                          htmlFor={`file-${course.id}`}
-                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100"
-                        >
-                          <Upload className="h-4 w-4" aria-hidden="true" />
-                          <span>
-                            {selectedFile
-                              ? selectedFile.name
-                              : "Selecionar arquivo"}
-                          </span>
-                        </label>
-                        <input
-                          id={`file-${course.id}`}
-                          type="file"
-                          accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
-                          className="sr-only"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0] ?? null;
-                            setFileByCourse((prev) => ({
-                              ...prev,
-                              [course.id]: file,
-                            }));
-                          }}
-                        />
-                        {selectedFile && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setFileByCourse((prev) => ({
-                                ...prev,
-                                [course.id]: null,
-                              }))
-                            }
-                            className="text-xs font-medium text-slate-500 hover:text-slate-800"
-                          >
-                            Remover arquivo
-                          </button>
-                        )}
-                      </div>
+                      <FileUploadField
+                        id={`file-${course.id}`}
+                        label="Certificado (opcional)"
+                        hint="PDF, PNG ou JPG, máx. 5 MB."
+                        accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
+                        file={selectedFile}
+                        onFileChange={(file) =>
+                          setFileByCourse((prev) => ({
+                            ...prev,
+                            [course.id]: file,
+                          }))
+                        }
+                      />
 
                       {selectedFile && (
-                        <label className="flex items-center gap-2 pt-1 text-sm text-slate-700">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 pt-1 text-sm text-[var(--ink-secondary)]">
                           <input
                             type="checkbox"
                             checked={Boolean(addToPortfolioByCourse[course.id])}
@@ -409,7 +376,7 @@ export function TrackCoursesClient({
                                 [course.id]: e.target.checked,
                               }))
                             }
-                            className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            className="h-4 w-4 rounded border-[var(--border-strong)] accent-[var(--brand-primary)]"
                           />
                           <span>
                             Incluir este certificado no meu portfólio
@@ -419,36 +386,27 @@ export function TrackCoursesClient({
                       )}
                     </div>
 
-                    {errorMsg && (
-                      <p className="text-sm font-medium text-rose-600">
-                        {errorMsg}
-                      </p>
-                    )}
+                    {errorMsg && <Alert variant="danger">{errorMsg}</Alert>}
 
                     <div className="flex flex-wrap items-center gap-2">
-                      <button
+                      <Button
                         type="submit"
-                        disabled={submittingId === course.id}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700 disabled:opacity-60"
+                        variant="primary"
+                        loading={submittingId === course.id}
                       >
-                        {submittingId === course.id && (
-                          <Loader2
-                            className="h-4 w-4 animate-spin"
-                            aria-hidden="true"
-                          />
-                        )}
-                        <span>Salvar conclusão</span>
-                      </button>
-                      <button
+                        Salvar conclusão
+                      </Button>
+                      <Button
                         type="button"
+                        variant="outline"
                         onClick={() => setOpenFormId(null)}
-                        className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
                       >
                         Cancelar
-                      </button>
+                      </Button>
                     </div>
                   </form>
                 )}
+                </Card>
               </li>
             );
           })}
