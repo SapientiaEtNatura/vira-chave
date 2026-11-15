@@ -89,13 +89,3 @@ npx vitest run         # Testes unitários e de integração
 npm run build          # Build de produção Next.js (standalone)
 npx playwright test    # Testes E2E (requer servidor e PostgreSQL ativos)
 ```
-
----
-
-## Documentação Adicional
-
-- [PROJECT_BRIEF.md](docs/PROJECT_BRIEF.md) — Visão de produto e escopo do MVP
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) — Princípios arquiteturais e componentes
-- [TECHNICAL_DECISIONS.md](docs/TECHNICAL_DECISIONS.md) — Registro de Decisões Arquiteturais (ADRs)
-- [ROADMAP.md](docs/ROADMAP.md) — Macrofases do projeto
-- [DEVELOPMENT_GUIDELINES.md](docs/DEVELOPMENT_GUIDELINES.md) — Governança e padrão Conventional Commits
