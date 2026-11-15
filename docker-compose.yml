@@ -1,0 +1,64 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: virachave-local-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-virachave}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-virachave2026}
+      POSTGRES_DB: ${POSTGRES_DB:-virachave}
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_local:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-virachave} -d ${POSTGRES_DB:-virachave}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: infra/local/Dockerfile.dev
+    container_name: virachave-local-app
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-virachave}:${POSTGRES_PASSWORD:-virachave2026}@db:5432/${POSTGRES_DB:-virachave}?schema=public
+      AUTH_SECRET: ${AUTH_SECRET:-dev-secret-troque-em-producao}
+      NEXTAUTH_URL: http://localhost:3000
+      NODE_ENV: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - node_modules_cache:/app/node_modules
+      - next_cache:/app/.next
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "
+        if [ -f package.json ]; then
+          npm install && npm run dev -- -H 0.0.0.0 -p 3000;
+        else
+          echo 'Container pronto! Nenhum package.json encontrado ainda. Aguardando inicializacao do Next.js...';
+          tail -f /dev/null;
+        fi
+      "
+
+  k6:
+    image: grafana/k6:latest
+    container_name: virachave-local-k6
+    profiles: ["loadtest"]
+    working_dir: /scripts
+    volumes:
+      - ./tests/load:/scripts:ro
+    depends_on:
+      - app
+
+volumes:
+  pgdata_local:
+  node_modules_cache:
+  next_cache:
