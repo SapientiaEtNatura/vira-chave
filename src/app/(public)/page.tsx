@@ -4,13 +4,15 @@ import {
   BookOpen,
   Check,
   Compass,
+  ExternalLink,
+  FileText,
   FlaskConical,
+  FolderKanban,
   GraduationCap,
   Hammer,
-  Share2,
+  Play,
   ShieldCheck,
   Sparkles,
-  Play,
   Users,
 } from "lucide-react";
 import {
@@ -35,6 +37,7 @@ const stages: Array<{
   href: string;
   Icon: typeof Compass;
   iconClasses: string;
+  hoverClasses: string;
   linkColor: string;
   stepOffset: string;
   previewBadge?: string;
@@ -51,6 +54,8 @@ const stages: Array<{
     Icon: Compass,
     iconClasses:
       "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
+    hoverClasses:
+      "hover:scale-[1.03] hover:bg-[#F3E8FF]/65 hover:border-[var(--stage-discover-border)]",
     linkColor: "text-[var(--stage-discover-ink)]",
     stepOffset: "sm:ml-0",
     previewDone: true,
@@ -65,6 +70,8 @@ const stages: Array<{
     Icon: BookOpen,
     iconClasses:
       "border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
+    hoverClasses:
+      "hover:scale-[1.03] hover:bg-[#E0F2FE]/65 hover:border-[var(--stage-learn-border)]",
     linkColor: "text-[var(--stage-learn-ink)]",
     stepOffset: "sm:ml-4",
     previewDone: true,
@@ -79,6 +86,8 @@ const stages: Array<{
     Icon: FlaskConical,
     iconClasses:
       "border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
+    hoverClasses:
+      "hover:scale-[1.03] hover:bg-[#FEF3C7]/65 hover:border-[var(--stage-experiment-border)]",
     linkColor: "text-[var(--stage-experiment-ink)]",
     stepOffset: "sm:ml-8",
     previewBadge: "Em andamento",
@@ -93,6 +102,8 @@ const stages: Array<{
     Icon: Hammer,
     iconClasses:
       "border-[var(--stage-build-border)] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
+    hoverClasses:
+      "hover:scale-[1.03] hover:bg-[#D1FAE5]/65 hover:border-[var(--stage-build-border)]",
     linkColor: "text-[var(--stage-build-ink)]",
     stepOffset: "sm:ml-12",
     previewLocked: true,
@@ -224,7 +235,7 @@ export default function LandingPage() {
                     as="article"
                     variant="interactive"
                     padding="md"
-                    className="flex w-full flex-col justify-between gap-5"
+                    className={`flex w-full flex-col justify-between gap-5 transition-all duration-300 ease-out ${stage.hoverClasses}`}
                   >
                     <div>
                       <div className="flex items-start justify-between gap-2">
@@ -343,29 +354,53 @@ export default function LandingPage() {
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--stage-build-ink)]">
+                <Card
+                  as="article"
+                  padding="sm"
+                  className="grid overflow-hidden p-0 sm:grid-cols-12 sm:p-0"
+                >
+                  <div className="relative flex min-h-32 flex-col items-center justify-center bg-[var(--stage-build-bg)] p-5 text-[var(--stage-build-ink)] sm:col-span-4">
+                    <span className="absolute left-4 top-3.5 font-mono text-xs font-semibold tracking-wider opacity-80">
                       PROJETO 01
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-surface)] px-2.5 py-0.5 text-xs font-medium text-[var(--ink-muted)]">
-                      <Share2 className="h-3 w-3" aria-hidden="true" />
-                      /p/seu-link
-                    </span>
+                    <FolderKanban className="h-8 w-8" aria-hidden="true" />
                   </div>
-                  <p className="mt-2 font-display text-base font-bold text-[var(--ink-primary)]">
-                    Guia digital para feira de profissões da escola
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-[var(--ink-secondary)]">
-                    Entrega prática da etapa Experimentar publicada como
-                    evidência de organização, pesquisa e comunicação.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Badge variant="neutral">Comunicação</Badge>
-                    <Badge variant="neutral">Pesquisa</Badge>
-                    <Badge variant="success">Visível no link</Badge>
+
+                  <div className="flex flex-col justify-between p-5 sm:col-span-8">
+                    <div>
+                      <div className="mb-2">
+                        <Badge variant="brand">
+                          Desafio: Feira de Profissões
+                        </Badge>
+                      </div>
+
+                      <h4 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                        Guia digital para feira de profissões da escola
+                      </h4>
+
+                      <p className="mt-1.5 text-xs leading-relaxed text-[var(--ink-secondary)]">
+                        Mapeamento de áreas profissionais com entrevistas e
+                        roteiro interativo para estudantes do 1º ano.
+                      </p>
+
+                      <p className="mt-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 text-xs leading-relaxed text-[var(--ink-secondary)]">
+                        “Organizar o guia me ajudou a comparar carreiras que eu
+                        nem conhecia e apresentar ideias com clareza.”
+                      </p>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-[var(--brand-primary)]">
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span>Acessar link</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--ink-secondary)]">
+                        <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                        <span>guia-profissoes.pdf · 1.2 MB</span>
+                      </span>
+                    </div>
                   </div>
-                </div>
+                </Card>
               </Card>
             </div>
           </StaggerGroup>

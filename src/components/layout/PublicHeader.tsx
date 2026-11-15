@@ -1,7 +1,9 @@
 "use client";
 
+import type { MouseEvent } from "react";
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { BrandLogo, ButtonLink } from "@/components/ui";
 
@@ -12,6 +14,43 @@ const PUBLIC_LINKS = [
 
 export function PublicHeader() {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  function handleNavClick(
+    event: MouseEvent<HTMLAnchorElement>,
+    href: string,
+    closeMobile = false,
+  ) {
+    if (closeMobile) {
+      setMobileOpen(false);
+    }
+
+    if (href !== "/#como-funciona" || pathname !== "/") {
+      return;
+    }
+
+    const section = document.getElementById("como-funciona");
+    if (!section) return;
+
+    event.preventDefault();
+    const prefersReduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const behavior: ScrollBehavior = prefersReduced ? "auto" : "smooth";
+
+    const rect = section.getBoundingClientRect();
+    const isAtSection =
+      window.location.hash === "#como-funciona" ||
+      (rect.top <= 140 && rect.bottom > 140);
+
+    if (isAtSection) {
+      window.history.replaceState(null, "", "/");
+      window.scrollTo({ top: 0, behavior });
+    } else {
+      window.history.replaceState(null, "", "/#como-funciona");
+      section.scrollIntoView({ behavior, block: "start" });
+    }
+  }
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 backdrop-blur-sm">
@@ -26,6 +65,7 @@ export function PublicHeader() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={(event) => handleNavClick(event, item.href)}
               className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--ink-secondary)] transition-colors hover:text-[var(--brand-primary)]"
             >
               {item.label}
@@ -68,7 +108,7 @@ export function PublicHeader() {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setMobileOpen(false)}
+                onClick={(event) => handleNavClick(event, item.href, true)}
                 className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]"
               >
                 {item.label}

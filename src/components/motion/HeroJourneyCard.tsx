@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { BookOpen, Check, Compass, FlaskConical, Hammer, Lock } from "lucide-react";
 import { Badge, Card, type StageKey } from "@/components/ui";
-import { gsap, MOTION_DURATION, MOTION_EASE, useGSAP } from "@/lib/gsap";
+import { gsap, MOTION_EASE, useGSAP } from "@/lib/gsap";
 
 export interface HeroJourneyStage {
   key: StageKey;
@@ -43,27 +43,30 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
           defaults: { ease: MOTION_EASE.enter },
         });
 
-        if (steps.length > 0) {
-          tl.from(steps, {
-            y: 10,
-            opacity: 0,
-            duration: MOTION_DURATION.fast,
-            stagger: 0.08,
-          });
-        }
-
-        if (lines.length > 0) {
+        steps.forEach((step, index) => {
           tl.from(
-            lines,
+            step,
             {
-              scaleY: 0,
-              transformOrigin: "top center",
-              duration: MOTION_DURATION.fast,
-              stagger: 0.08,
+              y: 12,
+              opacity: 0,
+              duration: 0.42,
             },
-            "<0.08",
+            index === 0 ? 0.1 : ">-0.05",
           );
-        }
+
+          const line = lines[index];
+          if (line) {
+            tl.from(
+              line,
+              {
+                scaleY: 0,
+                transformOrigin: "top center",
+                duration: 0.28,
+              },
+              ">-0.12",
+            );
+          }
+        });
       });
     },
     { scope: cardRef },
@@ -86,7 +89,9 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
               Seu caminho ganha forma a cada passo.
             </h2>
           </div>
-          <Badge variant="success">4 etapas</Badge>
+          <Badge variant="success" className="shrink-0 whitespace-nowrap">
+            4 etapas
+          </Badge>
         </div>
 
         <ol className="relative mt-4 space-y-4">

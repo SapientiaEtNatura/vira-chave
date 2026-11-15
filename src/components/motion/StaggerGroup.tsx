@@ -4,9 +4,7 @@ import type { ReactNode } from "react";
 import { useRef } from "react";
 import {
   gsap,
-  MOTION_DURATION,
   MOTION_EASE,
-  MOTION_STAGGER,
   useGSAP,
 } from "@/lib/gsap";
 
@@ -29,14 +27,14 @@ export function StaggerGroup({ children, className }: StaggerGroupProps) {
         if (items.length === 0) return;
 
         gsap.from(items, {
-          y: 16,
+          y: 20,
           opacity: 0,
-          duration: MOTION_DURATION.base,
+          duration: 0.7,
           ease: MOTION_EASE.enter,
-          stagger: MOTION_STAGGER,
+          stagger: 0.1,
           scrollTrigger: {
             trigger: container,
-            start: "top 85%",
+            start: "top 62%",
             once: true,
           },
         });

@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { useRef } from "react";
 import {
   gsap,
-  MOTION_DURATION,
   MOTION_EASE,
   SplitText,
   useGSAP,
@@ -40,14 +39,14 @@ export function SplitTextReveal({
         });
 
         gsap.from(split.words, {
-          y: 14,
+          y: 16,
           opacity: 0,
-          duration: MOTION_DURATION.base,
+          duration: 0.7,
           ease: MOTION_EASE.emphasis,
-          stagger: 0.045,
+          stagger: 0.055,
           scrollTrigger: {
             trigger: el,
-            start: "top 88%",
+            start: "top 62%",
             once: true,
           },
         });
