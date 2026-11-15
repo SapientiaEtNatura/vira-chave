@@ -1,4 +1,6 @@
+import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { requireRole } from "@/lib/rbac";
 import { AdminContentClient } from "@/components/admin/AdminContentClient";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +19,7 @@ function normalizeWeights(value: unknown): Record<string, number> {
 }
 
 export default async function AdminContentPage() {
+  await requireRole([Role.ADMIN]);
   const [macroAreas, questions, tracks, courseItems, challenges] =
     await Promise.all([
       prisma.macroArea.findMany({ orderBy: { name: "asc" } }),

@@ -240,4 +240,49 @@ describe("Área Admin — RBAC e Gestão de Instituições", () => {
     } satisfies Partial<RegistrationError>);
     expect(tx.user.create).not.toHaveBeenCalled();
   });
+
+  it("test_admin_content_rejects_non_http_external_urls", async () => {
+    authMock.mockResolvedValue({
+      user: {
+        id: "admin-1",
+        role: "ADMIN",
+        institutionId: null,
+      },
+    });
+
+    const { POST, PATCH } = await import("@/app/api/admin/content/route");
+
+    const postResponse = await POST(
+      new Request("http://localhost/api/admin/content", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "courseItem",
+          trackId: "track-1",
+          title: "Curso XSS",
+          providerName: "Teste",
+          externalUrl: "javascript:alert(1)",
+          order: 1,
+        }),
+      }),
+    );
+
+    expect(postResponse.status).toBe(400);
+
+    const patchResponse = await PATCH(
+      new Request("http://localhost/api/admin/content", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "courseItem",
+          id: "course-1",
+          externalUrl: "data:text/html,<script>alert(1)</script>",
+        }),
+      }),
+    );
+
+    expect(patchResponse.status).toBe(400);
+    expect(prismaMock.courseItem.create).not.toHaveBeenCalled();
+    expect(prismaMock.courseItem.update).not.toHaveBeenCalled();
+  });
 });

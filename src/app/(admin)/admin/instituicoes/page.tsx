@@ -1,10 +1,12 @@
 import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { requireRole } from "@/lib/rbac";
 import { AdminInstitutionsClient } from "@/components/admin/AdminInstitutionsClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminInstitutionsPage() {
+  await requireRole([Role.ADMIN]);
   const [institutions, educators] = await Promise.all([
     prisma.institution.findMany({
       orderBy: { createdAt: "desc" },

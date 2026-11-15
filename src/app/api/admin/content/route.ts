@@ -6,6 +6,21 @@ import { requireApiRole } from "@/lib/rbac";
 
 const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
+function isHttpOrHttpsUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+const httpExternalUrlSchema = z
+  .string()
+  .trim()
+  .url("Informe uma URL externa válida.")
+  .refine(isHttpOrHttpsUrl, "A URL externa deve usar http:// ou https://.");
+
 const createContentSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("macroArea"),
@@ -37,7 +52,7 @@ const createContentSchema = z.discriminatedUnion("kind", [
     trackId: z.string().trim().min(1, "Selecione uma trilha."),
     title: z.string().trim().min(2, "Informe o título do curso.").max(160),
     providerName: z.string().trim().min(2, "Informe o provedor.").max(100),
-    externalUrl: z.string().trim().url("Informe uma URL externa válida."),
+    externalUrl: httpExternalUrlSchema,
     order: z.coerce.number().int().min(1, "Ordem deve ser maior que zero."),
   }),
   z.object({
@@ -78,7 +93,7 @@ const updateContentSchema = z.discriminatedUnion("kind", [
     trackId: z.string().trim().min(1).optional(),
     title: z.string().trim().min(2).max(160).optional(),
     providerName: z.string().trim().min(2).max(100).optional(),
-    externalUrl: z.string().trim().url().optional(),
+    externalUrl: httpExternalUrlSchema.optional(),
     order: z.coerce.number().int().min(1).optional(),
   }),
   z.object({

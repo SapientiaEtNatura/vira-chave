@@ -108,7 +108,13 @@ export function AdminContentClient({
   const [courseTitle, setCourseTitle] = useState("");
   const [courseProvider, setCourseProvider] = useState("");
   const [courseUrl, setCourseUrl] = useState("");
-  const [courseOrder, setCourseOrder] = useState("1");
+  const [courseOrder, setCourseOrder] = useState(() => {
+    const firstTrackId = initialTracks[0]?.id ?? "";
+    const maxOrder = initialCourseItems
+      .filter((c) => c.trackId === firstTrackId)
+      .reduce((max, c) => Math.max(max, c.order), 0);
+    return String(maxOrder + 1);
+  });
 
   // Challenge form state
   const [editingChallengeId, setEditingChallengeId] = useState<string | null>(null);
@@ -181,6 +187,34 @@ export function AdminContentClient({
       setMacroAreas((prev) =>
         prev.map((m) => (m.id === payload.item.id ? payload.item : m)),
       );
+      setTracks((prev) =>
+        prev.map((t) =>
+          t.macroAreaId === payload.item.id
+            ? {
+                ...t,
+                macroArea: {
+                  id: payload.item.id,
+                  name: payload.item.name,
+                  slug: payload.item.slug,
+                },
+              }
+            : t,
+        ),
+      );
+      setChallenges((prev) =>
+        prev.map((c) =>
+          c.macroAreaId === payload.item.id
+            ? {
+                ...c,
+                macroArea: {
+                  id: payload.item.id,
+                  name: payload.item.name,
+                  slug: payload.item.slug,
+                },
+              }
+            : c,
+        ),
+      );
       setFeedback("Macroárea atualizada.");
     } else {
       setMacroAreas((prev) => [...prev, payload.item]);
@@ -195,6 +229,15 @@ export function AdminContentClient({
     kind: "macroArea" | "question" | "track" | "courseItem" | "challenge",
     id: string,
   ) {
+    if (
+      typeof window !== "undefined" &&
+      !window.confirm(
+        "Tem certeza que deseja excluir este registro? Registros vinculados também podem ser removidos.",
+      )
+    ) {
+      return;
+    }
+
     const payload = await sendContentRequest<{ deleted: boolean }>("DELETE", {
       kind,
       id,
@@ -202,8 +245,14 @@ export function AdminContentClient({
     if (!payload?.deleted) return;
 
     if (kind === "macroArea") {
+      const removedTrackIds = new Set(
+        tracks.filter((item) => item.macroAreaId === id).map((item) => item.id),
+      );
       setMacroAreas((prev) => prev.filter((item) => item.id !== id));
       setTracks((prev) => prev.filter((item) => item.macroAreaId !== id));
+      setCourseItems((prev) =>
+        prev.filter((item) => !removedTrackIds.has(item.trackId)),
+      );
       setChallenges((prev) => prev.filter((item) => item.macroAreaId !== id));
     } else if (kind === "question") {
       setQuestions((prev) => prev.filter((item) => item.id !== id));
@@ -219,10 +268,14 @@ export function AdminContentClient({
   }
 
   // Question handlers
-  function resetQuestionForm() {
+  function resetQuestionForm(nextQuestions?: unknown) {
+    const list = Array.isArray(nextQuestions)
+      ? (nextQuestions as AdminDiscoveryQuestion[])
+      : questions;
     setEditingQuestionId(null);
     setQuestionPrompt("");
-    setQuestionOrder(String(questions.length + 1));
+    const maxOrder = list.reduce((max, q) => Math.max(max, q.order), 0);
+    setQuestionOrder(String(maxOrder + 1));
     setQuestionWeightsText("{}");
   }
 
@@ -312,6 +365,16 @@ export function AdminContentClient({
       setTracks((prev) =>
         prev.map((t) => (t.id === payload.item.id ? payload.item : t)),
       );
+      setCourseItems((prev) =>
+        prev.map((c) =>
+          c.trackId === payload.item.id
+            ? {
+                ...c,
+                track: { id: payload.item.id, title: payload.item.title },
+              }
+            : c,
+        ),
+      );
       setFeedback("Trilha atualizada.");
     } else {
       setTracks((prev) => [...prev, payload.item]);
@@ -322,13 +385,20 @@ export function AdminContentClient({
   }
 
   // CourseItem handlers
-  function resetCourseForm() {
+  function resetCourseForm(overrideTrackId?: unknown) {
+    const targetTrackId =
+      typeof overrideTrackId === "string"
+        ? overrideTrackId
+        : (tracks[0]?.id ?? "");
     setEditingCourseId(null);
-    setCourseTrackId(tracks[0]?.id ?? "");
+    setCourseTrackId(targetTrackId);
     setCourseTitle("");
     setCourseProvider("");
     setCourseUrl("");
-    setCourseOrder("1");
+    const maxOrder = courseItems
+      .filter((c) => c.trackId === targetTrackId)
+      .reduce((max, c) => Math.max(max, c.order), 0);
+    setCourseOrder(String(maxOrder + 1));
   }
 
   async function handleCourseSubmit(e: React.FormEvent<HTMLFormElement>) {
