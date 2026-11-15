@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { hashShareToken } from "@/lib/portfolio/share-token";
 import {
@@ -10,7 +11,71 @@ import {
 } from "@/lib/storage/local-files";
 
 export const MIN_PROJECT_TITLE_LENGTH = 2;
+export const MAX_PROJECT_TITLE_LENGTH = 150;
+export const MAX_PROJECT_SUMMARY_LENGTH = 300;
 export const MIN_PROJECT_REFLECTION_LENGTH = 10;
+export const MAX_PROJECT_REFLECTION_LENGTH = 5000;
+export const MAX_PROJECT_EXTERNAL_URL_LENGTH = 2048;
+
+export const updatePortfolioProjectSchema = z
+  .object({
+    title: z
+      .string({ message: "Título inválido." })
+      .trim()
+      .min(
+        MIN_PROJECT_TITLE_LENGTH,
+        `Informe um título com pelo menos ${MIN_PROJECT_TITLE_LENGTH} caracteres.`,
+      )
+      .max(
+        MAX_PROJECT_TITLE_LENGTH,
+        `O título deve ter no máximo ${MAX_PROJECT_TITLE_LENGTH} caracteres.`,
+      )
+      .optional(),
+    summary: z
+      .string({ message: "Resumo inválido." })
+      .trim()
+      .max(
+        MAX_PROJECT_SUMMARY_LENGTH,
+        `O resumo deve ter no máximo ${MAX_PROJECT_SUMMARY_LENGTH} caracteres.`,
+      )
+      .optional(),
+    reflection: z
+      .string({ message: "Reflexão inválida." })
+      .trim()
+      .min(
+        MIN_PROJECT_REFLECTION_LENGTH,
+        `Descreva sua reflexão com pelo menos ${MIN_PROJECT_REFLECTION_LENGTH} caracteres.`,
+      )
+      .max(
+        MAX_PROJECT_REFLECTION_LENGTH,
+        `A reflexão deve ter no máximo ${MAX_PROJECT_REFLECTION_LENGTH} caracteres.`,
+      )
+      .optional(),
+    externalUrl: z
+      .union([
+        z
+          .string({ message: "URL externa inválida." })
+          .trim()
+          .max(
+            MAX_PROJECT_EXTERNAL_URL_LENGTH,
+            `A URL externa deve ter no máximo ${MAX_PROJECT_EXTERNAL_URL_LENGTH} caracteres.`,
+          ),
+        z.null(),
+      ])
+      .optional(),
+    isIncludedInShare: z
+      .boolean({ message: "Valor de compartilhamento inválido." })
+      .optional(),
+  })
+  .refine(
+    (data) =>
+      data.title !== undefined ||
+      data.summary !== undefined ||
+      data.reflection !== undefined ||
+      data.externalUrl !== undefined ||
+      data.isIncludedInShare !== undefined,
+    { message: "Nenhuma alteração válida informada." },
+  );
 
 export class PortfolioServiceError extends Error {
   status: number;
@@ -58,6 +123,13 @@ function normalizeOptionalExternalUrl(rawUrl?: string | null): string | null {
   const trimmed = (rawUrl ?? "").trim();
   if (!trimmed) {
     return null;
+  }
+
+  if (trimmed.length > MAX_PROJECT_EXTERNAL_URL_LENGTH) {
+    throw new PortfolioServiceError(
+      `A URL externa deve ter no máximo ${MAX_PROJECT_EXTERNAL_URL_LENGTH} caracteres.`,
+      400,
+    );
   }
 
   let parsed: URL;
@@ -395,6 +467,12 @@ export async function updatePortfolioProject(
         400,
       );
     }
+    if (trimmedTitle.length > MAX_PROJECT_TITLE_LENGTH) {
+      throw new PortfolioServiceError(
+        `O título deve ter no máximo ${MAX_PROJECT_TITLE_LENGTH} caracteres.`,
+        400,
+      );
+    }
     nextData.title = trimmedTitle;
   }
 
@@ -406,11 +484,23 @@ export async function updatePortfolioProject(
         400,
       );
     }
+    if (trimmedReflection.length > MAX_PROJECT_REFLECTION_LENGTH) {
+      throw new PortfolioServiceError(
+        `A reflexão deve ter no máximo ${MAX_PROJECT_REFLECTION_LENGTH} caracteres.`,
+        400,
+      );
+    }
     nextData.reflection = trimmedReflection;
   }
 
   if (input.summary !== undefined) {
     const trimmedSummary = input.summary.trim();
+    if (trimmedSummary.length > MAX_PROJECT_SUMMARY_LENGTH) {
+      throw new PortfolioServiceError(
+        `O resumo deve ter no máximo ${MAX_PROJECT_SUMMARY_LENGTH} caracteres.`,
+        400,
+      );
+    }
     nextData.summary =
       trimmedSummary ||
       buildSummaryFromReflection(nextData.reflection ?? existing.reflection);
@@ -422,6 +512,10 @@ export async function updatePortfolioProject(
 
   if (input.isIncludedInShare !== undefined) {
     nextData.isIncludedInShare = Boolean(input.isIncludedInShare);
+  }
+
+  if (Object.keys(nextData).length === 0) {
+    throw new PortfolioServiceError("Nenhuma alteração válida informada.", 400);
   }
 
   return prismaClient.portfolioProject.update({

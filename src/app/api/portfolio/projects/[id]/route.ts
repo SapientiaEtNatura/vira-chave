@@ -3,6 +3,7 @@ import {
   deletePortfolioProject,
   PortfolioServiceError,
   updatePortfolioProject,
+  updatePortfolioProjectSchema,
 } from "@/lib/portfolio/portfolio-service";
 import { requireApiRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
@@ -23,9 +24,9 @@ export async function PATCH(
     );
   }
 
-  let body: Record<string, unknown>;
+  let rawBody: unknown;
   try {
-    body = (await request.json()) as Record<string, unknown>;
+    rawBody = await request.json();
   } catch {
     return NextResponse.json(
       { error: "Corpo JSON inválido." },
@@ -33,21 +34,27 @@ export async function PATCH(
     );
   }
 
+  if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+    return NextResponse.json(
+      { error: "Corpo JSON inválido." },
+      { status: 400 },
+    );
+  }
+
+  const parsed = updatePortfolioProjectSchema.safeParse(rawBody);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: parsed.error.issues[0]?.message ?? "Dados inválidos." },
+      { status: 400 },
+    );
+  }
+
   try {
-    const project = await updatePortfolioProject(authResult.userId, id, {
-      title: typeof body.title === "string" ? body.title : undefined,
-      summary: typeof body.summary === "string" ? body.summary : undefined,
-      reflection:
-        typeof body.reflection === "string" ? body.reflection : undefined,
-      externalUrl:
-        body.externalUrl === null || typeof body.externalUrl === "string"
-          ? body.externalUrl
-          : undefined,
-      isIncludedInShare:
-        typeof body.isIncludedInShare === "boolean"
-          ? body.isIncludedInShare
-          : undefined,
-    });
+    const project = await updatePortfolioProject(
+      authResult.userId,
+      id,
+      parsed.data,
+    );
 
     return NextResponse.json({
       project: {
