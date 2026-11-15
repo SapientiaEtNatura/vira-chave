@@ -16,6 +16,7 @@ import {
   Users,
 } from "lucide-react";
 import {
+  AffinityPreviewCard,
   HeroJourneyCard,
   type HeroJourneyStage,
   ParallaxOrb,
@@ -129,12 +130,6 @@ const heroStages: HeroJourneyStage[] = stages.map(
     previewLocked,
   }),
 );
-
-const affinityPreview = [
-  { area: "Tecnologia & Dados", score: 86, barClass: "w-[86%] bg-[var(--stage-discover-ink)]" },
-  { area: "Comunicação & Design", score: 74, barClass: "w-[74%] bg-[var(--brand-primary)]" },
-  { area: "Negócios & Impacto", score: 62, barClass: "w-[62%] bg-[var(--stage-learn-ink)]" },
-];
 
 export default function LandingPage() {
   return (
@@ -314,21 +309,7 @@ export default function LandingPage() {
                   </p>
                 </div>
 
-                <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4">
-                  {affinityPreview.map((item) => (
-                    <div key={item.area} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-semibold text-[var(--ink-primary)]">
-                        <span>{item.area}</span>
-                        <span className="font-mono text-[var(--ink-muted)]">
-                          {item.score}%
-                        </span>
-                      </div>
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-surface)]">
-                        <div className={`h-full rounded-full ${item.barClass}`} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <AffinityPreviewCard />
               </Card>
             </div>
 
