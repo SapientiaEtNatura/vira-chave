@@ -139,7 +139,7 @@ export function AffinityPreviewCard() {
         }
         return next;
       });
-    }, 2200);
+    }, 1900);
 
     return () => {
       window.clearInterval(intervalId);
