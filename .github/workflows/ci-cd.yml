@@ -1,4 +1,4 @@
-name: CI (Vira Chave)
+name: CI/CD (Vira Chave)
 
 on:
   push:
@@ -24,3 +24,15 @@ jobs:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/virachave?schema=public"
           AUTH_SECRET: "ci-build-secret-placeholder"
         run: npm run build
+
+  deploy:
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: self-hosted
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy on Ubuntu Server
+        run: bash infra/server/deploy.sh
