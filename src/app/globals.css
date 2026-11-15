@@ -1,1 +1,115 @@
 @import "tailwindcss";
+
+:root {
+  /* Superfícies e bordas */
+  --bg-canvas: #F6F8FB;
+  --bg-surface: #FFFFFF;
+  --bg-surface-subtle: #EEF2F7;
+  --border-subtle: #DCE3EC;
+  --border-strong: #B8C4D4;
+
+  /* Texto */
+  --ink-primary: #101828;
+  --ink-secondary: #344054;
+  --ink-muted: #475467;
+
+  /* Marca */
+  --brand-primary: #0F5C6E;
+  --brand-primary-hover: #0B4654;
+  --brand-primary-deep: #123F4A;
+  --brand-primary-ink-on-dark: #CDE7ED;
+  --brand-primary-soft: #E6F4F6;
+  --brand-primary-border: #B6DFE6;
+  --brand-accent: #F59E0B;
+  --brand-accent-soft: #FEF3C7;
+  --brand-accent-ink: #92400E;
+
+  /* Feedback semântico */
+  --status-success-bg: #ECFDF5;
+  --status-success-ink: #065F46;
+  --status-success-border: #A7F3D0;
+  --status-warning-bg: #FFFBEB;
+  --status-warning-ink: #92400E;
+  --status-warning-border: #FDE68A;
+  --status-danger-bg: #FEF2F2;
+  --status-danger-ink: #B91C1C;
+  --status-danger-border: #FECACA;
+  --status-danger-solid: #DC2626;
+  --status-danger-solid-hover: #B91C1C;
+  --status-info-bg: #E6F4F6;
+  --status-info-ink: #0F5C6E;
+  --status-info-border: #B6DFE6;
+
+  /* 4 Etapas */
+  --stage-discover-bg: #F3E8FF;
+  --stage-discover-ink: #6D28D9;
+  --stage-discover-border: #DDD6FE;
+  --stage-learn-bg: #E0F2FE;
+  --stage-learn-ink: #0369A1;
+  --stage-learn-border: #BAE6FD;
+  --stage-experiment-bg: #FEF3C7;
+  --stage-experiment-ink: #B45309;
+  --stage-experiment-border: #FDE68A;
+  --stage-build-bg: #D1FAE5;
+  --stage-build-ink: #047857;
+  --stage-build-border: #A7F3D0;
+
+  /* Gráficos Recharts */
+  --chart-1: #6D28D9;
+  --chart-2: #0369A1;
+  --chart-3: #D97706;
+  --chart-4: #047857;
+  --chart-primary: #0F5C6E;
+  --chart-grid: #DCE3EC;
+  --chart-axis: #475467;
+}
+
+@theme inline {
+  --font-display: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
+
+  --color-canvas: var(--bg-canvas);
+  --color-surface: var(--bg-surface);
+  --color-surface-subtle: var(--bg-surface-subtle);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-ink: var(--ink-primary);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-muted: var(--ink-muted);
+  --color-brand: var(--brand-primary);
+  --color-brand-hover: var(--brand-primary-hover);
+  --color-brand-soft: var(--brand-primary-soft);
+  --color-accent: var(--brand-accent);
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--ink-primary);
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
