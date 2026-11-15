@@ -5,12 +5,21 @@ import {
   Check,
   Compass,
   FlaskConical,
+  GraduationCap,
   Hammer,
-  Lock,
-  Play,
+  Share2,
   ShieldCheck,
   Sparkles,
+  Play,
+  Users,
 } from "lucide-react";
+import {
+  HeroJourneyCard,
+  type HeroJourneyStage,
+  ParallaxOrb,
+  SplitTextReveal,
+  StaggerGroup,
+} from "@/components/motion";
 import {
   Badge,
   ButtonLink,
@@ -90,6 +99,32 @@ const stages: Array<{
   },
 ];
 
+const heroStages: HeroJourneyStage[] = stages.map(
+  ({
+    key,
+    title,
+    iconClasses,
+    stepOffset,
+    previewBadge,
+    previewDone,
+    previewLocked,
+  }) => ({
+    key,
+    title,
+    iconClasses,
+    stepOffset,
+    previewBadge,
+    previewDone,
+    previewLocked,
+  }),
+);
+
+const affinityPreview = [
+  { area: "Tecnologia & Dados", score: 86, barClass: "w-[86%] bg-[var(--stage-discover-ink)]" },
+  { area: "Comunicação & Design", score: 74, barClass: "w-[74%] bg-[var(--brand-primary)]" },
+  { area: "Negócios & Impacto", score: 62, barClass: "w-[62%] bg-[var(--stage-learn-ink)]" },
+];
+
 export default function LandingPage() {
   return (
     <>
@@ -151,79 +186,7 @@ export default function LandingPage() {
           </div>
 
           <div className="lg:col-span-5">
-            <Card
-              variant="default"
-              padding="lg"
-              aria-label="Prévia visual da jornada em 4 etapas"
-              className="shadow-md lg:rotate-1"
-            >
-              <div className="flex items-start justify-between gap-3 pb-4">
-                <div>
-                  <p className="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-                    MINHA JORNADA
-                  </p>
-                  <h2 className="mt-1 font-display text-xl font-bold text-[var(--ink-primary)]">
-                    Seu caminho ganha forma a cada passo.
-                  </h2>
-                </div>
-                <Badge variant="success">4 etapas</Badge>
-              </div>
-
-              <ol className="relative mt-4 space-y-4">
-                {stages.map((stage, index) => {
-                  const { Icon } = stage;
-                  const isLast = index === stages.length - 1;
-
-                  return (
-                    <li
-                      key={stage.key}
-                      className={`relative flex items-center justify-between gap-3 ${stage.stepOffset}`}
-                    >
-                      {!isLast ? (
-                        <span
-                          aria-hidden="true"
-                          className="absolute left-5 top-10 h-6 w-px border-l border-dashed border-[var(--border-strong)]"
-                        />
-                      ) : null}
-
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${stage.iconClasses}`}
-                        >
-                          <Icon className="h-4 w-4" aria-hidden="true" />
-                        </span>
-                        <div>
-                          <span className="block font-mono text-xs font-medium uppercase tracking-wider text-[var(--ink-muted)]">
-                            ETAPA {index + 1}
-                          </span>
-                          <span className="font-display text-sm font-bold text-[var(--ink-primary)]">
-                            {stage.title}
-                          </span>
-                        </div>
-                      </div>
-
-                      {stage.previewDone ? (
-                        <span
-                          aria-label="Etapa concluída"
-                          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]"
-                        >
-                          <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                        </span>
-                      ) : stage.previewBadge ? (
-                        <span className="rounded-full bg-[var(--stage-experiment-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--stage-experiment-ink)]">
-                          {stage.previewBadge}
-                        </span>
-                      ) : stage.previewLocked ? (
-                        <Lock
-                          className="h-4 w-4 shrink-0 text-[var(--ink-muted)]"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ol>
-            </Card>
+            <HeroJourneyCard stages={heroStages} />
           </div>
         </div>
       </section>
@@ -236,63 +199,275 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-2xl space-y-2.5 text-center">
             <Badge variant="brand">COMO FUNCIONA</Badge>
-            <h2
+            <SplitTextReveal
               id="jornada-heading"
+              text="Um passo de cada vez. Um mundo de possibilidades."
               className="font-display text-2xl font-bold text-[var(--ink-primary)] sm:text-4xl"
             >
               Um passo de cada vez.
               <br />
               Um mundo de possibilidades.
-            </h2>
+            </SplitTextReveal>
             <p className="mx-auto max-w-[54ch] text-sm leading-relaxed text-[var(--ink-muted)] sm:text-base">
               Você não precisa ter tudo decidido. Comece explorando e avance no
               seu ritmo.
             </p>
           </div>
 
-          <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <StaggerGroup className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {stages.map((stage) => {
               const { Icon } = stage;
 
               return (
-                <Card
-                  key={stage.key}
-                  as="article"
-                  variant="interactive"
-                  padding="md"
-                  className="flex flex-col justify-between gap-5"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-2">
-                      <span
-                        className={`flex h-11 w-11 items-center justify-center rounded-xl border ${stage.iconClasses}`}
-                      >
-                        <Icon className="h-5 w-5" aria-hidden="true" />
-                      </span>
-                      <span className="font-mono text-xs font-semibold text-[var(--ink-muted)]">
-                        {stage.number}
-                      </span>
+                <div key={stage.key} data-motion-item className="flex">
+                  <Card
+                    as="article"
+                    variant="interactive"
+                    padding="md"
+                    className="flex w-full flex-col justify-between gap-5"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <span
+                          className={`flex h-11 w-11 items-center justify-center rounded-xl border ${stage.iconClasses}`}
+                        >
+                          <Icon className="h-5 w-5" aria-hidden="true" />
+                        </span>
+                        <span className="font-mono text-xs font-semibold text-[var(--ink-muted)]">
+                          {stage.number}
+                        </span>
+                      </div>
+
+                      <h3 className="mt-5 font-display text-lg font-bold text-[var(--ink-primary)]">
+                        {stage.title}
+                      </h3>
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--ink-secondary)]">
+                        {stage.description}
+                      </p>
                     </div>
 
-                    <h3 className="mt-5 font-display text-lg font-bold text-[var(--ink-primary)]">
-                      {stage.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[var(--ink-secondary)]">
-                      {stage.description}
-                    </p>
-                  </div>
-
-                  <Link
-                    href={stage.href}
-                    className={`inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-80 ${stage.linkColor}`}
-                  >
-                    <span>Explorar etapa</span>
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </Card>
+                    <Link
+                      href={stage.href}
+                      className={`inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-80 ${stage.linkColor}`}
+                    >
+                      <span>Explorar etapa</span>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </Card>
+                </div>
               );
             })}
+          </StaggerGroup>
+        </div>
+      </section>
+
+      <section
+        id="na-pratica"
+        aria-labelledby="na-pratica-heading"
+        className="border-t border-[var(--border-subtle)] bg-[var(--bg-canvas)] py-14 sm:py-16"
+      >
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mx-auto max-w-2xl space-y-2.5 text-center">
+            <Badge variant="brand">NA PRÁTICA</Badge>
+            <SplitTextReveal
+              id="na-pratica-heading"
+              text="Do interesse ao portfólio real."
+              className="font-display text-2xl font-bold text-[var(--ink-primary)] sm:text-4xl"
+            />
+            <p className="mx-auto max-w-[56ch] text-sm leading-relaxed text-[var(--ink-muted)] sm:text-base">
+              Cada etapa gera resultados concretos que ajudam você a enxergar
+              seus talentos e compartilhar o que construiu.
+            </p>
           </div>
+
+          <StaggerGroup className="mt-10 grid gap-6 lg:grid-cols-2">
+            <div data-motion-item className="flex">
+              <Card variant="default" padding="lg" className="flex w-full flex-col justify-between gap-6">
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--stage-discover-ink)]">
+                      <Compass className="h-3.5 w-3.5" aria-hidden="true" />
+                      Mapa de Afinidades
+                    </span>
+                    <span className="font-mono text-xs text-[var(--ink-muted)]">
+                      Etapa 01 · Descobrir
+                    </span>
+                  </div>
+
+                  <h3 className="mt-4 font-display text-lg font-bold text-[var(--ink-primary)]">
+                    Descubra áreas que combinam com você
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--ink-secondary)]">
+                    Responda ao questionário inicial e veja suas 3 principais
+                    macroáreas conectadas a trilhas gratuitas.
+                  </p>
+                </div>
+
+                <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4">
+                  {affinityPreview.map((item) => (
+                    <div key={item.area} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold text-[var(--ink-primary)]">
+                        <span>{item.area}</span>
+                        <span className="font-mono text-[var(--ink-muted)]">
+                          {item.score}%
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-surface)]">
+                        <div className={`h-full rounded-full ${item.barClass}`} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </div>
+
+            <div data-motion-item className="flex">
+              <Card variant="default" padding="lg" className="flex w-full flex-col justify-between gap-6">
+                <div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--stage-build-border)] bg-[var(--stage-build-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--stage-build-ink)]">
+                      <Hammer className="h-3.5 w-3.5" aria-hidden="true" />
+                      Portfólio Compartilhável
+                    </span>
+                    <span className="font-mono text-xs text-[var(--ink-muted)]">
+                      Etapa 04 · Construir
+                    </span>
+                  </div>
+
+                  <h3 className="mt-4 font-display text-lg font-bold text-[var(--ink-primary)]">
+                    Evidências reais do que você sabe fazer
+                  </h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-[var(--ink-secondary)]">
+                    Desafios concluídos e projetos pessoais viram um portfólio
+                    organizado, com link público sob seu controle.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--stage-build-ink)]">
+                      PROJETO 01
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--bg-surface)] px-2.5 py-0.5 text-xs font-medium text-[var(--ink-muted)]">
+                      <Share2 className="h-3 w-3" aria-hidden="true" />
+                      /p/seu-link
+                    </span>
+                  </div>
+                  <p className="mt-2 font-display text-base font-bold text-[var(--ink-primary)]">
+                    Guia digital para feira de profissões da escola
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-[var(--ink-secondary)]">
+                    Entrega prática da etapa Experimentar publicada como
+                    evidência de organização, pesquisa e comunicação.
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge variant="neutral">Comunicação</Badge>
+                    <Badge variant="neutral">Pesquisa</Badge>
+                    <Badge variant="success">Visível no link</Badge>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </StaggerGroup>
+        </div>
+      </section>
+
+      <section
+        id="para-quem"
+        aria-labelledby="para-quem-heading"
+        className="border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] py-14 sm:py-16"
+      >
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="mx-auto max-w-2xl space-y-2.5 text-center">
+            <Badge variant="brand">PARA QUEM É</Badge>
+            <SplitTextReveal
+              id="para-quem-heading"
+              text="Feito para estudantes. Pensado para educadores."
+              className="font-display text-2xl font-bold text-[var(--ink-primary)] sm:text-4xl"
+            />
+            <p className="mx-auto max-w-[56ch] text-sm leading-relaxed text-[var(--ink-muted)] sm:text-base">
+              Aproxime escola e mundo do trabalho respeitando o ritmo de cada
+              jovem e a privacidade da turma.
+            </p>
+          </div>
+
+          <StaggerGroup className="mt-10 grid gap-6 md:grid-cols-2">
+            <div data-motion-item className="flex">
+              <Card variant="default" padding="lg" className="flex w-full flex-col justify-between gap-6">
+                <div>
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
+                    <GraduationCap className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <h3 className="mt-4 font-display text-xl font-bold text-[var(--ink-primary)]">
+                    Para Estudantes
+                  </h3>
+                  <ul className="mt-4 space-y-2.5 text-sm text-[var(--ink-secondary)]">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]" aria-hidden="true" />
+                      <span>Explore carreiras e afinidades sem pressão de escolher tudo agora.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]" aria-hidden="true" />
+                      <span>Trilhas curtas gratuitas e desafios práticos no seu ritmo.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]" aria-hidden="true" />
+                      <span>Você decide quais projetos aparecem no seu portfólio compartilhável.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <ButtonLink
+                    href="/cadastro"
+                    variant="primary"
+                    size="md"
+                    rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    Começar como estudante
+                  </ButtonLink>
+                </div>
+              </Card>
+            </div>
+
+            <div data-motion-item className="flex">
+              <Card variant="default" padding="lg" className="flex w-full flex-col justify-between gap-6">
+                <div>
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]">
+                    <Users className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <h3 className="mt-4 font-display text-xl font-bold text-[var(--ink-primary)]">
+                    Para Educadores e Escolas
+                  </h3>
+                  <ul className="mt-4 space-y-2.5 text-sm text-[var(--ink-secondary)]">
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-learn-ink)]" aria-hidden="true" />
+                      <span>Crie turmas com código de convite simples para seus estudantes.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-learn-ink)]" aria-hidden="true" />
+                      <span>Acompanhe interesses e evolução da turma em visão agregada.</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-learn-ink)]" aria-hidden="true" />
+                      <span>Respeito total à privacidade individual e respostas pessoais dos alunos.</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div>
+                  <ButtonLink
+                    href="/cadastro"
+                    variant="outline"
+                    size="md"
+                    rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                  >
+                    Criar conta de educador
+                  </ButtonLink>
+                </div>
+              </Card>
+            </div>
+          </StaggerGroup>
         </div>
       </section>
 
@@ -309,7 +484,8 @@ export default function LandingPage() {
                 </h2>
                 <p className="text-sm text-[var(--ink-muted)]">
                   Privacidade e segurança desde o primeiro passo. Seguimos a LGPD
-                  e nunca vendemos seus dados.
+                  com proteção especial aos dados de adolescentes e nunca
+                  vendemos suas informações.
                 </p>
               </div>
             </div>
@@ -326,19 +502,20 @@ export default function LandingPage() {
       </section>
 
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--brand-primary-deep)] to-[var(--brand-primary)] px-4 py-16 text-center text-white sm:py-20">
-        <div
-          aria-hidden="true"
+        <ParallaxOrb
+          offsetY={-20}
           className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full border border-white/10"
         />
-        <div
-          aria-hidden="true"
+        <ParallaxOrb
+          offsetY={24}
           className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full border border-white/10"
         />
 
         <div className="relative z-10 mx-auto max-w-2xl space-y-5">
-          <h2 className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Pronto para virar a chave?
-          </h2>
+          <SplitTextReveal
+            text="Pronto para virar a chave?"
+            className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl"
+          />
           <p className="text-base text-[var(--brand-primary-ink-on-dark)]">
             Seu caminho não precisa estar pronto. Só precisa começar.
           </p>
