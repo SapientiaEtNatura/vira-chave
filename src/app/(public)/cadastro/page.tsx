@@ -231,6 +231,7 @@ export default function CadastroPage() {
                 <Link
                   href="/termos"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="font-medium text-[var(--brand-primary)] underline underline-offset-4"
                 >
                   Termos de Uso
@@ -256,6 +257,7 @@ export default function CadastroPage() {
                 <Link
                   href="/privacidade"
                   target="_blank"
+                  rel="noopener noreferrer"
                   className="font-medium text-[var(--brand-primary)] underline underline-offset-4"
                 >
                   Política de Privacidade (LGPD)
@@ -282,6 +284,7 @@ export default function CadastroPage() {
                   <Link
                     href="/termos#sigilo-educador"
                     target="_blank"
+                    rel="noopener noreferrer"
                     className="font-medium text-[var(--brand-primary)] underline underline-offset-4"
                   >
                     Termo de Compromisso e Sigilo do Educador

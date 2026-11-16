@@ -21,6 +21,9 @@ export type RoleAccessResult =
       error: string;
     };
 
+export const STUDENT_PORTAL_ROLES: Role[] = [Role.ESTUDANTE, Role.ADMIN];
+export const EDUCATOR_PORTAL_ROLES: Role[] = [Role.EDUCADOR, Role.ADMIN];
+
 export function getHomeRouteForRole(role: Role): string {
   switch (role) {
     case Role.ESTUDANTE:
@@ -28,7 +31,7 @@ export function getHomeRouteForRole(role: Role): string {
     case Role.EDUCADOR:
       return "/educador";
     case Role.ADMIN:
-      return "/admin/conteudo";
+      return "/admin";
   }
 }
 

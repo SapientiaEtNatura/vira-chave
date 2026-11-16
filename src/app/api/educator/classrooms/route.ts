@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { Prisma, Role } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { generateClassroomInviteCode } from "@/lib/educator/classroom-analytics";
-import { requireApiRole } from "@/lib/rbac";
+import { requireApiRole, EDUCATOR_PORTAL_ROLES } from "@/lib/rbac";
 
 const MAX_INVITE_RETRIES = 5;
 
 export async function GET() {
-  const authResult = await requireApiRole([Role.EDUCADOR]);
+  const authResult = await requireApiRole(EDUCATOR_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -44,7 +44,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const authResult = await requireApiRole([Role.EDUCADOR]);
+  const authResult = await requireApiRole(EDUCATOR_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }

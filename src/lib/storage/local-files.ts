@@ -120,6 +120,16 @@ export async function saveEvidenceFile(
     throw new FileValidationError("Identificador de proprietário inválido.");
   }
 
+  if (file.size === 0) {
+    throw new FileValidationError("O arquivo enviado está vazio.");
+  }
+
+  if (file.size > MAX_EVIDENCE_SIZE_BYTES) {
+    throw new FileValidationError(
+      "O arquivo excede o limite máximo de 5 MB.",
+    );
+  }
+
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
   const validated = validateEvidenceBuffer(file.name, buffer);

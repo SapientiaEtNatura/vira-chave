@@ -1,8 +1,9 @@
 import { Role } from "@prisma/client";
 import { AppNav, type AppNavItem } from "@/components/layout/AppNav";
 import { signOut } from "@/lib/auth";
+import { cn } from "@/lib/cn";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 const navItems: AppNavItem[] = [
   { href: "/app", label: "Início", icon: "home", exact: true },
@@ -18,7 +19,7 @@ export default async function StudentAppLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const authUser = await requireRole([Role.ESTUDANTE]);
+  const authUser = await requireRole(STUDENT_PORTAL_ROLES);
   const user = await prisma.user.findUnique({
     where: { id: authUser.userId },
     select: { name: true },
@@ -29,12 +30,22 @@ export default async function StudentAppLayout({
     await signOut({ redirectTo: "/" });
   }
 
+  const isAdmin = authUser.role === Role.ADMIN;
+
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg-canvas)] text-[var(--ink-primary)] lg:flex-row">
+    <div
+      className={cn(
+        "flex min-h-screen flex-col bg-[var(--bg-canvas)] text-[var(--ink-primary)] lg:flex-row",
+        isAdmin && "lg:pt-9",
+      )}
+    >
       <AppNav
         homeHref="/app"
         subtitle="Estudante"
         userName={user?.name ?? undefined}
+        isAdmin={isAdmin}
+        previewMode={isAdmin ? "ESTUDANTE" : null}
+        variant="dock"
         items={navItems}
         signOutAction={handleSignOut}
       />

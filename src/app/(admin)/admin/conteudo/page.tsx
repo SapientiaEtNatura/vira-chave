@@ -46,6 +46,19 @@ export default async function AdminContentPage() {
     weightsByArea: normalizeWeights(q.weightsByArea),
   }));
 
+  const serializedCourseItems = courseItems.map((item) => ({
+    id: item.id,
+    trackId: item.trackId,
+    title: item.title,
+    providerName: item.providerName,
+    externalUrl: item.externalUrl,
+    order: item.order,
+    lastCheckedAt: item.lastCheckedAt ? item.lastCheckedAt.toISOString() : null,
+    lastCheckOk: item.lastCheckOk,
+    lastCheckStatus: item.lastCheckStatus,
+    track: item.track,
+  }));
+
   return (
     <div className="space-y-6">
       <Card padding="lg" className="space-y-3">
@@ -65,7 +78,7 @@ export default async function AdminContentPage() {
         initialMacroAreas={macroAreas}
         initialQuestions={serializedQuestions}
         initialTracks={tracks}
-        initialCourseItems={courseItems}
+        initialCourseItems={serializedCourseItems}
         initialChallenges={challenges}
       />
     </div>

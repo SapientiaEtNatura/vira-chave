@@ -1,19 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Role } from "@prisma/client";
 import { ArrowLeft, Users } from "lucide-react";
 import { ClassroomCharts } from "@/components/educator/ClassroomCharts";
 import { ClassroomStudentsTable } from "@/components/educator/ClassroomStudentsTable";
 import { Alert, Badge, Card, PageHeader } from "@/components/ui";
 import { getClassroomEducationalView } from "@/lib/educator/classroom-analytics";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, EDUCATOR_PORTAL_ROLES } from "@/lib/rbac";
 
 export default async function EducatorClassroomDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const user = await requireRole([Role.EDUCADOR]);
+  const user = await requireRole(EDUCATOR_PORTAL_ROLES);
   const { id } = await params;
 
   const view = await getClassroomEducationalView(id, user.userId);

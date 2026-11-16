@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getClassroomEducationalView } from "@/lib/educator/classroom-analytics";
-import { requireApiRole } from "@/lib/rbac";
+import { requireApiRole, EDUCATOR_PORTAL_ROLES } from "@/lib/rbac";
 
 export async function GET(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireApiRole([Role.EDUCADOR]);
+  const authResult = await requireApiRole(EDUCATOR_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -36,7 +35,7 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireApiRole([Role.EDUCADOR]);
+  const authResult = await requireApiRole(EDUCATOR_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }

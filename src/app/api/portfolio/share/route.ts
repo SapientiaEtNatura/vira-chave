@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import {
   generateShareLink,
   revokeShareLinks,
 } from "@/lib/portfolio/portfolio-service";
-import { requireApiRole } from "@/lib/rbac";
+import { requireApiRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export async function GET() {
-  const authResult = await requireApiRole([Role.ESTUDANTE]);
+  const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -32,7 +31,7 @@ export async function GET() {
 }
 
 export async function POST() {
-  const authResult = await requireApiRole([Role.ESTUDANTE]);
+  const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -48,7 +47,7 @@ export async function POST() {
 }
 
 export async function DELETE() {
-  const authResult = await requireApiRole([Role.ESTUDANTE]);
+  const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }

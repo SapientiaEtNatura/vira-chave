@@ -1,16 +1,15 @@
 import { NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import {
   completeCourseProgress,
   CourseProgressError,
 } from "@/lib/aprender/progress";
-import { requireApiRole } from "@/lib/rbac";
+import { requireApiRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ courseItemId: string }> },
 ) {
-  const authResult = await requireApiRole([Role.ESTUDANTE]);
+  const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }

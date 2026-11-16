@@ -9,7 +9,7 @@ import { Alert, Button, FormField, Input } from "@/components/ui";
 
 function getRedirectPath(role?: string): string {
   if (role === "EDUCADOR") return "/educador";
-  if (role === "ADMIN") return "/admin/conteudo";
+  if (role === "ADMIN") return "/admin";
   return "/app";
 }
 

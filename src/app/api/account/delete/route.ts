@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
+import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { signOut } from "@/lib/auth";
 import { requireApiRole } from "@/lib/rbac";
 import {
@@ -56,6 +57,15 @@ export async function DELETE(request: Request) {
       { status: 500 },
     );
   }
+
+  await recordAuditLog({
+    actorId: null,
+    actorRole: authResult.role,
+    action: AUDIT_ACTIONS.ACCOUNT_DELETED,
+    targetType: "User",
+    targetId: null,
+    metadata: { via: "self_service" },
+  });
 
   try {
     await signOut({ redirect: false });

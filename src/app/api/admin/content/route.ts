@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
+import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { requireApiRole } from "@/lib/rbac";
 
@@ -192,29 +193,30 @@ export async function POST(request: Request) {
 
   const data = parsed.data;
   try {
+    let item: { id: string };
     switch (data.kind) {
       case "macroArea": {
-        const item = await prisma.macroArea.create({
+        item = await prisma.macroArea.create({
           data: {
             name: data.name,
             slug: data.slug,
             description: data.description,
           },
         });
-        return NextResponse.json({ item }, { status: 201 });
+        break;
       }
       case "question": {
-        const item = await prisma.discoveryQuestion.create({
+        item = await prisma.discoveryQuestion.create({
           data: {
             prompt: data.prompt,
             order: data.order,
             weightsByArea: data.weightsByArea,
           },
         });
-        return NextResponse.json({ item }, { status: 201 });
+        break;
       }
       case "track": {
-        const item = await prisma.track.create({
+        item = await prisma.track.create({
           data: {
             macroAreaId: data.macroAreaId,
             title: data.title,
@@ -223,10 +225,10 @@ export async function POST(request: Request) {
           },
           include: { macroArea: { select: { id: true, name: true, slug: true } } },
         });
-        return NextResponse.json({ item }, { status: 201 });
+        break;
       }
       case "courseItem": {
-        const item = await prisma.courseItem.create({
+        item = await prisma.courseItem.create({
           data: {
             trackId: data.trackId,
             title: data.title,
@@ -236,10 +238,10 @@ export async function POST(request: Request) {
           },
           include: { track: { select: { id: true, title: true } } },
         });
-        return NextResponse.json({ item }, { status: 201 });
+        break;
       }
       case "challenge": {
-        const item = await prisma.challenge.create({
+        item = await prisma.challenge.create({
           data: {
             macroAreaId: data.macroAreaId,
             title: data.title,
@@ -248,9 +250,20 @@ export async function POST(request: Request) {
           },
           include: { macroArea: { select: { id: true, name: true, slug: true } } },
         });
-        return NextResponse.json({ item }, { status: 201 });
+        break;
       }
     }
+
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.CONTENT_CREATED,
+      targetType: data.kind,
+      targetId: item.id,
+      metadata: { kind: data.kind },
+    });
+
+    return NextResponse.json({ item }, { status: 201 });
   } catch (error) {
     const handled = handlePrismaError(error);
     if (handled) return handled;
@@ -281,9 +294,10 @@ export async function PATCH(request: Request) {
 
   const data = parsed.data;
   try {
+    let item: { id: string };
     switch (data.kind) {
       case "macroArea": {
-        const item = await prisma.macroArea.update({
+        item = await prisma.macroArea.update({
           where: { id: data.id },
           data: {
             ...(data.name !== undefined ? { name: data.name } : {}),
@@ -293,10 +307,10 @@ export async function PATCH(request: Request) {
               : {}),
           },
         });
-        return NextResponse.json({ item });
+        break;
       }
       case "question": {
-        const item = await prisma.discoveryQuestion.update({
+        item = await prisma.discoveryQuestion.update({
           where: { id: data.id },
           data: {
             ...(data.prompt !== undefined ? { prompt: data.prompt } : {}),
@@ -306,10 +320,10 @@ export async function PATCH(request: Request) {
               : {}),
           },
         });
-        return NextResponse.json({ item });
+        break;
       }
       case "track": {
-        const item = await prisma.track.update({
+        item = await prisma.track.update({
           where: { id: data.id },
           data: {
             ...(data.macroAreaId !== undefined
@@ -323,10 +337,10 @@ export async function PATCH(request: Request) {
           },
           include: { macroArea: { select: { id: true, name: true, slug: true } } },
         });
-        return NextResponse.json({ item });
+        break;
       }
       case "courseItem": {
-        const item = await prisma.courseItem.update({
+        item = await prisma.courseItem.update({
           where: { id: data.id },
           data: {
             ...(data.trackId !== undefined ? { trackId: data.trackId } : {}),
@@ -341,10 +355,10 @@ export async function PATCH(request: Request) {
           },
           include: { track: { select: { id: true, title: true } } },
         });
-        return NextResponse.json({ item });
+        break;
       }
       case "challenge": {
-        const item = await prisma.challenge.update({
+        item = await prisma.challenge.update({
           where: { id: data.id },
           data: {
             ...(data.macroAreaId !== undefined
@@ -358,9 +372,20 @@ export async function PATCH(request: Request) {
           },
           include: { macroArea: { select: { id: true, name: true, slug: true } } },
         });
-        return NextResponse.json({ item });
+        break;
       }
     }
+
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.CONTENT_UPDATED,
+      targetType: data.kind,
+      targetId: item.id,
+      metadata: { kind: data.kind },
+    });
+
+    return NextResponse.json({ item });
   } catch (error) {
     const handled = handlePrismaError(error);
     if (handled) return handled;
@@ -408,6 +433,15 @@ export async function DELETE(request: Request) {
         await prisma.challenge.delete({ where: { id } });
         break;
     }
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.CONTENT_DELETED,
+      targetType: kind,
+      targetId: id,
+      metadata: { kind },
+    });
+
     return NextResponse.json({ deleted: true, kind, id });
   } catch (error) {
     const handled = handlePrismaError(error);

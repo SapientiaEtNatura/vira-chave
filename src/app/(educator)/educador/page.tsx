@@ -1,12 +1,11 @@
-import { Role } from "@prisma/client";
 import { BookOpen, ShieldCheck, Users } from "lucide-react";
 import { EducatorClassroomsClient } from "@/components/educator/EducatorClassroomsClient";
 import { Alert, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, EDUCATOR_PORTAL_ROLES } from "@/lib/rbac";
 
 export default async function EducatorDashboardPage() {
-  const user = await requireRole([Role.EDUCADOR]);
+  const user = await requireRole(EDUCATOR_PORTAL_ROLES);
 
   const [educator, classrooms] = await Promise.all([
     prisma.user.findUnique({

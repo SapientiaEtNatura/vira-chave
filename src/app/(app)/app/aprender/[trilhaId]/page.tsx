@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { Role } from "@prisma/client";
 import { ArrowLeft } from "lucide-react";
 import {
   TrackCoursesClient,
@@ -7,7 +6,7 @@ import {
 } from "@/components/aprender/TrackCoursesClient";
 import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +15,7 @@ export default async function TrilhaDetailPage({
 }: {
   params: Promise<{ trilhaId: string }>;
 }) {
-  const user = await requireRole([Role.ESTUDANTE]);
+  const user = await requireRole(STUDENT_PORTAL_ROLES);
   const { trilhaId } = await params;
 
   const track = await prisma.track.findFirst({

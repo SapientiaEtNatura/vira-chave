@@ -1,17 +1,16 @@
 import { NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import {
   deletePortfolioProject,
   PortfolioServiceError,
   updatePortfolioProject,
 } from "@/lib/portfolio/portfolio-service";
-import { requireApiRole } from "@/lib/rbac";
+import { requireApiRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireApiRole([Role.ESTUDANTE]);
+  const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
@@ -83,7 +82,7 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const authResult = await requireApiRole([Role.ESTUDANTE]);
+  const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }

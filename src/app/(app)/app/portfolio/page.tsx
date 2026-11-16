@@ -1,13 +1,12 @@
-import { Role } from "@prisma/client";
 import { PortfolioManagerClient } from "@/components/portfolio/PortfolioManagerClient";
 import { StageBanner } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function PortfolioPage() {
-  const user = await requireRole([Role.ESTUDANTE]);
+  const user = await requireRole(STUDENT_PORTAL_ROLES);
 
   const [projects, activeShareLink] = await Promise.all([
     prisma.portfolioProject.findMany({
@@ -61,7 +60,7 @@ export default async function PortfolioPage() {
         stage="CONSTRUIR"
         stageLabel="Etapa 4 · Construir"
         title="Meu Portfólio"
-        subtitle="Reúna seus projetos, reflexões e evidências em um só lugar. Seu portfólio é privado por padrão e você decide o que entra no link compartilhável."
+        subtitle="Organize seus projetos e evidências com controle total sobre o que você compartilha."
       />
 
       <PortfolioManagerClient

@@ -305,28 +305,25 @@ export function PortfolioManagerClient({
 
   return (
     <div className="space-y-6">
-      {/* Seção de Link Compartilhável */}
-      <Card as="section">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      {/* Barra única: Link compartilhável + Novo projeto */}
+      <Card as="section" className="space-y-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1.5">
             <Badge variant="success">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               <span>Privado por padrão · Seus dados pessoais nunca aparecem</span>
             </Badge>
-            <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
-              Link Compartilhável do Portfólio
-            </h2>
-            <p className="max-w-2xl text-sm text-[var(--ink-secondary)]">
-              Somente projetos marcados como visíveis ({sharedCount} de{" "}
-              {projects.length}) aparecem no link público. E-mail, escola e
-              turma nunca são exibidos.
+            <p className="text-sm text-[var(--ink-secondary)]">
+              {sharedCount} de {projects.length}{" "}
+              {projects.length === 1 ? "projeto visível" : "projetos visíveis"}{" "}
+              no link compartilhável.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              variant="primary"
+              variant="outline"
               onClick={handleGenerateShareLink}
               loading={shareBusy}
               leftIcon={<Link2 className="h-4 w-4" aria-hidden="true" />}
@@ -344,20 +341,25 @@ export function PortfolioManagerClient({
                 disabled={shareBusy}
                 leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
               >
-                Revogar link
+                Revogar
               </Button>
             )}
+
+            <Button
+              type="button"
+              variant={showCreateForm ? "outline" : "primary"}
+              onClick={() => setShowCreateForm((prev) => !prev)}
+              leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
+            >
+              {showCreateForm ? "Cancelar" : "Novo projeto"}
+            </Button>
           </div>
         </div>
 
-        {shareError && (
-          <Alert variant="danger" className="mt-3">
-            {shareError}
-          </Alert>
-        )}
+        {shareError && <Alert variant="danger">{shareError}</Alert>}
 
         {shareUrl ? (
-          <div className="mt-4 flex flex-col gap-2 rounded-xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-xl border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)]/70 p-3 sm:flex-row sm:items-center sm:justify-between">
             <code className="break-all font-mono text-xs font-medium text-[var(--ink-primary)] sm:text-sm">
               {shareUrl}
             </code>
@@ -375,7 +377,7 @@ export function PortfolioManagerClient({
                   )
                 }
               >
-                {copied ? "Copiado" : "Copiar link"}
+                {copied ? "Copiado" : "Copiar"}
               </Button>
               <a
                 href={shareUrl}
@@ -389,36 +391,16 @@ export function PortfolioManagerClient({
             </div>
           </div>
         ) : hasActiveLink ? (
-          <Alert variant="info" className="mt-4">
-            Você possui um link ativo
+          <Alert variant="info">
+            Link ativo
             {shareCreatedAt
-              ? ` criado em ${new Date(shareCreatedAt).toLocaleDateString("pt-BR")}`
+              ? ` desde ${new Date(shareCreatedAt).toLocaleDateString("pt-BR")}`
               : ""}
-            . Por segurança, o token completo só é exibido no momento da geração;
-            gere um novo link se precisar copiá-lo novamente (o anterior será
+            . Gere um novo link se precisar copiá-lo novamente (o anterior será
             revogado).
           </Alert>
-        ) : (
-          <p className="mt-4 text-xs text-[var(--ink-muted)]">
-            Nenhum link ativo no momento. Seu portfólio está totalmente privado.
-          </p>
-        )}
+        ) : null}
       </Card>
-
-      {/* Cabeçalho da Lista + Botão Novo Projeto */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
-          Meus Projetos ({projects.length})
-        </h2>
-        <Button
-          type="button"
-          variant={showCreateForm ? "outline" : "primary"}
-          onClick={() => setShowCreateForm((prev) => !prev)}
-          leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
-        >
-          {showCreateForm ? "Cancelar" : "Novo projeto"}
-        </Button>
-      </div>
 
       {/* Formulário de Criação */}
       {showCreateForm && (
@@ -616,23 +598,26 @@ export function PortfolioManagerClient({
                 ) : (
                   <>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div>
+                      <div className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <h3 className="font-display text-base font-semibold text-[var(--ink-primary)]">
                             {project.title}
                           </h3>
                           {project.challengeTitle && (
                             <Badge variant="brand">
-                              Desafio: {project.challengeTitle}
+                              {project.challengeTitle}
                             </Badge>
                           )}
                         </div>
-                        <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-                          {project.summary}
-                        </p>
+                        {project.summary &&
+                        project.summary.trim() !== project.reflection.trim() ? (
+                          <p className="text-sm font-medium text-[var(--ink-primary)]/85">
+                            {project.summary}
+                          </p>
+                        ) : null}
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                         <button
                           type="button"
                           onClick={() => handleToggleShare(project)}
@@ -678,45 +663,47 @@ export function PortfolioManagerClient({
                       </div>
                     </div>
 
-                    <p className="mt-3 whitespace-pre-line rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 p-3 text-sm text-[var(--ink-secondary)]">
+                    <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-[var(--ink-secondary)]">
                       {project.reflection}
                     </p>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      {project.externalUrl && (
-                        <a
-                          href={project.externalUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex min-h-11 sm:min-h-0 items-center gap-1.5 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
-                        >
-                          <ExternalLink
-                            className="h-3.5 w-3.5"
-                            aria-hidden="true"
-                          />
-                          <span>Ver link externo</span>
-                        </a>
-                      )}
+                    {(project.externalUrl || project.evidenceFiles.length > 0) && (
+                      <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-[var(--border-subtle)] pt-3">
+                        {project.externalUrl && (
+                          <a
+                            href={project.externalUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex min-h-11 sm:min-h-0 items-center gap-1.5 text-xs font-semibold text-[var(--brand-primary)] hover:underline"
+                          >
+                            <ExternalLink
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                            <span>Link externo</span>
+                          </a>
+                        )}
 
-                      {project.evidenceFiles.map((evidence) => (
-                        <a
-                          key={evidence.id}
-                          href={`/api/files/${evidence.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex min-h-11 sm:min-h-8 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 px-2.5 py-1 text-xs font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface-subtle)]"
-                        >
-                          <FileText
-                            className="h-3.5 w-3.5 text-[var(--brand-primary)]"
-                            aria-hidden="true"
-                          />
-                          <span>
-                            {evidence.originalName} (
-                            {formatFileSize(evidence.sizeBytes)})
-                          </span>
-                        </a>
-                      ))}
-                    </div>
+                        {project.evidenceFiles.map((evidence) => (
+                          <a
+                            key={evidence.id}
+                            href={`/api/files/${evidence.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex min-h-11 sm:min-h-8 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 px-2.5 py-1 text-xs font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface-subtle)]"
+                          >
+                            <FileText
+                              className="h-3.5 w-3.5 text-[var(--brand-primary)]"
+                              aria-hidden="true"
+                            />
+                            <span>
+                              {evidence.originalName} (
+                              {formatFileSize(evidence.sizeBytes)})
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
               </Card>

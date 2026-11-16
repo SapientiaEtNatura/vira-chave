@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Role } from "@prisma/client";
 import { ArrowRight, CheckCircle2, Rocket, Sparkles } from "lucide-react";
 import {
   Badge,
@@ -9,7 +8,7 @@ import {
   StageBanner,
 } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -18,39 +17,73 @@ export default async function ExperimentarPage({
 }: {
   searchParams: Promise<{ area?: string }>;
 }) {
-  const user = await requireRole([Role.ESTUDANTE]);
+  const user = await requireRole(STUDENT_PORTAL_ROLES);
   const { area } = await searchParams;
   const activeArea = area?.trim() || "";
 
-  const [macroAreas, challenges] = await Promise.all([
+  const [macroAreas, latestDiscovery] = await Promise.all([
     prisma.macroArea.findMany({
       orderBy: { name: "asc" },
       select: {
         id: true,
         slug: true,
         name: true,
-      },
-    }),
-    prisma.challenge.findMany({
-      where: {
-        published: true,
-        ...(activeArea ? { macroArea: { slug: activeArea } } : {}),
-      },
-      orderBy: { title: "asc" },
-      include: {
-        macroArea: {
+        _count: {
           select: {
-            slug: true,
-            name: true,
+            challenges: { where: { published: true } },
           },
         },
-        projects: {
-          where: { studentId: user.userId },
-          select: { id: true },
-        },
       },
     }),
+    prisma.discoveryResult.findFirst({
+      where: { studentId: user.userId },
+      orderBy: { completedAt: "desc" },
+      select: { topAreas: true },
+    }),
   ]);
+
+  const recommendedSlugs = latestDiscovery?.topAreas ?? [];
+  const isRecommendedFilter = activeArea === "recomendadas";
+
+  const challenges = await prisma.challenge.findMany({
+    where: {
+      published: true,
+      ...(isRecommendedFilter
+        ? { macroArea: { slug: { in: recommendedSlugs } } }
+        : activeArea
+          ? { macroArea: { slug: activeArea } }
+          : {}),
+    },
+    orderBy: { title: "asc" },
+    include: {
+      macroArea: {
+        select: {
+          slug: true,
+          name: true,
+        },
+      },
+      projects: {
+        where: { studentId: user.userId },
+        select: { id: true },
+      },
+    },
+  });
+
+  const visibleMacroAreas = macroAreas.filter((m) => m._count.challenges > 0);
+  const totalChallengesCount = visibleMacroAreas.reduce(
+    (sum, m) => sum + m._count.challenges,
+    0,
+  );
+  const recommendedChallengesCount = visibleMacroAreas
+    .filter((m) => recommendedSlugs.includes(m.slug))
+    .reduce((sum, m) => sum + m._count.challenges, 0);
+
+  const chipBaseClass =
+    "min-h-11 inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150";
+  const chipActiveClass =
+    "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-xs";
+  const chipInactiveClass =
+    "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--ink-primary)]";
 
   return (
     <div className="space-y-6">
@@ -58,36 +91,51 @@ export default async function ExperimentarPage({
         stage="EXPERIMENTAR"
         stageLabel="Etapa 3 · Experimentar"
         title="Desafios Práticos"
-        subtitle="Coloque a mão na massa resolvendo desafios reais por macroárea. Cada entrega gera automaticamente um projeto no seu portfólio com suas reflexões e evidências."
+        subtitle="Resolva desafios reais por macroárea e transforme entregas em projetos no seu portfólio."
       />
 
       <nav
         aria-label="Filtrar desafios por macroárea"
-        className="flex flex-wrap items-center gap-2"
+        className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0"
       >
         <Link
           href="/app/experimentar"
-          className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-            !activeArea
-              ? "border-transparent bg-[var(--brand-primary)] text-white"
-              : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)]"
-          }`}
+          aria-current={!activeArea ? "page" : undefined}
+          className={`${chipBaseClass} ${!activeArea ? chipActiveClass : chipInactiveClass}`}
         >
-          Todas as áreas
+          <span>Todas as áreas</span>
+          <span className="text-xs opacity-80 tabular-nums">
+            ({totalChallengesCount})
+          </span>
         </Link>
-        {macroAreas.map((macroArea) => {
+
+        {recommendedSlugs.length > 0 && recommendedChallengesCount > 0 ? (
+          <Link
+            href="/app/experimentar?area=recomendadas"
+            aria-current={isRecommendedFilter ? "page" : undefined}
+            className={`${chipBaseClass} ${isRecommendedFilter ? chipActiveClass : chipInactiveClass}`}
+          >
+            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span>Para você</span>
+            <span className="text-xs opacity-80 tabular-nums">
+              ({recommendedChallengesCount})
+            </span>
+          </Link>
+        ) : null}
+
+        {visibleMacroAreas.map((macroArea) => {
           const isActive = activeArea === macroArea.slug;
           return (
             <Link
               key={macroArea.id}
               href={`/app/experimentar?area=${encodeURIComponent(macroArea.slug)}`}
-              className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                isActive
-                  ? "border-transparent bg-[var(--brand-primary)] text-white"
-                  : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)]"
-              }`}
+              aria-current={isActive ? "page" : undefined}
+              className={`${chipBaseClass} ${isActive ? chipActiveClass : chipInactiveClass}`}
             >
-              {macroArea.name}
+              <span>{macroArea.name}</span>
+              <span className="text-xs opacity-80 tabular-nums">
+                ({macroArea._count.challenges})
+              </span>
             </Link>
           );
         })}
@@ -117,13 +165,11 @@ export default async function ExperimentarPage({
                 as="article"
                 variant="interactive"
                 padding="sm"
-                className="flex flex-col justify-between p-5"
+                className="flex flex-col justify-between gap-4 p-5"
               >
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]">
-                      <Rocket className="h-5 w-5" aria-hidden="true" />
-                    </span>
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Badge variant="neutral">{challenge.macroArea.name}</Badge>
 
                     {isSubmitted ? (
                       <Badge variant="success">
@@ -131,33 +177,21 @@ export default async function ExperimentarPage({
                         Enviado ({submissionCount})
                       </Badge>
                     ) : (
-                      <Badge variant="warning">
-                        <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                        Aberto
-                      </Badge>
+                      <Badge variant="brand">Disponível</Badge>
                     )}
                   </div>
 
-                  <div className="mt-4">
-                    <Badge variant="neutral">{challenge.macroArea.name}</Badge>
-                  </div>
-
-                  <h2 className="mt-2.5 font-display text-lg font-bold text-[var(--ink-primary)]">
+                  <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
                     {challenge.title}
                   </h2>
-                  <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-[var(--ink-secondary)]">
-                    {challenge.description}
-                  </p>
                 </div>
 
-                <div className="mt-5 flex items-center justify-end border-t border-[var(--border-subtle)] pt-3">
+                <div className="flex justify-end">
                   <Link
                     href={`/app/experimentar/${challenge.id}`}
-                    className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-hover)]"
+                    className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-hover)]"
                   >
-                    <span>
-                      {isSubmitted ? "Ver entrega" : "Ver desafio"}
-                    </span>
+                    <span>Abrir desafio</span>
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Link>
                 </div>

@@ -1,13 +1,12 @@
-import { Role } from "@prisma/client";
 import { DiscoveryQuizClient } from "@/components/discovery/DiscoveryQuizClient";
 import { StageBanner } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function DescobrirPage() {
-  const user = await requireRole([Role.ESTUDANTE]);
+  const user = await requireRole(STUDENT_PORTAL_ROLES);
 
   const [questions, macroAreas, tracks, latestResult] = await Promise.all([
     prisma.discoveryQuestion.findMany({
@@ -79,7 +78,7 @@ export default async function DescobrirPage() {
         stage="DESCOBRIR"
         stageLabel="Etapa 1 · Descobrir"
         title="Descubra suas afinidades"
-        subtitle="Responda ao questionário para mapear seus interesses nas 6 macroáreas do Vira Chave e receber recomendações de trilhas para a sua jornada."
+        subtitle="Mapeie seus interesses nas 6 macroáreas para receber trilhas recomendadas."
       />
 
       <DiscoveryQuizClient

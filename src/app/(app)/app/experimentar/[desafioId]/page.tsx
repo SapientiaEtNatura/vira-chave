@@ -1,5 +1,4 @@
 import { notFound } from "next/navigation";
-import { Role } from "@prisma/client";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -9,7 +8,7 @@ import {
 import { ChallengeSubmitClient } from "@/components/experimentar/ChallengeSubmitClient";
 import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
+import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +17,7 @@ export default async function DesafioDetalhePage({
 }: {
   params: Promise<{ desafioId: string }>;
 }) {
-  const user = await requireRole([Role.ESTUDANTE]);
+  const user = await requireRole(STUDENT_PORTAL_ROLES);
   const { desafioId } = await params;
 
   const challenge = await prisma.challenge.findFirst({

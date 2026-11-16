@@ -59,14 +59,19 @@ export async function POST(request: Request) {
 
     const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
 
+    const now = new Date();
+
     await prisma.$transaction([
       prisma.user.update({
         where: { id: resetRecord.userId },
         data: { passwordHash },
       }),
-      prisma.passwordResetToken.update({
-        where: { id: resetRecord.id },
-        data: { usedAt: new Date() },
+      prisma.passwordResetToken.updateMany({
+        where: {
+          userId: resetRecord.userId,
+          usedAt: null,
+        },
+        data: { usedAt: now },
       }),
     ]);
 
@@ -93,15 +98,25 @@ export async function POST(request: Request) {
   if (user && user.status === "ACTIVE") {
     const rawToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = hashToken(rawToken);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 60 * 60 * 1000);
 
-    await prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt,
-      },
-    });
+    await prisma.$transaction([
+      prisma.passwordResetToken.updateMany({
+        where: {
+          userId: user.id,
+          usedAt: null,
+        },
+        data: { usedAt: now },
+      }),
+      prisma.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt,
+        },
+      }),
+    ]);
 
     if (process.env.NODE_ENV !== "production") {
       console.info(

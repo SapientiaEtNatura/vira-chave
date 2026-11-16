@@ -94,10 +94,10 @@ export function AccountControls() {
     <div className="space-y-6">
       <Card as="section">
         <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
-          Alterar senha
+          Segurança / Senha
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-          Use uma senha forte com pelo menos 8 caracteres.
+          Mínimo de 8 caracteres.
         </p>
 
         {passwordError && (
@@ -159,15 +159,12 @@ export function AccountControls() {
         className="border-[var(--status-danger-border)] bg-[var(--status-danger-bg)]/50"
       >
         <h2 className="font-display text-lg font-bold text-[var(--status-danger-ink)]">
-          Exclusão de Conta (LGPD)
+          Privacidade e exclusão
         </h2>
         <p className="mt-1 text-sm leading-relaxed text-[var(--ink-secondary)]">
-          Ao excluir sua conta, seus dados pessoais (nome, e-mail e senha),
-          resultados do questionário, progresso nas trilhas, projetos do
-          portfólio, arquivos enviados e links compartilháveis serão apagados de
-          forma permanente e irreversível. Apenas registros anonimizados de
-          consentimento são mantidos para cumprimento legal, sem identificação
-          pessoal.
+          Apaga permanentemente seus dados pessoais, progresso, projetos e
+          arquivos. Apenas registros anonimizados de consentimento são mantidos
+          por exigência legal.
         </p>
 
         {deleteError && (

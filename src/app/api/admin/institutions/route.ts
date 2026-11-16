@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
+import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { requireApiRole } from "@/lib/rbac";
 
@@ -154,6 +155,18 @@ export async function POST(request: Request) {
         },
       });
 
+      await recordAuditLog({
+        actorId: authResult.userId,
+        actorRole: authResult.role,
+        action: AUDIT_ACTIONS.INSTITUTION_CREATED,
+        targetType: "Institution",
+        targetId: institution.id,
+        metadata: {
+          institutionCode: institution.institutionCode,
+          active: institution.active,
+        },
+      });
+
       return NextResponse.json(
         {
           institution: {
@@ -231,6 +244,15 @@ export async function PATCH(request: Request) {
         },
       });
 
+      await recordAuditLog({
+        actorId: authResult.userId,
+        actorRole: authResult.role,
+        action: AUDIT_ACTIONS.INSTITUTION_UPDATED,
+        targetType: "Institution",
+        targetId: institution.id,
+        metadata: { active: institution.active },
+      });
+
       return NextResponse.json({
         institution: {
           id: institution.id,
@@ -269,6 +291,18 @@ export async function PATCH(request: Request) {
         institution: {
           select: { id: true, name: true, active: true },
         },
+      },
+    });
+
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.INSTITUTION_UPDATED,
+      targetType: "User",
+      targetId: educator.id,
+      metadata: {
+        kind: "educator",
+        status: educator.status,
       },
     });
 

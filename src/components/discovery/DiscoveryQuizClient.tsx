@@ -123,18 +123,11 @@ export function DiscoveryQuizClient({
   if (isRetaking || !result) {
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="space-y-4">
+        <Card className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-[var(--ink-primary)]">
-                Progresso do questionário: {answeredCount} de {questions.length}{" "}
-                respondidas
-              </p>
-              <p className="text-xs text-[var(--ink-muted)]">
-                Marque de 1 (Nada a ver comigo) a 5 (Tudo a ver comigo) em cada
-                afirmação.
-              </p>
-            </div>
+            <p className="text-sm font-semibold text-[var(--ink-primary)]">
+              {answeredCount} de {questions.length} respondidas
+            </p>
             {result ? (
               <Button
                 type="button"
@@ -145,9 +138,13 @@ export function DiscoveryQuizClient({
                   setError(null);
                 }}
               >
-                Voltar ao resultado anterior
+                Voltar ao resultado
               </Button>
-            ) : null}
+            ) : (
+              <span className="text-xs text-[var(--ink-muted)]">
+                1 = Nada a ver · 5 = Tudo a ver
+              </span>
+            )}
           </div>
 
           <Progress
@@ -164,20 +161,20 @@ export function DiscoveryQuizClient({
             Nenhuma pergunta de descoberta está disponível no momento.
           </Alert>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {questions.map((question, index) => {
               const selectedValue = answers[question.id];
               return (
-                <Card key={question.id} as="div" className="p-5 sm:p-6">
+                <Card key={question.id} as="div" className="p-6 sm:p-7">
                   <fieldset>
-                    <legend className="font-display text-base font-semibold text-[var(--ink-primary)]">
-                      <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--stage-discover-bg)] font-mono text-xs font-bold text-[var(--stage-discover-ink)]">
+                    <legend className="font-display text-base font-semibold leading-snug text-[var(--ink-primary)]">
+                      <span className="mr-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--stage-discover-bg)] font-mono text-xs font-bold text-[var(--stage-discover-ink)]">
                         {index + 1}
                       </span>
                       {question.prompt}
                     </legend>
 
-                    <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-5">
+                    <div className="mt-5 grid grid-cols-1 gap-2.5 sm:grid-cols-5">
                       {LIKERT_OPTIONS.map((option) => {
                         const isSelected = selectedValue === option.value;
                         return (
@@ -262,26 +259,24 @@ export function DiscoveryQuizClient({
     <div className="space-y-8">
       <Card as="section">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
+          <div className="space-y-1.5">
             <Badge variant="success">
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Questionário concluído em {formattedDate}</span>
+              <span>Concluído em {formattedDate}</span>
             </Badge>
-            <h2 className="mt-3 font-display text-xl font-bold text-[var(--ink-primary)]">
+            <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
               Seu Mapa de Afinidades
             </h2>
-            <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-              Pontuação normalizada de 0 a 100 com base nas suas respostas.
-            </p>
           </div>
 
           <Button
             type="button"
             variant="outline"
+            size="sm"
             onClick={handleStartRetake}
             leftIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
           >
-            Refazer questionário
+            Refazer
           </Button>
         </div>
 
@@ -297,19 +292,14 @@ export function DiscoveryQuizClient({
             {topAreaDetails.map((area, index) => (
               <div
                 key={area.slug}
-                className="rounded-xl border border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)]/45 p-4"
+                className="flex items-center justify-between gap-3 rounded-xl border border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)]/45 px-4 py-3"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold text-[var(--ink-primary)]">
-                    {index + 1}. {area.name}
-                  </span>
-                  <span className="rounded-full bg-[var(--stage-discover-ink)] px-2.5 py-0.5 font-mono text-xs font-bold text-white tabular-nums">
-                    {result.scores[area.slug] ?? 0}%
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-[var(--ink-secondary)]">
-                  {area.description}
-                </p>
+                <span className="text-sm font-bold text-[var(--ink-primary)]">
+                  {index + 1}. {area.name}
+                </span>
+                <span className="rounded-full bg-[var(--stage-discover-ink)] px-2.5 py-0.5 font-mono text-xs font-bold text-white tabular-nums">
+                  {result.scores[area.slug] ?? 0}%
+                </span>
               </div>
             ))}
           </div>
@@ -318,28 +308,23 @@ export function DiscoveryQuizClient({
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
-              Trilhas recomendadas para você no Aprender
-            </h2>
-            <p className="text-sm text-[var(--ink-muted)]">
-              Cursos e trilhas alinhados às suas maiores afinidades.
-            </p>
-          </div>
+          <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
+            Trilhas recomendadas para você
+          </h2>
           <ButtonLink
             href="/app/aprender"
             variant="ghost"
             size="sm"
             rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
           >
-            Explorar todas as trilhas
+            Ver todas
           </ButtonLink>
         </div>
 
         {recommendedTracks.length === 0 ? (
           <EmptyState
             icon={<BookOpen className="h-5 w-5" />}
-            title="Nenhuma trilha publicada encontrada para suas áreas de destaque no momento."
+            title="Nenhuma trilha publicada para suas áreas de destaque no momento."
           />
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -349,31 +334,29 @@ export function DiscoveryQuizClient({
                 as="article"
                 variant="interactive"
                 padding="sm"
-                className="flex flex-col justify-between p-5"
+                className="flex flex-col justify-between gap-4 p-5"
               >
-                <div>
-                  <Badge variant="neutral">{track.macroAreaName}</Badge>
-                  <h3 className="mt-3 font-display text-base font-bold text-[var(--ink-primary)]">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <Badge variant="neutral">{track.macroAreaName}</Badge>
+                    <span className="font-mono text-xs font-medium text-[var(--ink-muted)]">
+                      {track.courseCount}{" "}
+                      {track.courseCount === 1 ? "curso" : "cursos"}
+                    </span>
+                  </div>
+                  <h3 className="font-display text-base font-bold text-[var(--ink-primary)]">
                     {track.title}
                   </h3>
-                  <p className="mt-1.5 text-sm text-[var(--ink-secondary)]">
-                    {track.description}
-                  </p>
                 </div>
 
-                <div className="mt-4 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
-                  <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ink-muted)]">
-                    <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
-                    {track.courseCount}{" "}
-                    {track.courseCount === 1 ? "curso" : "cursos"}
-                  </span>
+                <div>
                   <ButtonLink
                     href={`/app/aprender/${track.id}`}
                     variant="secondary"
                     size="sm"
                     rightIcon={<ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />}
                   >
-                    Ver trilha
+                    Abrir trilha
                   </ButtonLink>
                 </div>
               </Card>

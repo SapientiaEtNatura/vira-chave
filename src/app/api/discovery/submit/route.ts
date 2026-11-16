@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { Role } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { calculateAffinityScores } from "@/lib/discovery/scoring";
-import { requireApiRole } from "@/lib/rbac";
+import { requireApiRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 const submitDiscoverySchema = z.object({
   answers: z.record(
@@ -17,7 +16,7 @@ const submitDiscoverySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const authResult = await requireApiRole([Role.ESTUDANTE]);
+  const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
