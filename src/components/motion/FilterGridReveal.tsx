@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { gsap, MOTION_EASE, useGSAP } from "@/lib/gsap";
-import { cn } from "@/lib/cn";
 
 interface FilterGridRevealProps {
   filterKey: string;
@@ -62,8 +61,10 @@ export function FilterGridReveal({
   );
 
   return (
-    <div ref={gridRef} className={cn("min-h-[45dvh]", className)}>
-      {children}
+    <div className="min-h-[45dvh]">
+      <div ref={gridRef} className={className}>
+        {children}
+      </div>
     </div>
   );
 }
