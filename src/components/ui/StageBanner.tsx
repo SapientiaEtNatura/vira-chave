@@ -56,7 +56,7 @@ export function StageBanner({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-2xl border px-6 pt-6 pb-9 sm:px-7 sm:pt-7 sm:pb-11",
+        "relative overflow-hidden rounded-t-2xl border border-b-0 px-6 pt-6 pb-14 sm:px-7 sm:pt-7 sm:pb-16",
         styles.container,
         className,
       )}
