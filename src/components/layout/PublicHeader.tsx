@@ -142,10 +142,10 @@ export function PublicHeader() {
     <header className="sticky top-0 z-30 w-full">
       <div
         className={cn(
-          "mx-auto bg-[var(--bg-surface)]/95 backdrop-blur-sm transition-[max-width,transform,border-radius,box-shadow,border-color,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          "mx-auto transition-[max-width,transform,border-radius,box-shadow,border-color,background-color,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
           scrolled
-            ? "max-w-5xl translate-y-2.5 rounded-full border border-[var(--border-subtle)] px-4 shadow-[0_10px_28px_-8px_rgba(16,24,40,0.12)] sm:px-5"
-            : "max-w-full translate-y-0 rounded-none border-b border-[var(--border-subtle)] px-0 shadow-none",
+            ? "max-w-5xl translate-y-2.5 rounded-full border border-[var(--brand-primary-border)] bg-[var(--brand-primary-soft)] px-4 shadow-[0_10px_28px_-8px_rgba(16,24,40,0.12)] sm:px-5"
+            : "max-w-full translate-y-0 rounded-none border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-0 shadow-none",
         )}
       >
         <div
@@ -171,8 +171,12 @@ export function PublicHeader() {
                   className={cn(
                     "inline-flex min-h-10 items-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 motion-reduce:transition-none",
                     active
-                      ? "bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary)]"
-                      : "text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]",
+                      ? scrolled
+                        ? "bg-[var(--bg-surface)] font-semibold text-[var(--brand-primary)] shadow-2xs"
+                        : "bg-[var(--brand-primary-soft)] font-semibold text-[var(--brand-primary)]"
+                      : scrolled
+                        ? "text-[var(--brand-primary-deep)] hover:bg-[var(--bg-surface)]/65 hover:text-[var(--ink-primary)]"
+                        : "text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]",
                   )}
                 >
                   {item.label}

@@ -104,7 +104,7 @@ export default async function AprenderPage({
 
       <nav
         aria-label="Filtrar trilhas por macroárea"
-        className="-mx-1 flex flex-nowrap items-center gap-2 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-wrap md:overflow-visible md:px-0 md:pb-0"
+        className="flex flex-wrap items-center gap-2"
       >
         <Link
           href="/app/aprender"

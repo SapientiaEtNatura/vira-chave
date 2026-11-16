@@ -1,34 +1,31 @@
 import type { ReactNode } from "react";
+import { BannerMountains } from "@/components/motion/BannerMountains";
 import { cn } from "@/lib/cn";
 import { StagePill, type StageKey } from "./StagePill";
 
 const STAGE_BANNER_STYLES: Record<
   StageKey,
-  { container: string; subtitle: string; ring: string }
+  { container: string; subtitle: string }
 > = {
   DESCOBRIR: {
     container:
       "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)]/55",
     subtitle: "text-[var(--ink-secondary)]",
-    ring: "border-[var(--stage-discover-border)]",
   },
   APRENDER: {
     container:
       "border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)]/55",
     subtitle: "text-[var(--ink-secondary)]",
-    ring: "border-[var(--stage-learn-border)]",
   },
   EXPERIMENTAR: {
     container:
       "border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)]/55",
     subtitle: "text-[var(--ink-secondary)]",
-    ring: "border-[var(--stage-experiment-border)]",
   },
   CONSTRUIR: {
     container:
       "border-[var(--stage-build-border)] bg-[var(--stage-build-bg)]/55",
     subtitle: "text-[var(--ink-secondary)]",
-    ring: "border-[var(--stage-build-border)]",
   },
 };
 
@@ -59,18 +56,12 @@ export function StageBanner({
   return (
     <section
       className={cn(
-        "relative overflow-hidden rounded-2xl border p-6 sm:p-7",
+        "relative overflow-hidden rounded-2xl border px-6 pt-6 pb-9 sm:px-7 sm:pt-7 sm:pb-11",
         styles.container,
         className,
       )}
     >
-      <div
-        aria-hidden="true"
-        className={cn(
-          "pointer-events-none absolute -right-12 -top-12 h-56 w-56 rounded-full border opacity-60",
-          styles.ring,
-        )}
-      />
+      <BannerMountains stage={stage} />
 
       <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2.5">
