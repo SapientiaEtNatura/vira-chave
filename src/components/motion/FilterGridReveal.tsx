@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { gsap, MOTION_EASE, useGSAP } from "@/lib/gsap";
+import { cn } from "@/lib/cn";
 
 interface FilterGridRevealProps {
   filterKey: string;
@@ -16,6 +17,26 @@ export function FilterGridReveal({
   className,
 }: FilterGridRevealProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const prevKeyRef = useRef(filterKey);
+
+  useEffect(() => {
+    if (prevKeyRef.current === filterKey) return;
+    prevKeyRef.current = filterKey;
+
+    const el = gridRef.current;
+    if (!el) return;
+
+    const rect = el.getBoundingClientRect();
+    if (rect.top < 80) {
+      const prefersReduced = window.matchMedia(
+        "(prefers-reduced-motion: reduce)",
+      ).matches;
+      el.scrollIntoView({
+        behavior: prefersReduced ? "auto" : "smooth",
+        block: "nearest",
+      });
+    }
+  }, [filterKey]);
 
   useGSAP(
     () => {
@@ -41,7 +62,7 @@ export function FilterGridReveal({
   );
 
   return (
-    <div ref={gridRef} className={className}>
+    <div ref={gridRef} className={cn("min-h-[45dvh]", className)}>
       {children}
     </div>
   );
