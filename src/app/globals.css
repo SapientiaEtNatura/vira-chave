@@ -91,12 +91,22 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    scrollbar-color: var(--border-strong) var(--bg-canvas);
   }
 
   body {
     background-color: var(--bg-canvas);
     color: var(--ink-primary);
     font-family: var(--font-sans);
+  }
+
+  ::selection {
+    background-color: var(--brand-primary-soft);
+    color: var(--brand-primary-deep);
+  }
+
+  a {
+    text-underline-offset: 0.2em;
   }
 
   h1,

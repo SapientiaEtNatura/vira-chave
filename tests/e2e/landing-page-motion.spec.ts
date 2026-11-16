@@ -24,7 +24,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
 
       const journeyHeading = page.getByRole("heading", {
         level: 2,
-        name: /Quatro passos no seu ritmo/i,
+        name: /Um percurso em quatro fases, no seu ritmo/i,
       });
       const journeySection = page.locator("#como-funciona");
       await journeySection.scrollIntoViewIfNeeded();
@@ -33,7 +33,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
 
       const practiceHeading = page.getByRole("heading", {
         level: 2,
-        name: /O que você constrói aqui dentro/i,
+        name: /O que você produz ao longo do percurso/i,
       });
       const practiceSection = page.locator("#na-pratica");
       await practiceSection.scrollIntoViewIfNeeded();
@@ -47,7 +47,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
 
       const audienceHeading = page.getByRole("heading", {
         level: 2,
-        name: /Para quem estuda e para quem acompanha/i,
+        name: /Feito para o estudante, preparado para a escola/i,
       });
       const audienceSection = page.locator("#para-quem");
       await audienceSection.scrollIntoViewIfNeeded();
@@ -64,7 +64,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
 
       const finalHeading = page.getByRole("heading", {
         level: 2,
-        name: /Pronto para testar na prática\?/i,
+        name: /Pronto para começar seu percurso\?/i,
       });
       const finalCta = page.getByRole("link", {
         name: /Criar minha conta/i,

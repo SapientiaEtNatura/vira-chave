@@ -30,7 +30,7 @@ const stages: Array<{
   description: string;
   outcome: string;
   Icon: typeof Compass;
-  barClass: string;
+  nodeClasses: string;
   iconClasses: string;
   hoverClasses: string;
   previewBadge?: string;
@@ -42,14 +42,14 @@ const stages: Array<{
     number: "1",
     title: "Descobrir",
     description:
-      "Responda ao questionário inicial e veja quais áreas despertam seu interesse.",
-    outcome: "Você sai com: mapa de afinidades",
+      "Responda ao questionário inicial e mapeie quais áreas despertam sua curiosidade.",
+    outcome: "Entrega: mapa de afinidades",
     Icon: Compass,
-    barClass: "bg-[var(--stage-discover-ink)]",
+    nodeClasses:
+      "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
     iconClasses:
       "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
-    hoverClasses:
-      "hover:scale-[1.03] hover:bg-[var(--stage-discover-bg)]/65 hover:border-[var(--stage-discover-border)]",
+    hoverClasses: "hover:bg-[var(--stage-discover-bg)]/45",
     previewDone: true,
   },
   {
@@ -57,14 +57,14 @@ const stages: Array<{
     number: "2",
     title: "Aprender",
     description:
-      "Estude em trilhas curtas e gratuitas ligadas às suas áreas de afinidade.",
-    outcome: "Você sai com: trilhas concluídas",
+      "Estude em trilhas curtas e gratuitas escolhidas a partir dos seus interesses.",
+    outcome: "Entrega: trilhas concluídas",
     Icon: BookOpen,
-    barClass: "bg-[var(--stage-learn-ink)]",
+    nodeClasses:
+      "border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
     iconClasses:
       "border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
-    hoverClasses:
-      "hover:scale-[1.03] hover:bg-[var(--stage-learn-bg)]/65 hover:border-[var(--stage-learn-border)]",
+    hoverClasses: "hover:bg-[var(--stage-learn-bg)]/45",
     previewDone: true,
   },
   {
@@ -72,14 +72,14 @@ const stages: Array<{
     number: "3",
     title: "Experimentar",
     description:
-      "Resolva desafios práticos inspirados em problemas reais do dia a dia.",
-    outcome: "Você sai com: entregas práticas",
+      "Resolva desafios práticos baseados em situações reais de trabalho e estudo.",
+    outcome: "Entrega: projetos práticos",
     Icon: FlaskConical,
-    barClass: "bg-[var(--stage-experiment-ink)]",
+    nodeClasses:
+      "border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
     iconClasses:
       "border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
-    hoverClasses:
-      "hover:scale-[1.03] hover:bg-[var(--stage-experiment-bg)]/65 hover:border-[var(--stage-experiment-border)]",
+    hoverClasses: "hover:bg-[var(--stage-experiment-bg)]/45",
     previewBadge: "Em andamento",
   },
   {
@@ -87,14 +87,14 @@ const stages: Array<{
     number: "4",
     title: "Construir",
     description:
-      "Reúna seus projetos e reflexões em um portfólio com link compartilhável.",
-    outcome: "Você sai com: portfólio próprio",
+      "Organize suas entregas e reflexões em um portfólio com link compartilhável.",
+    outcome: "Entrega: portfólio próprio",
     Icon: Hammer,
-    barClass: "bg-[var(--stage-build-ink)]",
+    nodeClasses:
+      "border-[var(--stage-build-border)] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
     iconClasses:
       "border-[var(--stage-build-border)] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
-    hoverClasses:
-      "hover:scale-[1.03] hover:bg-[var(--stage-build-bg)]/65 hover:border-[var(--stage-build-border)]",
+    hoverClasses: "hover:bg-[var(--stage-build-bg)]/45",
     previewLocked: true,
   },
 ];
@@ -125,18 +125,14 @@ export default function LandingPage() {
         <div className="mx-auto max-w-6xl px-4 py-14 sm:py-20 lg:py-24">
           <div className="grid items-center gap-10 lg:grid-cols-12 lg:gap-12">
             <div className="lg:col-span-7">
-              <p className="inline-block rounded-md bg-[var(--brand-accent-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-accent-ink)]">
-                Para estudantes do Ensino Médio
-              </p>
-
-              <h1 className="mt-5 font-display text-4xl font-bold tracking-tight text-[var(--ink-primary)] sm:text-5xl sm:leading-[1.1]">
+              <h1 className="font-display text-4xl font-bold tracking-tight text-[var(--ink-primary)] sm:text-5xl sm:leading-[1.08]">
                 Teste caminhos antes de escolher uma profissão.
               </h1>
 
-              <p className="mt-5 max-w-[54ch] text-base leading-relaxed text-[var(--ink-secondary)] sm:text-lg">
-                Responda ao mapa de afinidades, faça trilhas curtas gratuitas,
-                resolva desafios reais e guarde o que produziu em um portfólio
-                seu.
+              <p className="mt-5 max-w-[56ch] text-base leading-relaxed text-[var(--ink-secondary)] sm:text-lg">
+                Descubra suas áreas de afinidade, estude em trilhas curtas
+                gratuitas, resolva desafios reais e monte um portfólio com o que
+                você já sabe fazer.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -153,12 +149,13 @@ export default function LandingPage() {
                   variant="outline"
                   size="lg"
                 >
-                  Ver as 4 etapas
+                  Ver o percurso
                 </ButtonLink>
               </div>
 
               <p className="mt-5 text-xs font-medium text-[var(--ink-muted)]">
-                100% gratuito para estudantes e escolas públicas. Sem anúncios.
+                Gratuito para estudantes do Ensino Médio e escolas públicas. Sem
+                anúncios.
               </p>
             </div>
 
@@ -178,54 +175,58 @@ export default function LandingPage() {
           <div className="max-w-2xl space-y-2.5">
             <SplitTextReveal
               id="jornada-heading"
-              text="Quatro passos no seu ritmo"
+              text="Um percurso em quatro fases, no seu ritmo"
               className="font-display text-3xl font-bold text-[var(--ink-primary)] sm:text-4xl"
             />
             <p className="max-w-[56ch] text-sm leading-relaxed text-[var(--ink-muted)] sm:text-base">
-              Você não precisa chegar com tudo decidido. Comece pelo que desperta
-              curiosidade e avance conforme testa cada área.
+              Você não precisa chegar com tudo decidido. Cada etapa prepara a
+              seguinte, da curiosidade inicial até um projeto publicado.
             </p>
           </div>
 
-          <StaggerGroup className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {stages.map((stage) => {
-              const { Icon } = stage;
+          <div className="relative mt-12">
+            <div
+              aria-hidden="true"
+              className="absolute left-8 right-8 top-6 hidden h-px bg-[var(--border-subtle)] lg:block"
+            />
+            <StaggerGroup className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {stages.map((stage) => {
+                const { Icon } = stage;
 
-              return (
-                <div key={stage.key} data-motion-item className="flex">
-                  <article
-                    className={`flex w-full flex-col justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-5 transition-all duration-300 ease-out ${stage.hoverClasses}`}
-                  >
-                    <div>
-                      <div className={`mb-5 h-1 w-12 rounded-full ${stage.barClass}`} />
+                return (
+                  <div key={stage.key} data-motion-item>
+                    <article
+                      className={`flex h-full flex-col justify-between rounded-2xl p-4 transition-colors duration-200 ${stage.hoverClasses}`}
+                    >
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${stage.nodeClasses}`}
+                          >
+                            <Icon className="h-5 w-5" aria-hidden="true" />
+                          </span>
+                          <span className="tabular-nums text-xs font-semibold text-[var(--ink-muted)]">
+                            Passo {stage.number}
+                          </span>
+                        </div>
 
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={`flex h-10 w-10 items-center justify-center rounded-xl border ${stage.iconClasses}`}
-                        >
-                          <Icon className="h-5 w-5" aria-hidden="true" />
-                        </span>
-                        <span className="font-display text-2xl font-bold text-[var(--border-strong)]">
-                          {stage.number}
-                        </span>
+                        <h3 className="mt-5 font-display text-xl font-bold text-[var(--ink-primary)]">
+                          {stage.title}
+                        </h3>
+                        <p className="mt-2 text-sm leading-relaxed text-[var(--ink-secondary)]">
+                          {stage.description}
+                        </p>
                       </div>
 
-                      <h3 className="mt-5 font-display text-lg font-bold text-[var(--ink-primary)]">
-                        {stage.title}
-                      </h3>
-                      <p className="mt-2 text-sm leading-relaxed text-[var(--ink-secondary)]">
-                        {stage.description}
+                      <p className="mt-5 pt-3 text-xs font-semibold text-[var(--brand-primary)]">
+                        {stage.outcome}
                       </p>
-                    </div>
-
-                    <p className="mt-5 border-t border-[var(--border-subtle)] pt-3 text-xs font-medium text-[var(--ink-muted)]">
-                      {stage.outcome}
-                    </p>
-                  </article>
-                </div>
-              );
-            })}
-          </StaggerGroup>
+                    </article>
+                  </div>
+                );
+              })}
+            </StaggerGroup>
+          </div>
         </div>
       </section>
 
@@ -238,12 +239,12 @@ export default function LandingPage() {
           <div className="max-w-2xl space-y-2.5">
             <SplitTextReveal
               id="na-pratica-heading"
-              text="O que você constrói aqui dentro"
+              text="O que você produz ao longo do percurso"
               className="font-display text-3xl font-bold text-[var(--ink-primary)] sm:text-4xl"
             />
             <p className="max-w-[56ch] text-sm leading-relaxed text-[var(--ink-muted)] sm:text-base">
-              Em vez de só ler sobre carreiras, você visualiza seus interesses e
-              monta um portfólio com entregas reais.
+              Em vez de ficar só na teoria, você visualiza suas afinidades e
+              transforma desafios em evidências reais no seu portfólio.
             </p>
           </div>
 
@@ -307,7 +308,7 @@ export default function LandingPage() {
           <div className="max-w-2xl space-y-2.5">
             <SplitTextReveal
               id="para-quem-heading"
-              text="Para quem estuda e para quem acompanha"
+              text="Feito para o estudante, preparado para a escola"
               className="font-display text-3xl font-bold text-[var(--ink-primary)] sm:text-4xl"
             />
           </div>
@@ -348,7 +349,7 @@ export default function LandingPage() {
 
             <div
               data-motion-item
-              className="flex flex-col justify-between gap-6 rounded-2xl border border-[var(--border-subtle)] border-l-4 border-l-[var(--brand-primary)] bg-[var(--bg-surface-subtle)] p-6 md:col-span-6"
+              className="flex flex-col justify-between gap-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-6 md:col-span-6"
             >
               <div>
                 <h3 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
@@ -415,7 +416,7 @@ export default function LandingPage() {
       <section className="bg-[var(--brand-primary-deep)] px-4 py-16 text-center text-white sm:py-20">
         <div className="mx-auto max-w-2xl space-y-5">
           <SplitTextReveal
-            text="Pronto para testar na prática?"
+            text="Pronto para começar seu percurso?"
             className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl"
           />
           <p className="text-base text-[var(--brand-primary-ink-on-dark)]">

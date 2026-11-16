@@ -81,14 +81,9 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
         className="border-[var(--border-strong)] shadow-sm lg:rotate-1"
       >
         <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
-          <div>
-            <p className="text-xs font-semibold text-[var(--brand-primary)]">
-              Caderno de avanço
-            </p>
-            <h2 className="mt-1 font-display text-xl font-bold text-[var(--ink-primary)]">
-              Seu caminho ganha forma a cada passo.
-            </h2>
-          </div>
+          <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
+            Seu caminho ganha forma a cada passo.
+          </h2>
           <Badge variant="success" className="shrink-0 whitespace-nowrap">
             4 etapas
           </Badge>
