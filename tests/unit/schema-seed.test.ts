@@ -34,9 +34,10 @@ describe("Schema & Seed Integrity", () => {
       track: { upsert: vi.fn().mockResolvedValue({}) },
       courseItem: { upsert: vi.fn().mockResolvedValue({}) },
       challenge: { upsert: vi.fn().mockResolvedValue({}) },
-      institution: { upsert: vi.fn().mockResolvedValue({}) },
-      user: { upsert: vi.fn().mockResolvedValue({}) },
-      classroom: { upsert: vi.fn().mockResolvedValue({}) },
+      institution: { upsert: vi.fn().mockResolvedValue({ id: "inst-1" }) },
+      user: { upsert: vi.fn().mockResolvedValue({ id: "user-1" }) },
+      classroom: { upsert: vi.fn().mockResolvedValue({ id: "class-1" }) },
+      classroomEnrollment: { upsert: vi.fn().mockResolvedValue({}) },
     };
 
     await seedDatabase(mockPrisma as never);
