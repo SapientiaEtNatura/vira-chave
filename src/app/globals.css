@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 :root {
+  /* Fontes */
+  --font-outfit: "Outfit";
+  --font-jakarta: "Plus Jakarta Sans";
+  --font-jetbrains: "JetBrains Mono";
+
   /* Superfícies e bordas */
   --bg-canvas: #F6F8FB;
   --bg-surface: #FFFFFF;
