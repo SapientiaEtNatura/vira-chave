@@ -5,26 +5,26 @@ import { StagePill, type StageKey } from "./StagePill";
 
 const STAGE_BANNER_STYLES: Record<
   StageKey,
-  { container: string; subtitle: string }
+  { bg: string; border: string; subtitle: string }
 > = {
   DESCOBRIR: {
-    container:
-      "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)]/55",
+    bg: "bg-[var(--stage-discover-bg)]/55",
+    border: "border-[var(--stage-discover-border)]",
     subtitle: "text-[var(--ink-secondary)]",
   },
   APRENDER: {
-    container:
-      "border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)]/55",
+    bg: "bg-[var(--stage-learn-bg)]/55",
+    border: "border-[var(--stage-learn-border)]",
     subtitle: "text-[var(--ink-secondary)]",
   },
   EXPERIMENTAR: {
-    container:
-      "border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)]/55",
+    bg: "bg-[var(--stage-experiment-bg)]/55",
+    border: "border-[var(--stage-experiment-border)]",
     subtitle: "text-[var(--ink-secondary)]",
   },
   CONSTRUIR: {
-    container:
-      "border-[var(--stage-build-border)] bg-[var(--stage-build-bg)]/55",
+    bg: "bg-[var(--stage-build-bg)]/55",
+    border: "border-[var(--stage-build-border)]",
     subtitle: "text-[var(--ink-secondary)]",
   },
 };
@@ -56,11 +56,18 @@ export function StageBanner({
   return (
     <section
       className={cn(
-        "relative rounded-t-2xl border border-b-0 px-6 pt-6 pb-14 sm:px-7 sm:pt-7 sm:pb-16",
-        styles.container,
+        "relative overflow-hidden rounded-t-2xl px-6 pt-6 pb-14 sm:px-7 sm:pt-7 sm:pb-16",
+        styles.bg,
         className,
       )}
     >
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-0 rounded-t-2xl border border-b-0 [mask-image:linear-gradient(to_bottom,black_55%,transparent_95%)]",
+          styles.border,
+        )}
+      />
       <BannerMountains stage={stage} />
 
       <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
