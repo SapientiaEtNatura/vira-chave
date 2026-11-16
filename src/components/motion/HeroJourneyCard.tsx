@@ -78,12 +78,12 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
         variant="default"
         padding="lg"
         aria-label="Prévia visual da jornada em 4 etapas"
-        className="shadow-md lg:rotate-1"
+        className="border-[var(--border-strong)] shadow-sm lg:rotate-1"
       >
-        <div className="flex items-start justify-between gap-3 pb-4">
+        <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
           <div>
-            <p className="font-mono text-xs font-semibold uppercase tracking-wider text-[var(--ink-muted)]">
-              MINHA JORNADA
+            <p className="text-xs font-semibold text-[var(--brand-primary)]">
+              Caderno de avanço
             </p>
             <h2 className="mt-1 font-display text-xl font-bold text-[var(--ink-primary)]">
               Seu caminho ganha forma a cada passo.
@@ -94,7 +94,7 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
           </Badge>
         </div>
 
-        <ol className="relative mt-4 space-y-4">
+        <ol className="relative mt-5 space-y-4">
           {stages.map((stage, index) => {
             const Icon = STAGE_ICONS[stage.key];
             const isLast = index === stages.length - 1;
@@ -120,8 +120,8 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
                     <Icon className="h-4 w-4" aria-hidden="true" />
                   </span>
                   <div>
-                    <span className="block font-mono text-xs font-medium uppercase tracking-wider text-[var(--ink-muted)]">
-                      ETAPA {index + 1}
+                    <span className="block text-xs font-medium text-[var(--ink-muted)]">
+                      Etapa {index + 1}
                     </span>
                     <span className="font-display text-sm font-bold text-[var(--ink-primary)]">
                       {stage.title}

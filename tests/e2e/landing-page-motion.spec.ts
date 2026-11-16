@@ -10,11 +10,11 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       await expect(
         page.getByRole("heading", {
           level: 1,
-          name: /Descubra possibilidades\. Desenvolva habilidades\./i,
+          name: /Teste caminhos antes de escolher uma profissão\./i,
         }),
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: /Quero começar/i }),
+        page.getByRole("link", { name: /Começar gratuitamente/i }),
       ).toBeVisible();
 
       const firstJourneyLine = page.locator("[data-journey-line]").first();
@@ -24,7 +24,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
 
       const journeyHeading = page.getByRole("heading", {
         level: 2,
-        name: /Um passo de cada vez\. Um mundo de possibilidades\./i,
+        name: /Quatro passos no seu ritmo/i,
       });
       const journeySection = page.locator("#como-funciona");
       await journeySection.scrollIntoViewIfNeeded();
@@ -33,41 +33,41 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
 
       const practiceHeading = page.getByRole("heading", {
         level: 2,
-        name: /Do interesse ao portfólio real\./i,
+        name: /O que você constrói aqui dentro/i,
       });
       const practiceSection = page.locator("#na-pratica");
       await practiceSection.scrollIntoViewIfNeeded();
       await expect(practiceHeading).toBeVisible();
       await expect(practiceHeading).toHaveCSS("opacity", "1");
-      await expect(page.getByText("Mapa de Afinidades")).toBeVisible();
-      await expect(page.getByText("Portfólio Compartilhável")).toBeVisible();
+      await expect(page.getByText("Mapa de afinidades")).toBeVisible();
+      await expect(page.getByText("Portfólio público do estudante")).toBeVisible();
       await expect(
         practiceSection.locator("[data-motion-item]").first(),
       ).toHaveCSS("opacity", "1");
 
       const audienceHeading = page.getByRole("heading", {
         level: 2,
-        name: /Feito para estudantes\. Pensado para educadores\./i,
+        name: /Para quem estuda e para quem acompanha/i,
       });
       const audienceSection = page.locator("#para-quem");
       await audienceSection.scrollIntoViewIfNeeded();
       await expect(audienceHeading).toBeVisible();
       await expect(audienceHeading).toHaveCSS("opacity", "1");
       await expect(
-        page.getByRole("link", { name: /Começar como estudante/i }),
+        page.getByRole("link", { name: /Criar conta de estudante/i }),
       ).toBeVisible();
       await expect(
         page.getByRole("link", { name: /Criar conta de educador/i }),
       ).toBeVisible();
 
-      await expect(page.getByText(/dados de adolescentes/i)).toBeVisible();
+      await expect(page.getByText(/dados de jovens/i)).toBeVisible();
 
       const finalHeading = page.getByRole("heading", {
         level: 2,
-        name: /Pronto para virar a chave\?/i,
+        name: /Pronto para testar na prática\?/i,
       });
       const finalCta = page.getByRole("link", {
-        name: /Criar minha conta grátis/i,
+        name: /Criar minha conta/i,
       });
       await finalCta.scrollIntoViewIfNeeded();
       await expect(finalHeading).toBeVisible();

@@ -117,3 +117,9 @@
     scroll-behavior: auto !important;
   }
 }
+
+.bg-notebook-dots {
+  background-color: var(--bg-canvas);
+  background-image: radial-gradient(var(--border-strong) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
