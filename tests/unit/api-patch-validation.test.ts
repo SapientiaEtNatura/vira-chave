@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("@/lib/rbac", () => ({
   requireApiRole: mocks.requireApiRole,
+  EDUCATOR_PORTAL_ROLES: ["EDUCADOR", "ADMIN"],
+  STUDENT_PORTAL_ROLES: ["ESTUDANTE", "ADMIN"],
 }));
 
 vi.mock("@/lib/portfolio/portfolio-service", async () => {
