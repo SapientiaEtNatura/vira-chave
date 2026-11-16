@@ -1,10 +1,12 @@
 .superpowers/
 .agents/
 docs/superpowers/
-infra/
 node_modules/
 .next/
 .env
+**/.env
+.htpasswd
+**/.htpasswd
 uploads/
 playwright-report/
 test-results/
