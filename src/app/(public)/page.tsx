@@ -184,14 +184,11 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="relative mt-12">
-            <div
-              aria-hidden="true"
-              className="absolute left-8 right-8 top-6 hidden h-px bg-[var(--border-subtle)] lg:block"
-            />
-            <StaggerGroup className="relative grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {stages.map((stage) => {
+          <div className="mt-12">
+            <StaggerGroup className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {stages.map((stage, index) => {
                 const { Icon } = stage;
+                const isLast = index === stages.length - 1;
 
                 return (
                   <div key={stage.key} data-motion-item>
@@ -201,13 +198,19 @@ export default function LandingPage() {
                       <div>
                         <div className="flex items-center gap-3">
                           <span
-                            className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${stage.nodeClasses}`}
+                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${stage.nodeClasses}`}
                           >
                             <Icon className="h-5 w-5" aria-hidden="true" />
                           </span>
-                          <span className="tabular-nums text-xs font-semibold text-[var(--ink-muted)]">
+                          <span className="tabular-nums shrink-0 text-xs font-semibold text-[var(--ink-muted)]">
                             Passo {stage.number}
                           </span>
+                          {!isLast ? (
+                            <span
+                              aria-hidden="true"
+                              className="hidden h-px flex-1 bg-[var(--border-strong)] lg:block"
+                            />
+                          ) : null}
                         </div>
 
                         <h3 className="mt-5 font-display text-xl font-bold text-[var(--ink-primary)]">
