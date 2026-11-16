@@ -1,5 +1,6 @@
 export { AffinityPreviewCard } from "./AffinityPreviewCard";
 export { BannerMountains } from "./BannerMountains";
+export { FilterGridReveal } from "./FilterGridReveal";
 export { HeroJourneyCard, type HeroJourneyStage } from "./HeroJourneyCard";
 export { ParallaxOrb } from "./ParallaxOrb";
 export { SplitTextReveal } from "./SplitTextReveal";

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Rocket, Sparkles } from "lucide-react";
+import { FilterGridReveal } from "@/components/motion/FilterGridReveal";
 import {
   Badge,
   ButtonLink,
@@ -102,6 +103,7 @@ export default async function ExperimentarPage({
       >
         <Link
           href="/app/experimentar"
+          scroll={false}
           aria-current={!activeArea ? "page" : undefined}
           className={`${chipBaseClass} ${!activeArea ? chipActiveClass : chipInactiveClass}`}
         >
@@ -114,6 +116,7 @@ export default async function ExperimentarPage({
         {recommendedSlugs.length > 0 && recommendedChallengesCount > 0 ? (
           <Link
             href="/app/experimentar?area=recomendadas"
+            scroll={false}
             aria-current={isRecommendedFilter ? "page" : undefined}
             className={`${chipBaseClass} ${isRecommendedFilter ? chipActiveClass : chipInactiveClass}`}
           >
@@ -131,6 +134,7 @@ export default async function ExperimentarPage({
             <Link
               key={macroArea.id}
               href={`/app/experimentar?area=${encodeURIComponent(macroArea.slug)}`}
+              scroll={false}
               aria-current={isActive ? "page" : undefined}
               className={`${chipBaseClass} ${isActive ? chipActiveClass : chipInactiveClass}`}
             >
@@ -156,19 +160,22 @@ export default async function ExperimentarPage({
           }
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <FilterGridReveal
+          filterKey={activeArea ?? "all"}
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {challenges.map((challenge) => {
             const submissionCount = challenge.projects.length;
             const isSubmitted = submissionCount > 0;
 
             return (
-              <Card
-                key={challenge.id}
-                as="article"
-                variant="interactive"
-                padding="sm"
-                className="flex flex-col justify-between gap-4 p-5"
-              >
+              <div key={challenge.id} data-filter-card className="flex">
+                <Card
+                  as="article"
+                  variant="interactive"
+                  padding="sm"
+                  className="flex w-full flex-col justify-between gap-4 p-5"
+                >
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Badge variant="neutral">{challenge.macroArea.name}</Badge>
@@ -198,9 +205,10 @@ export default async function ExperimentarPage({
                   </Link>
                 </div>
               </Card>
+              </div>
             );
           })}
-        </div>
+        </FilterGridReveal>
       )}
     </div>
   );
