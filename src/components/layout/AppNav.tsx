@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -115,7 +115,26 @@ export function AppNav({
   const desktopNav = useSlidingIndicator(activeHref);
   const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+  const dockNavRef = useRef<HTMLElement | null>(null);
   const isExpanded = pinned || hovered;
+
+  useEffect(() => {
+    const el = dockNavRef.current;
+    if (!el) return;
+
+    const checkOverflow = () => {
+      setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 4);
+    };
+
+    checkOverflow();
+    el.addEventListener("scroll", checkOverflow, { passive: true });
+    window.addEventListener("resize", checkOverflow);
+    return () => {
+      el.removeEventListener("scroll", checkOverflow);
+      window.removeEventListener("resize", checkOverflow);
+    };
+  }, [isExpanded, items.length]);
   const initials = getInitials(userName, subtitle);
   const hasPreviewBanner = Boolean(previewMode);
 
@@ -191,7 +210,7 @@ export function AppNav({
 
   const navContent = (onNavigate?: () => void) => (
     <div className="flex h-full flex-col justify-between p-4">
-      <div className="space-y-5">
+      <div className="flex min-h-0 flex-1 flex-col gap-5">
         <div className="px-1">
           <BrandLogo href={homeHref} />
         </div>
@@ -214,7 +233,7 @@ export function AppNav({
         <nav
           ref={onNavigate ? undefined : desktopNav.containerRef}
           aria-label="Navegação principal"
-          className="relative space-y-1"
+          className="relative min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {!onNavigate ? (
             <span
@@ -380,57 +399,68 @@ export function AppNav({
                 </div>
               ) : null}
 
-              <nav
-                ref={desktopNav.containerRef}
-                aria-label="Navegação principal"
-                className={cn(
-                  "relative flex flex-col gap-1",
-                  !isExpanded && "items-center",
-                )}
-              >
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute top-0 left-0 z-0 rounded-full bg-white shadow-xs transition-[transform,width,height,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                  style={{
-                    width: desktopNav.indicator.width,
-                    height: desktopNav.indicator.height,
-                    transform: `translate3d(${desktopNav.indicator.x}px, ${desktopNav.indicator.y}px, 0)`,
-                    opacity: desktopNav.indicator.ready ? 1 : 0,
+              <div className="relative min-h-0 flex-1">
+                <nav
+                  ref={(el) => {
+                    dockNavRef.current = el;
+                    desktopNav.containerRef(el);
                   }}
-                />
-                {items.map((item) => {
-                  const Icon = ICON_MAP[item.icon];
-                  const active = isItemActive(pathname, item);
-                  return (
-                    <Link
-                      key={item.href}
-                      ref={desktopNav.setItemRef(item.href)}
-                      href={item.href}
-                      title={!isExpanded ? item.label : undefined}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "relative z-10 flex h-11 items-center rounded-full text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
-                        isExpanded
-                          ? "w-full gap-3 px-3.5"
-                          : "w-11 justify-center",
-                        active
-                          ? "font-semibold text-[var(--brand-primary)]"
-                          : "text-white/80 hover:bg-white/10 hover:text-white",
-                      )}
-                    >
-                      <Icon
-                        className="h-[18px] w-[18px] shrink-0"
-                        aria-hidden="true"
-                      />
-                      {isExpanded ? (
-                        <span className="whitespace-nowrap">{item.label}</span>
-                      ) : (
-                        <span className="sr-only">{item.label}</span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </nav>
+                  aria-label="Navegação principal"
+                  className={cn(
+                    "relative flex h-full flex-col gap-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                    !isExpanded && "items-center",
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute top-0 left-0 z-0 rounded-full bg-white shadow-xs transition-[transform,width,height,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                    style={{
+                      width: desktopNav.indicator.width,
+                      height: desktopNav.indicator.height,
+                      transform: `translate3d(${desktopNav.indicator.x}px, ${desktopNav.indicator.y}px, 0)`,
+                      opacity: desktopNav.indicator.ready ? 1 : 0,
+                    }}
+                  />
+                  {items.map((item) => {
+                    const Icon = ICON_MAP[item.icon];
+                    const active = isItemActive(pathname, item);
+                    return (
+                      <Link
+                        key={item.href}
+                        ref={desktopNav.setItemRef(item.href)}
+                        href={item.href}
+                        title={!isExpanded ? item.label : undefined}
+                        aria-current={active ? "page" : undefined}
+                        className={cn(
+                          "relative z-10 flex h-11 shrink-0 items-center rounded-full text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
+                          isExpanded
+                            ? "w-full gap-3 px-3.5"
+                            : "w-11 justify-center",
+                          active
+                            ? "font-semibold text-[var(--brand-primary)]"
+                            : "text-white/80 hover:bg-white/10 hover:text-white",
+                        )}
+                      >
+                        <Icon
+                          className="h-[18px] w-[18px] shrink-0"
+                          aria-hidden="true"
+                        />
+                        {isExpanded ? (
+                          <span className="whitespace-nowrap">{item.label}</span>
+                        ) : (
+                          <span className="sr-only">{item.label}</span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </nav>
+                {canScrollDown ? (
+                  <div
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-x-0 bottom-0 h-7 bg-gradient-to-t from-[var(--brand-primary)] to-transparent"
+                  />
+                ) : null}
+              </div>
             </div>
 
             <div className="flex shrink-0 flex-col gap-1 border-t border-white/15 p-2.5">
