@@ -110,6 +110,16 @@
   - *Positivas:* Conexão apenas de saída para o GitHub (sem expor SSH), deploy automatizado com `docker compose up -d --build` e `npx prisma migrate deploy`.
   - *Atenções:* Migrações destrutivas continuam exigindo autorização explícita conforme governança.
 
+### ADR-012: Otimização de Consultas Prisma e Adiamento de Cache
+- **Status:** Aprovada
+- **Data:** 2026-11-16
+- **Contexto:** Medições com `EXPLAIN (ANALYZE, BUFFERS)` (1.000 estudantes, 4.000 progressos) mostraram queries críticas abaixo de `3 ms`, e teste de carga `k6` (50 VUs, 5.368 requisições, 0% erro) apontou `/app/aprender` (`p95 = 698.1 ms`), `/app/experimentar` (`p95 = 687.2 ms`) e `/app` (`p95 = 658.6 ms`) como os maiores `p95` do portal do estudante devido a queries redundantes (`computeStudentStage` duplicando contagens já feitas em `/app`) e `include` sem `select` mínimo (`description`/`scoresJson`).
+- **Decisão:** Otimizar diretamente as consultas Prisma nas rotas do estudante (`resolveStageFromMilestones` com reuso das contagens e `select` mínimo em `/app`, `/app/aprender` e `/app/experimentar`) e **adiar** qualquer camada de cache (Next.js ou Redis).
+- **Gatilho de reavaliação:** Reavaliar cache nativo do Next.js (`unstable_cache` com `revalidateTag`) **exclusivamente para catálogo público** (`MacroArea`, `Track`, `Challenge`) se `p95 SSR > 300 ms` com `> 5.000` usuários ativos ou `> 500` itens de catálogo após as otimizações de consulta. Cache externo (Redis) somente se `p95` de banco ultrapassar `500 ms` com pool saturado.
+- **Consequências:**
+  - *Positivas:* Redução imediata de queries por requisição sem risco de stale cache na curadoria nem complexidade operacional adicional no Ubuntu Server.
+  - *Impacto LGPD:* Risco zero de vazamento de dados de estudantes/menores em cache compartilhado.
+
 ---
 
-> **Todas as decisões arquiteturais iniciais (`ADR-001` a `ADR-011`) estão formalizadas.** Novas alterações estruturais devem ser registradas como novas ADRs neste arquivo.
+> **Todas as decisões arquiteturais iniciais (`ADR-001` a `ADR-012`) estão formalizadas.** Novas alterações estruturais devem ser registradas como novas ADRs neste arquivo.

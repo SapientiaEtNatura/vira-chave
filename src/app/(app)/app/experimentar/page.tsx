@@ -55,7 +55,9 @@ export default async function ExperimentarPage({
           : {}),
     },
     orderBy: { title: "asc" },
-    include: {
+    select: {
+      id: true,
+      title: true,
       macroArea: {
         select: {
           slug: true,

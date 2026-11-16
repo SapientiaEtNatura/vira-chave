@@ -56,7 +56,9 @@ export default async function AprenderPage({
           : {}),
     },
     orderBy: { title: "asc" },
-    include: {
+    select: {
+      id: true,
+      title: true,
       macroArea: {
         select: {
           slug: true,

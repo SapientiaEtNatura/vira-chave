@@ -11,7 +11,7 @@ import {
 } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
-import { computeStudentStage, type StudentStage } from "@/lib/student/stage";
+import { resolveStageFromMilestones, type StudentStage } from "@/lib/student/stage";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +55,6 @@ export default async function StudentDashboardPage() {
 
   const [
     user,
-    currentStage,
     latestDiscovery,
     totalCourses,
     inProgressCourses,
@@ -67,10 +66,10 @@ export default async function StudentDashboardPage() {
       where: { id: authUser.userId },
       select: { name: true },
     }),
-    computeStudentStage(authUser.userId),
     prisma.discoveryResult.findFirst({
       where: { studentId: authUser.userId },
       orderBy: { completedAt: "desc" },
+      select: { id: true },
     }),
     prisma.courseItem.count({
       where: { track: { published: true } },
@@ -88,6 +87,12 @@ export default async function StudentDashboardPage() {
       where: { studentId: authUser.userId, challengeId: null },
     }),
   ]);
+
+  const currentStage = resolveStageFromMilestones({
+    portfolioCount: portfolioProjectsCount,
+    challengeSubmissionCount: challengeSubmissionsCount,
+    activeCourseCount: inProgressCourses + completedCourses,
+  });
 
   const stageInfo = STAGE_META[currentStage];
   const recommendedNextHref =
