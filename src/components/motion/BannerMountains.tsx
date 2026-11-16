@@ -131,7 +131,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
     <div
       ref={containerRef}
       aria-hidden="true"
-      className="pointer-events-none absolute -bottom-px -left-px -right-px h-20 overflow-hidden sm:h-24"
+      className="pointer-events-none absolute -bottom-px -left-px -right-px z-[1] h-20 overflow-hidden sm:h-24"
     >
       <svg
         data-wave-back
