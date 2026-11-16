@@ -131,13 +131,13 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
     <div
       ref={containerRef}
       aria-hidden="true"
-      className="pointer-events-none absolute -bottom-px -left-px -right-px z-[1] h-20 overflow-hidden sm:h-24"
+      className="pointer-events-none absolute -bottom-[2px] -left-[2px] -right-[2px] z-[1] h-20 overflow-hidden sm:h-24"
     >
       <svg
         data-wave-back
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className="absolute bottom-0 -left-[10%] h-full w-[120%]"
+        className="absolute bottom-0 -left-[12%] h-full w-[124%] will-change-transform"
       >
         <defs>
           <linearGradient id={accentGradId} x1="0" y1="0" x2="0" y2="1">
@@ -155,7 +155,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-mid
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className="absolute bottom-0 -left-[10%] h-full w-[120%]"
+        className="absolute bottom-0 -left-[12%] h-full w-[124%] will-change-transform"
       >
         <defs>
           <linearGradient id={mainGradId} x1="0" y1="0" x2="0" y2="1">
@@ -173,13 +173,14 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-cutout
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className="absolute bottom-0 -left-[10%] h-full w-[120%]"
+        className="absolute -bottom-[2px] -left-[12%] h-[calc(100%+2px)] w-[124%] will-change-transform"
       >
         <path
           d="M0,84 C190,116 360,58 590,82 C810,104 970,52 1170,76 C1300,92 1385,78 1440,68 L1440,120 L0,120 Z"
           fill="var(--bg-canvas)"
         />
       </svg>
+      <div className="absolute inset-x-0 bottom-0 h-[3px] bg-[var(--bg-canvas)]" />
     </div>
   );
 }
