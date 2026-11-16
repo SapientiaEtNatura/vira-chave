@@ -309,7 +309,7 @@ export function AppNav({
                 : "w-[64px] rounded-[32px]",
             )}
           >
-            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-x-hidden overflow-y-auto p-2.5">
+            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-2.5">
               <Link
                 href={homeHref}
                 aria-label="Vira Chave — Início"
