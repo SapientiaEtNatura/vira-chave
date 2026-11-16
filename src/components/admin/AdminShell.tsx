@@ -13,6 +13,8 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { MobileAccountMenu } from "@/components/layout/MobileAccountMenu";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { BrandLogo } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useSlidingIndicator } from "@/lib/use-sliding-indicator";
@@ -63,9 +65,17 @@ export function AdminShell({
   const activeHref =
     ADMIN_NAV_ITEMS.find((item) => isNavItemActive(pathname, item))?.href ?? "";
   const desktopNav = useSlidingIndicator(activeHref);
-  const mobileNav = useSlidingIndicator(activeHref);
   const displayName = userName?.trim() || "Admin";
   const initials = getInitials(displayName);
+  const bottomNavItems = ADMIN_NAV_ITEMS.map((item) => {
+    const Icon = item.icon;
+    return {
+      href: item.href,
+      label: item.label,
+      icon: <Icon className="h-5 w-5" aria-hidden="true" />,
+      active: isNavItemActive(pathname, item),
+    };
+  });
 
   return (
     <div className="min-h-screen bg-[var(--bg-canvas)] text-[var(--ink-primary)]">
@@ -131,7 +141,7 @@ export function AdminShell({
             </div>
 
             <div
-              className="hidden sm:flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] py-1 pl-1 pr-3"
+              className="hidden md:flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] py-1 pl-1 pr-3"
               title={displayName}
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[11px] font-semibold text-[var(--brand-primary)]">
@@ -142,7 +152,7 @@ export function AdminShell({
               </span>
             </div>
 
-            <form action={signOutAction}>
+            <form action={signOutAction} className="hidden md:block">
               <button
                 type="submit"
                 className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)] cursor-pointer"
@@ -151,47 +161,36 @@ export function AdminShell({
                 <span>Sair</span>
               </button>
             </form>
+
+            <MobileAccountMenu
+              className="md:hidden"
+              userName={displayName}
+              subtitle="Admin"
+              extraLinks={[
+                {
+                  href: "/app",
+                  label: "Preview: Estudante",
+                  icon: <GraduationCap className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  href: "/educador",
+                  label: "Preview: Educador",
+                  icon: <UserCheck className="h-4 w-4" aria-hidden="true" />,
+                },
+              ]}
+              signOutAction={signOutAction}
+            />
           </div>
         </div>
-
-        <nav
-          ref={mobileNav.containerRef}
-          aria-label="Navegação administrativa móvel"
-          className="relative flex min-h-11 items-center gap-1.5 overflow-x-auto border-t border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 px-4 py-1.5 md:hidden"
-        >
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute top-0 left-0 z-0 rounded-full bg-[var(--brand-primary)] shadow-xs transition-[transform,width,height,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
-            style={{
-              width: mobileNav.indicator.width,
-              height: mobileNav.indicator.height,
-              transform: `translate3d(${mobileNav.indicator.x}px, ${mobileNav.indicator.y}px, 0)`,
-              opacity: mobileNav.indicator.ready ? 1 : 0,
-            }}
-          />
-          {ADMIN_NAV_ITEMS.map((item) => {
-            const active = isNavItemActive(pathname, item);
-            return (
-              <Link
-                key={item.href}
-                ref={mobileNav.setItemRef(item.href)}
-                href={item.href}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "relative z-10 shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-200",
-                  active
-                    ? "text-white"
-                    : "bg-[var(--bg-canvas)] text-[var(--ink-secondary)] hover:text-[var(--ink-primary)]",
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
       </header>
 
-      <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 py-6 sm:px-6 sm:py-8">
+      <MobileBottomNav
+        className="md:hidden"
+        items={bottomNavItems}
+        activeHref={activeHref}
+      />
+
+      <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 pt-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 md:pb-8">
         <aside
           aria-label="Atalhos laterais do admin"
           className="hidden lg:flex w-14 shrink-0 flex-col items-center justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] py-3 sticky top-20 h-[calc(100vh-7rem)]"

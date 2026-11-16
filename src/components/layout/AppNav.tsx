@@ -13,7 +13,6 @@ import {
   Home,
   LayoutDashboard,
   LogOut,
-  Menu,
   Pin,
   PinOff,
   Rocket,
@@ -21,12 +20,16 @@ import {
   ShieldCheck,
   UserCircle,
   Users,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import { BrandLogo } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useSlidingIndicator } from "@/lib/use-sliding-indicator";
+import {
+  MobileAccountMenu,
+  type MobileAccountMenuLink,
+} from "./MobileAccountMenu";
+import { MobileBottomNav } from "./MobileBottomNav";
 import { PreviewBanner, type PreviewMode } from "./PreviewBanner";
 
 export type NavIconKey =
@@ -110,13 +113,43 @@ export function AppNav({
   const activeHref =
     items.find((item) => isItemActive(pathname, item))?.href ?? "";
   const desktopNav = useSlidingIndicator(activeHref);
-  const mobileNav = useSlidingIndicator(activeHref);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(false);
   const isExpanded = pinned || hovered;
   const initials = getInitials(userName, subtitle);
   const hasPreviewBanner = Boolean(previewMode);
+
+  const bottomNavSource =
+    homeHref === "/app"
+      ? items.filter((item) => item.href !== "/app/conta").slice(0, 5)
+      : items.slice(0, 5);
+  const bottomNavItems = bottomNavSource.map((item) => {
+    const Icon = ICON_MAP[item.icon];
+    return {
+      href: item.href,
+      label: item.label,
+      icon: <Icon className="h-5 w-5" aria-hidden="true" />,
+      active: isItemActive(pathname, item),
+    };
+  });
+  const bottomActiveHref =
+    bottomNavItems.find((item) => item.active)?.href ?? "";
+
+  const accountMenuLinks: MobileAccountMenuLink[] = [];
+  if (homeHref === "/app") {
+    accountMenuLinks.push({
+      href: "/app/conta",
+      label: "Minha conta",
+      icon: <UserCircle className="h-4 w-4" aria-hidden="true" />,
+    });
+  }
+  if (isAdmin) {
+    accountMenuLinks.push({
+      href: "/admin",
+      label: "Admin",
+      icon: <Shield className="h-4 w-4" aria-hidden="true" />,
+    });
+  }
 
   const renderAdminControls = (onNavigate?: () => void) => {
     if (!isAdmin) return null;
@@ -498,105 +531,21 @@ export function AppNav({
 
       {/* Topbar móvel */}
       <header className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-surface)]/95 px-4 py-2.5 backdrop-blur lg:hidden">
-        <BrandLogo href={homeHref} subtitle={subtitle} />
+        <BrandLogo href={homeHref} />
 
-        <div className="flex items-center gap-2">
-          {isAdmin && previewMode !== null ? (
-            <Link
-              href="/admin"
-              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-[var(--brand-accent)] bg-[var(--brand-accent-soft)]/50 px-2.5 py-1.5 text-xs font-semibold text-[var(--brand-accent-ink)] transition-colors duration-150 hover:bg-[var(--brand-accent-soft)]"
-            >
-              <Shield className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Admin</span>
-            </Link>
-          ) : null}
-
-          <button
-            type="button"
-            aria-expanded={mobileOpen}
-            aria-controls="app-mobile-drawer"
-            aria-label={mobileOpen ? "Fechar menu" : "Abrir menu"}
-            onClick={() => setMobileOpen((prev) => !prev)}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-primary)] transition-colors duration-150 hover:bg-[var(--bg-surface-subtle)]"
-          >
-            {mobileOpen ? (
-              <X className="h-5 w-5" aria-hidden="true" />
-            ) : (
-              <Menu className="h-5 w-5" aria-hidden="true" />
-            )}
-          </button>
-        </div>
+        <MobileAccountMenu
+          userName={userName}
+          subtitle={subtitle}
+          extraLinks={accountMenuLinks}
+          signOutAction={signOutAction}
+        />
       </header>
 
-      {/* Pill-tabs horizontais roláveis no mobile (< md) */}
-      <nav
-        ref={mobileNav.containerRef}
-        aria-label="Navegação rápida"
-        className="relative flex items-center gap-1.5 overflow-x-auto whitespace-nowrap border-b border-[var(--border-subtle)] bg-[var(--bg-surface)] px-4 py-2 md:hidden"
-      >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 left-0 z-0 rounded-full bg-[var(--brand-primary-soft)] transition-[transform,width,height,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
-          style={{
-            width: mobileNav.indicator.width,
-            height: mobileNav.indicator.height,
-            transform: `translate3d(${mobileNav.indicator.x}px, ${mobileNav.indicator.y}px, 0)`,
-            opacity: mobileNav.indicator.ready ? 1 : 0,
-          }}
-        />
-        {items.map((item) => {
-          const Icon = ICON_MAP[item.icon];
-          const active = isItemActive(pathname, item);
-          return (
-            <Link
-              key={item.href}
-              ref={mobileNav.setItemRef(item.href)}
-              href={item.href}
-              aria-current={active ? "page" : undefined}
-              className={cn(
-                "relative z-10 inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-medium transition-colors duration-200",
-                active
-                  ? "font-semibold text-[var(--brand-primary)]"
-                  : "text-[var(--ink-secondary)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]",
-              )}
-            >
-              <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Drawer móvel */}
-      {mobileOpen ? (
-        <div
-          id="app-mobile-drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Menu de navegação"
-          className="fixed inset-0 z-40 flex lg:hidden"
-        >
-          <div
-            className="fixed inset-0 bg-black/35 backdrop-blur-[1px]"
-            onClick={() => setMobileOpen(false)}
-          />
-          <div className="relative z-10 flex h-full w-72 max-w-[85vw] flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] shadow-xl">
-            <div className="flex items-center justify-end px-4 pt-3">
-              <button
-                type="button"
-                aria-label="Fechar menu"
-                onClick={() => setMobileOpen(false)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-[var(--ink-muted)] transition-colors duration-150 hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              {navContent(() => setMobileOpen(false))}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <MobileBottomNav
+        className="lg:hidden"
+        items={bottomNavItems}
+        activeHref={bottomActiveHref}
+      />
     </>
   );
 }
