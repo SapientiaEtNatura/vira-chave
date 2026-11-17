@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, CheckCircle2, Sparkles } from "lucide-react";
+import { FilterGridReveal } from "@/components/motion/FilterGridReveal";
 import {
   Badge,
   ButtonLink,
@@ -108,6 +109,7 @@ export default async function AprenderPage({
       >
         <Link
           href="/app/aprender"
+          scroll={false}
           aria-current={!activeArea ? "page" : undefined}
           className={`${chipBaseClass} ${!activeArea ? chipActiveClass : chipInactiveClass}`}
         >
@@ -120,6 +122,7 @@ export default async function AprenderPage({
         {recommendedSlugs.length > 0 && recommendedTracksCount > 0 ? (
           <Link
             href="/app/aprender?area=recomendadas"
+            scroll={false}
             aria-current={isRecommendedFilter ? "page" : undefined}
             className={`${chipBaseClass} ${isRecommendedFilter ? chipActiveClass : chipInactiveClass}`}
           >
@@ -137,6 +140,7 @@ export default async function AprenderPage({
             <Link
               key={macroArea.id}
               href={`/app/aprender?area=${encodeURIComponent(macroArea.slug)}`}
+              scroll={false}
               aria-current={isActive ? "page" : undefined}
               className={`${chipBaseClass} ${isActive ? chipActiveClass : chipInactiveClass}`}
             >
@@ -162,7 +166,10 @@ export default async function AprenderPage({
           }
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <FilterGridReveal
+          filterKey={activeArea ?? "all"}
+          className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
+        >
           {tracks.map((track) => {
             const totalCourses = track.courses.length;
             const completedCourses = track.courses.filter(
@@ -172,13 +179,13 @@ export default async function AprenderPage({
               totalCourses > 0 && completedCourses === totalCourses;
 
             return (
-              <Card
-                key={track.id}
-                as="article"
-                variant="interactive"
-                padding="sm"
-                className="flex flex-col justify-between gap-4 p-5"
-              >
+              <div key={track.id} data-filter-card className="flex">
+                <Card
+                  as="article"
+                  variant="interactive"
+                  padding="sm"
+                  className="flex w-full flex-col justify-between gap-4 p-5"
+                >
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Badge variant="neutral">{track.macroArea.name}</Badge>
@@ -219,9 +226,10 @@ export default async function AprenderPage({
                   </div>
                 </div>
               </Card>
+              </div>
             );
           })}
-        </div>
+        </FilterGridReveal>
       )}
     </div>
   );

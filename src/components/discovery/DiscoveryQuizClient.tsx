@@ -253,6 +253,7 @@ export function DiscoveryQuizClient({
   const formattedDate = new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
   }).format(new Date(result.completedAt));
 
   return (

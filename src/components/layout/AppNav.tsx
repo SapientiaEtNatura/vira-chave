@@ -350,7 +350,7 @@ export function AppNav({
               hasPreviewBanner ? "top-14" : "top-6",
               isExpanded
                 ? "w-[228px] rounded-[28px]"
-                : "w-[64px] rounded-[32px]",
+                : "w-[68px] rounded-[34px]",
             )}
           >
             <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden p-2.5">
@@ -433,7 +433,7 @@ export function AppNav({
                   }}
                   aria-label="Navegação principal"
                   className={cn(
-                    "relative flex h-full flex-col gap-1 overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+                    "relative flex h-full flex-col gap-1 overflow-y-auto overscroll-contain px-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
                     !isExpanded && "items-center",
                   )}
                 >
