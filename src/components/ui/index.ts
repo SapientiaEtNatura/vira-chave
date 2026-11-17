@@ -8,7 +8,7 @@ export {
   type ButtonProps,
   type ButtonSize,
   type ButtonVariant,
-} from "./Button";
+} from "./AppButton";
 export {
   Card,
   type CardPadding,
