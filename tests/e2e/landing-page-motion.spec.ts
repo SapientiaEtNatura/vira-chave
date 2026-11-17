@@ -39,7 +39,9 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       await practiceSection.scrollIntoViewIfNeeded();
       await expect(practiceHeading).toBeVisible();
       await expect(practiceHeading).toHaveCSS("opacity", "1");
-      await expect(page.getByText("Mapa de afinidades")).toBeVisible();
+      await expect(
+        practiceSection.getByRole("heading", { name: "Mapa de afinidades" }),
+      ).toBeVisible();
       await expect(page.getByText("Portfólio público do estudante")).toBeVisible();
       await expect(
         practiceSection.locator("[data-motion-item]").first(),

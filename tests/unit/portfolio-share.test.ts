@@ -20,6 +20,7 @@ describe("Etapa Construir — Portfólio Privado e Link Compartilhável Revogáv
       student: {
         id: "student-1",
         name: "Ana Clara",
+        status: "ACTIVE",
         email: "ana.clara@escola.edu.br",
         institution: { name: "Escola Estadual Modelo" },
         enrollments: [{ classroom: { name: "3º Ano B" } }],
@@ -110,7 +111,7 @@ describe("Etapa Construir — Portfólio Privado e Link Compartilhável Revogáv
       tokenHash: string;
       active: boolean;
       revokedAt: Date | null;
-      student: { name: string };
+      student: { name: string; status: string };
     };
     const state: { activeLink: MockActiveLink | null } = { activeLink: null };
 
@@ -137,7 +138,7 @@ describe("Etapa Construir — Portfólio Privado e Link Compartilhável Revogáv
             tokenHash: data.tokenHash,
             active: data.active ?? true,
             revokedAt: null,
-            student: { name: "Lucas Silva" },
+            student: { name: "Lucas Silva", status: "ACTIVE" },
           };
           state.activeLink = createdLink;
           return {

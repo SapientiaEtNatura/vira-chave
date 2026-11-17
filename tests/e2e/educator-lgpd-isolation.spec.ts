@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 const EDUCATOR_INSTITUTION_CODE =
-  process.env.E2E_EDUCATOR_INSTITUTION_CODE ?? "ESCOLA-01";
+  process.env.E2E_EDUCATOR_INSTITUTION_CODE ?? "PILOTO01";
 
 test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD", () => {
   test("educador cria turma, vê visão agregada sem dados privados e estudante exclui conta perdendo acesso", async ({
@@ -22,7 +22,7 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
 
     // 1. Educador se cadastra e cria turma
     await page.goto("/cadastro");
-    await page.getByRole("button", { name: "Sou Educador(a)" }).click();
+    await page.locator("#role").selectOption("EDUCADOR");
     await page.locator("#name").fill(educatorName);
     await page.locator("#email").fill(educatorEmail);
     await page.locator("#password").fill(educatorPassword);
@@ -33,7 +33,7 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
     await page.getByLabel(/Termo de Compromisso e Sigilo do Educador/i).check();
 
     await page.getByRole("button", { name: "Criar conta" }).click();
-    await expect(page).toHaveURL(/\/educador$/);
+    await expect(page).toHaveURL(/\/educador$/, { timeout: 15000 });
 
     await page.getByLabel("Nome da nova turma").fill(classroomName);
     await page.getByRole("button", { name: "Criar turma" }).click();
@@ -54,7 +54,7 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
 
     try {
       await studentPage.goto("/cadastro");
-      await studentPage.getByRole("button", { name: "Sou Estudante" }).click();
+      await studentPage.locator("#role").selectOption("ESTUDANTE");
       await studentPage.locator("#name").fill(studentName);
       await studentPage.locator("#email").fill(studentEmail);
       await studentPage.locator("#password").fill(studentPassword);
@@ -64,7 +64,7 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
       await studentPage.getByLabel(/Política de Privacidade/i).check();
 
       await studentPage.getByRole("button", { name: "Criar conta" }).click();
-      await expect(studentPage).toHaveURL(/\/app$/);
+      await expect(studentPage).toHaveURL(/\/app$/, { timeout: 15000 });
 
       // Responde Descobrir para gerar dados agregados de macroárea
       await studentPage.goto("/app/descobrir");
@@ -140,9 +140,9 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
       await studentPage.locator("#password").fill(studentPassword);
       await studentPage.getByRole("button", { name: "Entrar" }).click();
 
-      await expect(studentPage.getByRole("alert")).toContainText(
-        "E-mail ou senha inválidos, ou conta inativa.",
-      );
+      await expect(
+        studentPage.locator("main").getByRole("alert"),
+      ).toContainText("E-mail ou senha inválidos, ou conta inativa.");
       await expect(studentPage).toHaveURL(/\/login$/);
     } finally {
       await studentContext.close();

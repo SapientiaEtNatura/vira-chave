@@ -20,6 +20,9 @@ jobs:
       - run: npm run lint
       - run: npx tsc --noEmit
       - run: npx vitest run
+      - name: Security Audit (Dependencies)
+        run: npm audit --omit=dev
+        continue-on-error: true
       - env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/virachave?schema=public"
           AUTH_SECRET: "ci-build-secret-placeholder"
@@ -29,6 +32,7 @@ jobs:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: self-hosted
+    environment: production
     concurrency:
       group: production-deploy
       cancel-in-progress: false

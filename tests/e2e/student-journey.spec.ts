@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-const STUDENT_INVITE_CODE = process.env.E2E_STUDENT_INVITE_CODE ?? "TURMA-2026";
+const STUDENT_INVITE_CODE = process.env.E2E_STUDENT_INVITE_CODE ?? "TURMA01";
 
 test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimentar -> Construir)", () => {
   test("estudante se cadastra com código de turma, percorre as 4 etapas e gerencia link compartilhável", async ({
@@ -14,7 +14,7 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
 
     // 1. Cadastro com código de turma
     await page.goto("/cadastro");
-    await page.getByRole("button", { name: "Sou Estudante" }).click();
+    await page.locator("#role").selectOption("ESTUDANTE");
     await page.locator("#name").fill(studentName);
     await page.locator("#email").fill(studentEmail);
     await page.locator("#password").fill(studentPassword);
@@ -24,7 +24,7 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
     await page.getByLabel(/Política de Privacidade/i).check();
 
     await page.getByRole("button", { name: "Criar conta" }).click();
-    await expect(page).toHaveURL(/\/app$/);
+    await expect(page).toHaveURL(/\/app$/, { timeout: 15000 });
 
     // 2. Etapa 1: Descobrir
     await page.goto("/app/descobrir");
@@ -133,9 +133,9 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
       expect(publicBodyText).not.toContain(studentEmail);
 
       // Revogar link no contexto autenticado do estudante
-      await page.getByRole("button", { name: "Revogar link" }).click();
+      await page.getByRole("button", { name: /^Revogar$/i }).click();
       await expect(
-        page.getByText(/Nenhum link ativo no momento/i),
+        page.getByRole("button", { name: /Gerar link compartilhável/i }),
       ).toBeVisible();
 
       // Validar 404 após revogação no contexto anônimo

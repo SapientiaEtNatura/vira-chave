@@ -64,9 +64,9 @@ export async function POST(request: Request) {
   let file: File | null = null;
 
   if (contentType.includes("application/json")) {
-    let body: Record<string, unknown>;
+    let rawBody: unknown;
     try {
-      body = (await request.json()) as Record<string, unknown>;
+      rawBody = await request.json();
     } catch {
       return NextResponse.json(
         { error: "Corpo JSON inválido." },
@@ -74,6 +74,14 @@ export async function POST(request: Request) {
       );
     }
 
+    if (!rawBody || typeof rawBody !== "object" || Array.isArray(rawBody)) {
+      return NextResponse.json(
+        { error: "Corpo JSON deve ser um objeto." },
+        { status: 400 },
+      );
+    }
+
+    const body = rawBody as Record<string, unknown>;
     title = typeof body.title === "string" ? body.title : "";
     summary = typeof body.summary === "string" ? body.summary : "";
     reflection = typeof body.reflection === "string" ? body.reflection : "";

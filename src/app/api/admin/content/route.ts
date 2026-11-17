@@ -267,7 +267,10 @@ export async function POST(request: Request) {
   } catch (error) {
     const handled = handlePrismaError(error);
     if (handled) return handled;
-    throw error;
+    return NextResponse.json(
+      { error: "Erro interno ao processar conteúdo." },
+      { status: 500 },
+    );
   }
 }
 
@@ -389,7 +392,10 @@ export async function PATCH(request: Request) {
   } catch (error) {
     const handled = handlePrismaError(error);
     if (handled) return handled;
-    throw error;
+    return NextResponse.json(
+      { error: "Erro interno ao processar conteúdo." },
+      { status: 500 },
+    );
   }
 }
 
@@ -446,6 +452,9 @@ export async function DELETE(request: Request) {
   } catch (error) {
     const handled = handlePrismaError(error);
     if (handled) return handled;
-    throw error;
+    return NextResponse.json(
+      { error: "Erro interno ao processar conteúdo." },
+      { status: 500 },
+    );
   }
 }

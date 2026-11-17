@@ -67,10 +67,17 @@ export async function POST(request: Request) {
     );
   }
 
+  if (parsed.data.newPassword === parsed.data.currentPassword) {
+    return NextResponse.json(
+      { error: "A nova senha deve ser diferente da senha atual." },
+      { status: 400 },
+    );
+  }
+
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
   await prisma.user.update({
     where: { id: user.id },
-    data: { passwordHash },
+    data: { passwordHash, tokenVersion: { increment: 1 } },
   });
 
   return NextResponse.json({ message: "Senha alterada com sucesso." });

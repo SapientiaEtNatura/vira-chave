@@ -4,7 +4,11 @@ import { useState } from "react";
 import { signOut } from "next-auth/react";
 import { Alert, Button, Card, FormField, Input } from "@/components/ui";
 
-export function AccountControls() {
+export function AccountControls({
+  allowAccountDeletion = true,
+}: {
+  allowAccountDeletion?: boolean;
+}) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -154,64 +158,66 @@ export function AccountControls() {
         </form>
       </Card>
 
-      <Card
-        as="section"
-        className="border-[var(--status-danger-border)] bg-[var(--status-danger-bg)]/50"
-      >
-        <h2 className="font-display text-lg font-bold text-[var(--status-danger-ink)]">
-          Privacidade e exclusão
-        </h2>
-        <p className="mt-1 text-sm leading-relaxed text-[var(--ink-secondary)]">
-          Apaga permanentemente seus dados pessoais, progresso, projetos e
-          arquivos. Apenas registros anonimizados de consentimento são mantidos
-          por exigência legal.
-        </p>
+      {allowAccountDeletion && (
+        <Card
+          as="section"
+          className="border-[var(--status-danger-border)] bg-[var(--status-danger-bg)]/50"
+        >
+          <h2 className="font-display text-lg font-bold text-[var(--status-danger-ink)]">
+            Privacidade e exclusão
+          </h2>
+          <p className="mt-1 text-sm leading-relaxed text-[var(--ink-secondary)]">
+            Apaga permanentemente seus dados pessoais, progresso, projetos e
+            arquivos. Apenas registros anonimizados de consentimento são mantidos
+            por exigência legal.
+          </p>
 
-        {deleteError && (
-          <Alert variant="danger" className="mt-4">
-            {deleteError}
-          </Alert>
-        )}
+          {deleteError && (
+            <Alert variant="danger" className="mt-4">
+              {deleteError}
+            </Alert>
+          )}
 
-        <form onSubmit={handleDeleteAccount} className="mt-4 max-w-md space-y-4">
-          <label className="flex min-h-11 cursor-pointer items-start gap-2.5 text-sm text-[var(--ink-primary)]">
-            <input
-              type="checkbox"
-              checked={understoodDeletion}
-              onChange={(e) => setUnderstoodDeletion(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-[var(--status-danger-border)] accent-[var(--status-danger-solid)]"
-            />
-            <span>
-              Entendo que esta ação é permanente e que todos os meus projetos e
-              arquivos serão excluídos.
-            </span>
-          </label>
+          <form onSubmit={handleDeleteAccount} className="mt-4 max-w-md space-y-4">
+            <label className="flex min-h-11 cursor-pointer items-start gap-2.5 text-sm text-[var(--ink-primary)]">
+              <input
+                type="checkbox"
+                checked={understoodDeletion}
+                onChange={(e) => setUnderstoodDeletion(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-[var(--status-danger-border)] accent-[var(--status-danger-solid)]"
+              />
+              <span>
+                Entendo que esta ação é permanente e que todos os meus projetos e
+                arquivos serão excluídos.
+              </span>
+            </label>
 
-          <FormField
-            id="deleteConfirmation"
-            label="Digite EXCLUIR para confirmar"
-          >
-            <Input
-              name="deleteConfirmation"
-              type="text"
-              value={confirmationText}
-              onChange={(e) => setConfirmationText(e.target.value)}
-              placeholder="EXCLUIR"
-            />
-          </FormField>
+            <FormField
+              id="deleteConfirmation"
+              label="Digite EXCLUIR para confirmar"
+            >
+              <Input
+                name="deleteConfirmation"
+                type="text"
+                value={confirmationText}
+                onChange={(e) => setConfirmationText(e.target.value)}
+                placeholder="EXCLUIR"
+              />
+            </FormField>
 
-          <Button
-            type="submit"
-            variant="danger"
-            disabled={!canDelete}
-            loading={deleteLoading}
-          >
-            {deleteLoading
-              ? "Excluindo conta..."
-              : "Excluir minha conta permanentemente"}
-          </Button>
-        </form>
-      </Card>
+            <Button
+              type="submit"
+              variant="danger"
+              disabled={!canDelete}
+              loading={deleteLoading}
+            >
+              {deleteLoading
+                ? "Excluindo conta..."
+                : "Excluir minha conta permanentemente"}
+            </Button>
+          </form>
+        </Card>
+      )}
     </div>
   );
 }

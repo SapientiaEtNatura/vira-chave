@@ -25,17 +25,19 @@ export function SplitTextReveal({
   children,
 }: SplitTextRevealProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const splitTargetRef = useRef<HTMLSpanElement>(null);
 
   useGSAP(
     () => {
       const el = headingRef.current;
-      if (!el) return;
+      const target = splitTargetRef.current;
+      if (!el || !target) return;
 
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const split = SplitText.create(el, {
+        const split = SplitText.create(target, {
           type: "words",
-          aria: "hidden",
+          aria: "none",
         });
 
         gsap.from(split.words, {
@@ -60,8 +62,11 @@ export function SplitTextReveal({
   );
 
   return (
-    <Tag ref={headingRef} id={id} aria-label={text} className={className}>
-      {children ?? text}
+    <Tag ref={headingRef} id={id} className={className}>
+      <span className="sr-only">{text}</span>
+      <span ref={splitTargetRef} aria-hidden="true">
+        {children ?? text}
+      </span>
     </Tag>
   );
 }

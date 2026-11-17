@@ -82,12 +82,18 @@ export async function getClassroomEducationalView(
         select: { name: true },
       },
       enrollments: {
+        where: {
+          student: {
+            status: "ACTIVE",
+          },
+        },
         orderBy: { enrolledAt: "asc" },
         select: {
           student: {
             select: {
               id: true,
               name: true,
+              status: true,
               discoveryResults: {
                 orderBy: { completedAt: "desc" },
                 take: 1,
@@ -137,7 +143,11 @@ export async function getClassroomEducationalView(
   };
   const macroAreaCounts = new Map<string, number>();
 
-  const students: EducationalViewStudent[] = classroom.enrollments.map(
+  const activeEnrollments = classroom.enrollments.filter(
+    ({ student }) => (student.status ?? "ACTIVE") === "ACTIVE",
+  );
+
+  const students: EducationalViewStudent[] = activeEnrollments.map(
     ({ student }) => {
       const portfolioProjects = student.portfolioProjects ?? [];
       const portfolioCount = portfolioProjects.filter(

@@ -109,6 +109,9 @@ export async function authorizeAndReadFile(
         studentId: true,
         active: true,
         revokedAt: true,
+        student: {
+          select: { status: true },
+        },
       },
     });
 
@@ -116,7 +119,8 @@ export async function authorizeAndReadFile(
       !shareLink ||
       !shareLink.active ||
       shareLink.revokedAt !== null ||
-      shareLink.studentId !== evidenceFile.project.studentId
+      shareLink.studentId !== evidenceFile.project.studentId ||
+      shareLink.student?.status !== "ACTIVE"
     ) {
       return {
         ok: false,

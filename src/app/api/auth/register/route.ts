@@ -39,7 +39,10 @@ export async function POST(request: Request) {
       );
     }
 
-    console.error("Erro inesperado no cadastro:", error);
+    console.error(
+      "Erro inesperado no cadastro:",
+      error instanceof Error ? error.message : "Erro desconhecido",
+    );
     return NextResponse.json(
       { error: "Não foi possível concluir o cadastro." },
       { status: 500 },
