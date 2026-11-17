@@ -11,7 +11,6 @@ const navItems: AppNavItem[] = [
   { href: "/app/aprender", label: "Aprender", icon: "book" },
   { href: "/app/experimentar", label: "Experimentar", icon: "rocket" },
   { href: "/app/portfolio", label: "Portfólio", icon: "folder" },
-  { href: "/app/conta", label: "Minha conta", icon: "user" },
 ];
 
 export default async function StudentAppLayout({
