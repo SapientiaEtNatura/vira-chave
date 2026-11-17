@@ -1,32 +1,28 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { StageKey } from "@/components/ui/StagePill";
 import { gsap, useGSAP } from "@/lib/gsap";
 
 const STAGE_WAVE_COLORS: Record<
   StageKey,
-  { back: string; mid: string; front: string }
+  { main: string; accent: string }
 > = {
   DESCOBRIR: {
-    back: "var(--stage-discover-border)",
-    mid: "var(--stage-discover-ink)",
-    front: "var(--brand-primary)",
+    main: "var(--stage-discover-ink)",
+    accent: "var(--brand-primary)",
   },
   APRENDER: {
-    back: "var(--stage-learn-border)",
-    mid: "var(--stage-learn-ink)",
-    front: "var(--brand-primary)",
+    main: "var(--brand-primary)",
+    accent: "var(--stage-build-ink)",
   },
   EXPERIMENTAR: {
-    back: "var(--stage-experiment-border)",
-    mid: "var(--stage-experiment-ink)",
-    front: "var(--brand-accent)",
+    main: "var(--stage-experiment-ink)",
+    accent: "var(--brand-accent)",
   },
   CONSTRUIR: {
-    back: "var(--stage-build-border)",
-    mid: "var(--stage-build-ink)",
-    front: "var(--brand-primary)",
+    main: "var(--stage-build-ink)",
+    accent: "var(--brand-primary)",
   },
 };
 
@@ -35,9 +31,13 @@ interface BannerMountainsProps {
 }
 
 export function BannerMountains({ stage }: BannerMountainsProps) {
+  const uid = useId().replace(/:/g, "");
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const colors = STAGE_WAVE_COLORS[stage];
+
+  const mainGradId = `wave-main-${uid}`;
+  const accentGradId = `wave-accent-${uid}`;
 
   useGSAP(
     () => {
@@ -48,7 +48,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
       mm.add("(prefers-reduced-motion: no-preference)", () => {
         const backWave = container.querySelector<SVGSVGElement>("[data-wave-back]");
         const midWave = container.querySelector<SVGSVGElement>("[data-wave-mid]");
-        const frontWave = container.querySelector<SVGSVGElement>("[data-wave-front]");
+        const cutoutWave = container.querySelector<SVGSVGElement>("[data-wave-cutout]");
 
         const tl = gsap.timeline();
 
@@ -57,7 +57,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
             backWave,
             {
               xPercent: -4,
-              duration: 13,
+              duration: 12,
               repeat: -1,
               yoyo: true,
               ease: "sine.inOut",
@@ -71,7 +71,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
             midWave,
             {
               xPercent: 4.5,
-              duration: 10,
+              duration: 9,
               repeat: -1,
               yoyo: true,
               ease: "sine.inOut",
@@ -80,12 +80,12 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
           );
         }
 
-        if (frontWave) {
+        if (cutoutWave) {
           tl.to(
-            frontWave,
+            cutoutWave,
             {
-              xPercent: -5,
-              duration: 7,
+              xPercent: -3.5,
+              duration: 11,
               repeat: -1,
               yoyo: true,
               ease: "sine.inOut",
@@ -131,7 +131,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
     <div
       ref={containerRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 bottom-0 h-20 overflow-hidden sm:h-24"
+      className="pointer-events-none absolute -bottom-px -left-px -right-px z-[1] h-20 overflow-hidden sm:h-24"
     >
       <svg
         data-wave-back
@@ -139,10 +139,15 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         preserveAspectRatio="none"
         className="absolute bottom-0 -left-[10%] h-full w-[120%]"
       >
+        <defs>
+          <linearGradient id={accentGradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={colors.accent} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={colors.accent} stopOpacity="0.04" />
+          </linearGradient>
+        </defs>
         <path
-          d="M0,74 C240,26 460,96 740,56 C1020,16 1220,82 1440,42 L1440,120 L0,120 Z"
-          fill={colors.back}
-          fillOpacity="0.48"
+          d="M0,78 C210,48 410,92 650,64 C890,36 1080,14 1260,36 C1340,46 1400,62 1440,56 L1440,120 L0,120 Z"
+          fill={`url(#${accentGradId})`}
         />
       </svg>
 
@@ -152,23 +157,27 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         preserveAspectRatio="none"
         className="absolute bottom-0 -left-[10%] h-full w-[120%]"
       >
+        <defs>
+          <linearGradient id={mainGradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={colors.main} stopOpacity="0.34" />
+            <stop offset="100%" stopColor={colors.main} stopOpacity="0.06" />
+          </linearGradient>
+        </defs>
         <path
-          d="M0,88 C280,44 520,104 820,66 C1100,30 1270,90 1440,58 L1440,120 L0,120 Z"
-          fill={colors.mid}
-          fillOpacity="0.16"
+          d="M0,58 C160,26 320,86 520,66 C710,48 860,88 1060,52 C1210,24 1340,58 1440,44 L1440,120 L0,120 Z"
+          fill={`url(#${mainGradId})`}
         />
       </svg>
 
       <svg
-        data-wave-front
+        data-wave-cutout
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
         className="absolute bottom-0 -left-[10%] h-full w-[120%]"
       >
         <path
-          d="M0,96 C320,64 560,112 880,78 C1160,48 1310,98 1440,76 L1440,120 L0,120 Z"
-          fill={colors.front}
-          fillOpacity="0.14"
+          d="M0,84 C190,116 360,58 590,82 C810,104 970,52 1170,76 C1300,92 1385,78 1440,68 L1440,120 L0,120 Z"
+          fill="var(--bg-canvas)"
         />
       </svg>
     </div>
