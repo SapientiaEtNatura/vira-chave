@@ -172,12 +172,17 @@ export async function PATCH(request: Request) {
     }
   }
 
+  const shouldRevokeSessions =
+    (status !== undefined && status !== existing.status) ||
+    (role !== undefined && role !== existing.role);
+
   const updated = await prisma.user.update({
     where: { id: userId },
     data: {
       ...(status !== undefined ? { status } : {}),
       ...(role !== undefined ? { role } : {}),
       ...(institutionId !== undefined ? { institutionId } : {}),
+      ...(shouldRevokeSessions ? { tokenVersion: { increment: 1 } } : {}),
     },
     select: userSelect,
   });

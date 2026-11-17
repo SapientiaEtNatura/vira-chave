@@ -1,4 +1,4 @@
-import { ConsentType } from "@prisma/client";
+import { ConsentType, Role } from "@prisma/client";
 import { Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
@@ -146,7 +146,9 @@ export default async function StudentAccountPage() {
       </Card>
 
       <div id="seguranca">
-        <AccountControls />
+        <AccountControls
+          allowAccountDeletion={authUser.role === Role.ESTUDANTE}
+        />
       </div>
     </div>
   );

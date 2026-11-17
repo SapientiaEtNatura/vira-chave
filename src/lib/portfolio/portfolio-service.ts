@@ -17,6 +17,54 @@ export const MIN_PROJECT_REFLECTION_LENGTH = 10;
 export const MAX_PROJECT_REFLECTION_LENGTH = 5000;
 export const MAX_PROJECT_EXTERNAL_URL_LENGTH = 2048;
 
+export const createPortfolioProjectSchema = z.object({
+  title: z
+    .string({ message: "Título inválido." })
+    .trim()
+    .min(
+      MIN_PROJECT_TITLE_LENGTH,
+      `Informe um título com pelo menos ${MIN_PROJECT_TITLE_LENGTH} caracteres.`,
+    )
+    .max(
+      MAX_PROJECT_TITLE_LENGTH,
+      `O título deve ter no máximo ${MAX_PROJECT_TITLE_LENGTH} caracteres.`,
+    ),
+  summary: z
+    .string({ message: "Resumo inválido." })
+    .trim()
+    .max(
+      MAX_PROJECT_SUMMARY_LENGTH,
+      `O resumo deve ter no máximo ${MAX_PROJECT_SUMMARY_LENGTH} caracteres.`,
+    )
+    .optional(),
+  reflection: z
+    .string({ message: "Reflexão inválida." })
+    .trim()
+    .min(
+      MIN_PROJECT_REFLECTION_LENGTH,
+      `Descreva sua reflexão com pelo menos ${MIN_PROJECT_REFLECTION_LENGTH} caracteres.`,
+    )
+    .max(
+      MAX_PROJECT_REFLECTION_LENGTH,
+      `A reflexão deve ter no máximo ${MAX_PROJECT_REFLECTION_LENGTH} caracteres.`,
+    ),
+  externalUrl: z
+    .union([
+      z
+        .string({ message: "URL externa inválida." })
+        .trim()
+        .max(
+          MAX_PROJECT_EXTERNAL_URL_LENGTH,
+          `A URL externa deve ter no máximo ${MAX_PROJECT_EXTERNAL_URL_LENGTH} caracteres.`,
+        ),
+      z.null(),
+    ])
+    .optional(),
+  isIncludedInShare: z
+    .boolean({ message: "Valor de compartilhamento inválido." })
+    .optional(),
+});
+
 export const updatePortfolioProjectSchema = z
   .object({
     title: z
@@ -250,12 +298,18 @@ export async function getSharedPortfolioByToken(
       student: {
         select: {
           name: true,
+          status: true,
         },
       },
     },
   });
 
-  if (!shareLink || !shareLink.active || shareLink.revokedAt !== null) {
+  if (
+    !shareLink ||
+    !shareLink.active ||
+    shareLink.revokedAt !== null ||
+    shareLink.student?.status !== "ACTIVE"
+  ) {
     return null;
   }
 
@@ -329,27 +383,28 @@ export async function createPortfolioProject(
   const saveFile = deps.saveFile ?? saveEvidenceFile;
   const deleteFile = deps.deleteFile ?? deleteStoredFile;
 
-  const trimmedTitle = (input.title ?? "").trim();
-  if (trimmedTitle.length < MIN_PROJECT_TITLE_LENGTH) {
+  const parsed = createPortfolioProjectSchema.safeParse({
+    title: input.title,
+    summary: input.summary,
+    reflection: input.reflection,
+    externalUrl: input.externalUrl,
+    isIncludedInShare: input.isIncludedInShare,
+  });
+
+  if (!parsed.success) {
     throw new PortfolioServiceError(
-      `Informe um título com pelo menos ${MIN_PROJECT_TITLE_LENGTH} caracteres.`,
+      parsed.error.issues[0]?.message ?? "Dados do projeto inválidos.",
       400,
     );
   }
 
-  const trimmedReflection = (input.reflection ?? "").trim();
-  if (trimmedReflection.length < MIN_PROJECT_REFLECTION_LENGTH) {
-    throw new PortfolioServiceError(
-      `Descreva sua reflexão com pelo menos ${MIN_PROJECT_REFLECTION_LENGTH} caracteres.`,
-      400,
-    );
-  }
-
-  const trimmedSummary = (input.summary ?? "").trim();
+  const trimmedTitle = parsed.data.title;
+  const trimmedReflection = parsed.data.reflection;
+  const trimmedSummary = parsed.data.summary ?? "";
   const projectSummary =
     trimmedSummary || buildSummaryFromReflection(trimmedReflection);
-  const normalizedUrl = normalizeOptionalExternalUrl(input.externalUrl);
-  const isIncludedInShare = input.isIncludedInShare ?? true;
+  const normalizedUrl = normalizeOptionalExternalUrl(parsed.data.externalUrl);
+  const isIncludedInShare = parsed.data.isIncludedInShare ?? true;
 
   let savedFile: SavedEvidenceFile | null = null;
   if (input.file && input.file.size > 0) {

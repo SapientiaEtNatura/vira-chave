@@ -35,12 +35,15 @@ export async function GET(
   }
 
   const safeFilename = sanitizeHeaderFilename(result.file.originalName);
+  const isPdf = result.file.mimeType === "application/pdf";
+  const disposition = isPdf ? "attachment" : "inline";
 
   return new NextResponse(new Uint8Array(result.buffer), {
     status: 200,
     headers: {
       "Content-Type": result.file.mimeType,
-      "Content-Disposition": `inline; filename="${safeFilename}"`,
+      "Content-Disposition": `${disposition}; filename="${safeFilename}"`,
+      "Content-Security-Policy": "sandbox",
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
     },

@@ -46,7 +46,7 @@ services:
       - app
 
   tunnel:
-    image: cloudflare/cloudflared:latest
+    image: cloudflare/cloudflared:2025.2.1
     container_name: virachave-tunnel
     restart: unless-stopped
     security_opt:

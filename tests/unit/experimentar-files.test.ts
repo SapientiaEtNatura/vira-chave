@@ -204,6 +204,7 @@ describe("Etapa Experimentar — Submissão de Desafios e Endpoint Protegido de 
             tokenHash: string;
             active: boolean;
             revokedAt: Date | null;
+            student: { status: string };
           } | null> => {
             if (where.tokenHash === expectedHash) {
               return {
@@ -212,6 +213,7 @@ describe("Etapa Experimentar — Submissão de Desafios e Endpoint Protegido de 
                 tokenHash: expectedHash,
                 active: true,
                 revokedAt: null,
+                student: { status: "ACTIVE" },
               };
             }
             return null;
@@ -277,6 +279,7 @@ describe("Etapa Experimentar — Submissão de Desafios e Endpoint Protegido de 
       tokenHash: expectedHash,
       active: false,
       revokedAt: new Date("2026-01-02T00:00:00Z"),
+      student: { status: "ACTIVE" },
     });
     const revokedTokenResult = await authorizeAndReadFile(
       {

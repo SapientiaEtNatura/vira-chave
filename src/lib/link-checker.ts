@@ -160,28 +160,104 @@ export async function isSafeExternalUrl(
   }
 }
 
-export async function checkExternalLink(
-  rawUrl: string,
-): Promise<{ ok: boolean; status: number | null; reason?: string }> {
-  const safety = await isSafeExternalUrl(rawUrl);
-  if (!safety.safe) {
-    return { ok: false, status: null, reason: safety.reason };
-  }
+const MAX_REDIRECTS = 3;
 
-  try {
-    let response = await fetch(rawUrl, {
-      method: "HEAD",
-      redirect: "follow",
+async function fetchWithValidatedRedirects(
+  initialUrl: string,
+  method: "HEAD" | "GET",
+): Promise<
+  | { response: Response; error?: undefined }
+  | { response?: undefined; error: { ok: false; status: number | null; reason: string } }
+> {
+  let currentUrl = initialUrl;
+
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const safety = await isSafeExternalUrl(currentUrl);
+    if (!safety.safe) {
+      return {
+        error: {
+          ok: false,
+          status: null,
+          reason: safety.reason ?? "URL de redirecionamento bloqueada.",
+        },
+      };
+    }
+
+    const response = await fetch(currentUrl, {
+      method,
+      redirect: "manual",
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });
 
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      await response.body?.cancel().catch(() => undefined);
+
+      if (!location) {
+        return {
+          error: {
+            ok: false,
+            status: response.status,
+            reason: "Redirecionamento sem cabeçalho Location.",
+          },
+        };
+      }
+
+      if (hop >= MAX_REDIRECTS) {
+        return {
+          error: {
+            ok: false,
+            status: response.status,
+            reason: "Limite de redirecionamentos excedido.",
+          },
+        };
+      }
+
+      try {
+        currentUrl = new URL(location, currentUrl).toString();
+      } catch {
+        return {
+          error: {
+            ok: false,
+            status: response.status,
+            reason: "URL de redirecionamento inválida.",
+          },
+        };
+      }
+
+      continue;
+    }
+
+    return { response };
+  }
+
+  return {
+    error: {
+      ok: false,
+      status: null,
+      reason: "Limite de redirecionamentos excedido.",
+    },
+  };
+}
+
+export async function checkExternalLink(
+  rawUrl: string,
+): Promise<{ ok: boolean; status: number | null; reason?: string }> {
+  try {
+    let result = await fetchWithValidatedRedirects(rawUrl, "HEAD");
+    if (result.error) {
+      return result.error;
+    }
+
+    let response = result.response;
+
     if (response.status === 405 || response.status === 501) {
       await response.body?.cancel().catch(() => undefined);
-      response = await fetch(rawUrl, {
-        method: "GET",
-        redirect: "follow",
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
+      result = await fetchWithValidatedRedirects(rawUrl, "GET");
+      if (result.error) {
+        return result.error;
+      }
+      response = result.response;
     }
 
     await response.body?.cancel().catch(() => undefined);

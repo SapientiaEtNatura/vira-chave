@@ -268,7 +268,7 @@ export async function PATCH(request: Request) {
 
     const existing = await prisma.user.findUnique({
       where: { id: data.id },
-      select: { id: true, role: true },
+      select: { id: true, role: true, status: true },
     });
 
     if (!existing || existing.role !== Role.EDUCADOR) {
@@ -280,7 +280,12 @@ export async function PATCH(request: Request) {
 
     const educator = await prisma.user.update({
       where: { id: data.id },
-      data: { status: data.status },
+      data: {
+        status: data.status,
+        ...(data.status !== existing.status
+          ? { tokenVersion: { increment: 1 } }
+          : {}),
+      },
       select: {
         id: true,
         name: true,
