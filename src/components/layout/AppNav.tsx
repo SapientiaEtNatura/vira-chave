@@ -8,9 +8,7 @@ import {
   Building2,
   ClipboardList,
   Compass,
-  EllipsisIcon,
   EllipsisVertical,
-  EllipsisVerticalIcon,
   FolderKanban,
   GraduationCap,
   Home,
@@ -21,9 +19,7 @@ import {
   Rocket,
   Shield,
   ShieldCheck,
-  TrashIcon,
   UserCircle,
-  UserPenIcon,
   UserRound,
   Users,
   type LucideIcon,
@@ -48,7 +44,6 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { tr } from "zod/v4/locales";
 
 export type NavIconKey =
   | "home"

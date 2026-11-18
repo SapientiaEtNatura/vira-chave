@@ -186,10 +186,7 @@ export async function seedDatabase(client: PrismaClient): Promise<void> {
   }
 
   // Semeia instituição, turma e usuários locais apenas fora de produção
-  if (
-    process.env.NODE_ENV !== "production" ||
-    process.env.SEED_DEV_USERS === "true"
-  ) {
+  if (process.env.NODE_ENV !== "production") {
     await seedDevFixtures(client);
   }
 }

@@ -101,7 +101,7 @@ export function AccountControls({
           Segurança / Senha
         </h2>
         <p className="mt-1 text-sm text-[var(--ink-secondary)]">
-          Mínimo de 8 caracteres.
+          Mínimo de 8 caracteres, com letras maiúsculas, minúsculas e número.
         </p>
 
         {passwordError && (

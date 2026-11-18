@@ -1,13 +1,18 @@
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { validateExternalUrlStructure } from "@/lib/link-checker";
 import {
   deleteStoredFile,
   FileValidationError,
+  MAX_STUDENT_EVIDENCE_FILES,
   saveEvidenceFile,
   type SavedEvidenceFile,
 } from "@/lib/storage/local-files";
 
 export const MIN_CHALLENGE_REFLECTION_LENGTH = 10;
+export const MAX_CHALLENGE_TITLE_LENGTH = 150;
+export const MAX_CHALLENGE_REFLECTION_LENGTH = 5000;
+export const MAX_CHALLENGE_EXTERNAL_URL_LENGTH = 2048;
 
 export class ChallengeSubmissionError extends Error {
   status: number;
@@ -41,24 +46,22 @@ function normalizeOptionalExternalUrl(rawUrl?: string | null): string | null {
     return null;
   }
 
-  let parsed: URL;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
+  if (trimmed.length > MAX_CHALLENGE_EXTERNAL_URL_LENGTH) {
     throw new ChallengeSubmissionError(
-      "Informe uma URL externa válida (ex.: https://...).",
+      `A URL externa deve ter no máximo ${MAX_CHALLENGE_EXTERNAL_URL_LENGTH} caracteres.`,
       400,
     );
   }
 
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+  const check = validateExternalUrlStructure(trimmed);
+  if (!check.safe || !check.parsed) {
     throw new ChallengeSubmissionError(
-      "A URL externa deve começar com http:// ou https://.",
+      check.reason ?? "Informe uma URL externa válida (ex.: https://...).",
       400,
     );
   }
 
-  return parsed.toString();
+  return check.parsed.toString();
 }
 
 function buildProjectSummary(reflection: string): string {
@@ -81,10 +84,24 @@ export async function submitChallenge(
   const saveFile = deps.saveFile ?? saveEvidenceFile;
   const deleteFile = deps.deleteFile ?? deleteStoredFile;
 
+  const trimmedTitle = (input.title ?? "").trim();
+  if (trimmedTitle.length > MAX_CHALLENGE_TITLE_LENGTH) {
+    throw new ChallengeSubmissionError(
+      `O título deve ter no máximo ${MAX_CHALLENGE_TITLE_LENGTH} caracteres.`,
+      400,
+    );
+  }
+
   const trimmedReflection = (input.reflection ?? "").trim();
   if (trimmedReflection.length < MIN_CHALLENGE_REFLECTION_LENGTH) {
     throw new ChallengeSubmissionError(
       `Descreva sua solução e aprendizado com pelo menos ${MIN_CHALLENGE_REFLECTION_LENGTH} caracteres.`,
+      400,
+    );
+  }
+  if (trimmedReflection.length > MAX_CHALLENGE_REFLECTION_LENGTH) {
+    throw new ChallengeSubmissionError(
+      `A reflexão deve ter no máximo ${MAX_CHALLENGE_REFLECTION_LENGTH} caracteres.`,
       400,
     );
   }
@@ -106,13 +123,24 @@ export async function submitChallenge(
     throw new ChallengeSubmissionError("Desafio não encontrado.", 404);
   }
 
-  const trimmedTitle = (input.title ?? "").trim();
   const projectTitle = trimmedTitle || challenge.title;
   const projectSummary = buildProjectSummary(trimmedReflection);
   const isIncludedInShare = input.isIncludedInShare ?? true;
 
   let savedFile: SavedEvidenceFile | null = null;
   if (input.file && input.file.size > 0) {
+    if (typeof prismaClient.evidenceFile?.count === "function") {
+      const existingFileCount = await prismaClient.evidenceFile.count({
+        where: { project: { studentId: input.studentId } },
+      });
+      if (existingFileCount >= MAX_STUDENT_EVIDENCE_FILES) {
+        throw new ChallengeSubmissionError(
+          "Limite máximo de arquivos atingido na conta.",
+          400,
+        );
+      }
+    }
+
     try {
       savedFile = await saveFile(input.file, input.studentId);
     } catch (error) {

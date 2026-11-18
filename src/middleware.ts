@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { SHARE_TOKEN_COOKIE_NAME } from "@/lib/portfolio/share-cookie";
 
 const PROTECTED_PAGE_PREFIXES = ["/app", "/educador", "/admin"];
 const PROTECTED_API_PREFIXES = [
@@ -10,6 +11,7 @@ const PROTECTED_API_PREFIXES = [
   "/api/educator",
   "/api/admin",
 ];
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 function hasSessionCookie(request: NextRequest): boolean {
   return Boolean(
@@ -18,8 +20,61 @@ function hasSessionCookie(request: NextRequest): boolean {
   );
 }
 
+export function isValidMutationOrigin(request: NextRequest): boolean {
+  if (!MUTATING_METHODS.has(request.method.toUpperCase())) {
+    return true;
+  }
+
+  const origin = request.headers.get("origin");
+  const expectedHost =
+    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
+    request.headers.get("host") ||
+    request.nextUrl.host;
+
+  if (origin) {
+    try {
+      const originHost = new URL(origin).host;
+      return originHost === expectedHost;
+    } catch {
+      return false;
+    }
+  }
+
+  if (request.headers.get("sec-fetch-site") === "cross-site") {
+    return false;
+  }
+
+  return true;
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  if (pathname.startsWith("/api/") && !isValidMutationOrigin(request)) {
+    return NextResponse.json(
+      { error: "Origem da requisição inválida." },
+      { status: 403 },
+    );
+  }
+
+  if (request.method === "GET" && pathname.startsWith("/p/")) {
+    const tokenSeg = pathname.slice(3).split("/")[0] ?? "";
+    if (
+      tokenSeg &&
+      tokenSeg !== "exemplo-demonstracao" &&
+      /^[A-Za-z0-9_-]{16,128}$/.test(tokenSeg)
+    ) {
+      const response = NextResponse.next();
+      response.cookies.set(SHARE_TOKEN_COOKIE_NAME, tokenSeg, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/api/files",
+        maxAge: 60 * 60,
+      });
+      return response;
+    }
+  }
 
   const isProtectedPage = PROTECTED_PAGE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
@@ -53,6 +108,9 @@ export const config = {
     "/app/:path*",
     "/educador/:path*",
     "/admin/:path*",
+    "/p/:path*",
+    "/api/auth/:path*",
+    "/api/files/:path*",
     "/api/account/:path*",
     "/api/discovery/:path*",
     "/api/tracks/:path*",

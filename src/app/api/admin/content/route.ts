@@ -3,24 +3,19 @@ import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
+import { validateExternalUrlStructure } from "@/lib/link-checker";
 import { requireApiRole } from "@/lib/rbac";
 
 const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-
-function isHttpOrHttpsUrl(value: string): boolean {
-  try {
-    const parsed = new URL(value);
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
 
 const httpExternalUrlSchema = z
   .string()
   .trim()
   .url("Informe uma URL externa válida.")
-  .refine(isHttpOrHttpsUrl, "A URL externa deve usar http:// ou https://.");
+  .refine(
+    (value) => validateExternalUrlStructure(value).safe,
+    "URL externa inválida ou aponta para endereço interno não permitido.",
+  );
 
 const createContentSchema = z.discriminatedUnion("kind", [
   z.object({

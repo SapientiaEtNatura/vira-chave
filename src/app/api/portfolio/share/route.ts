@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import {
   generateShareLink,
@@ -37,6 +38,13 @@ export async function POST() {
   }
 
   const result = await generateShareLink(authResult.userId);
+  await recordAuditLog({
+    actorId: authResult.userId,
+    actorRole: authResult.role,
+    action: AUDIT_ACTIONS.PORTFOLIO_SHARE_CREATED,
+    targetType: "PortfolioShareLink",
+  });
+
   return NextResponse.json(
     {
       rawToken: result.rawToken,
@@ -53,5 +61,11 @@ export async function DELETE() {
   }
 
   await revokeShareLinks(authResult.userId);
+  await recordAuditLog({
+    actorId: authResult.userId,
+    actorRole: authResult.role,
+    action: AUDIT_ACTIONS.PORTFOLIO_SHARE_REVOKED,
+    targetType: "PortfolioShareLink",
+  });
   return NextResponse.json({ revoked: true });
 }

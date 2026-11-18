@@ -177,7 +177,7 @@ export function SharedPortfolioView({
                         ) : (
                           <a
                             key={file.id}
-                            href={`/api/files/${file.id}?shareToken=${encodeURIComponent(shareToken)}`}
+                            href={`/api/files/${file.id}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] px-3 py-1.5 text-xs font-medium text-[var(--ink-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--ink-primary)]"

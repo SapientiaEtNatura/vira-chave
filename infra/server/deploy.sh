@@ -8,20 +8,26 @@ COMPOSE_FILE="${SCRIPT_DIR}/docker-compose.yml"
 
 cd "${SCRIPT_DIR}"
 
-# Reutiliza .env e .htpasswd persistentes do servidor quando executado pelo runner
-for secret_file in .env .htpasswd; do
-  if [ ! -f "${SCRIPT_DIR}/${secret_file}" ]; then
-    if [ -f "${SERVER_CONFIG_DIR}/infra/server/${secret_file}" ]; then
-      ln -s "${SERVER_CONFIG_DIR}/infra/server/${secret_file}" "${SCRIPT_DIR}/${secret_file}"
-    elif [ -f "${SERVER_CONFIG_DIR}/${secret_file}" ]; then
-      ln -s "${SERVER_CONFIG_DIR}/${secret_file}" "${SCRIPT_DIR}/${secret_file}"
-    else
-      echo "Erro: ${secret_file} nao encontrado em ${SCRIPT_DIR} nem em ${SERVER_CONFIG_DIR}." >&2
-      echo "Execute infra/server/init-env.sh no servidor antes do primeiro deploy." >&2
-      exit 1
-    fi
+# Reutiliza .env persistente do servidor (obrigatório) e .htpasswd (opcional) quando executado pelo runner
+if [ ! -f "${SCRIPT_DIR}/.env" ]; then
+  if [ -f "${SERVER_CONFIG_DIR}/infra/server/.env" ]; then
+    ln -s "${SERVER_CONFIG_DIR}/infra/server/.env" "${SCRIPT_DIR}/.env"
+  elif [ -f "${SERVER_CONFIG_DIR}/.env" ]; then
+    ln -s "${SERVER_CONFIG_DIR}/.env" "${SCRIPT_DIR}/.env"
+  else
+    echo "Erro: .env nao encontrado em ${SCRIPT_DIR} nem em ${SERVER_CONFIG_DIR}." >&2
+    echo "Execute infra/server/init-env.sh no servidor antes do primeiro deploy." >&2
+    exit 1
   fi
-done
+fi
+
+if [ ! -f "${SCRIPT_DIR}/.htpasswd" ]; then
+  if [ -f "${SERVER_CONFIG_DIR}/infra/server/.htpasswd" ]; then
+    ln -s "${SERVER_CONFIG_DIR}/infra/server/.htpasswd" "${SCRIPT_DIR}/.htpasswd"
+  elif [ -f "${SERVER_CONFIG_DIR}/.htpasswd" ]; then
+    ln -s "${SERVER_CONFIG_DIR}/.htpasswd" "${SCRIPT_DIR}/.htpasswd"
+  fi
+fi
 
 echo "==> Atualizando containers a partir de ${REPO_DIR}..."
 docker compose -p virachave -f "${COMPOSE_FILE}" up -d --build --remove-orphans

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
+import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import {
   resetConfirmSchema,
@@ -74,6 +75,13 @@ export async function POST(request: Request) {
         data: { usedAt: now },
       }),
     ]);
+
+    await recordAuditLog({
+      actorId: resetRecord.userId,
+      action: AUDIT_ACTIONS.AUTH_PASSWORD_RESET,
+      targetType: "User",
+      targetId: resetRecord.userId,
+    });
 
     return NextResponse.json({
       ok: true,

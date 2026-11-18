@@ -89,7 +89,7 @@ function ResetPasswordForm() {
         </h1>
         <p className="text-sm text-[var(--ink-muted)]">
           {token
-            ? "Escolha uma nova senha com pelo menos 8 caracteres."
+            ? "Escolha uma nova senha com pelo menos 8 caracteres, letras maiúsculas, minúsculas e número."
             : "Informe seu e-mail cadastrado para receber o link de recuperação."}
         </p>
       </div>
@@ -119,7 +119,7 @@ function ResetPasswordForm() {
             id="newPassword"
             label="Nova senha"
             required
-            hint="Mínimo de 8 caracteres."
+            hint="Mínimo de 8 caracteres, com letras maiúsculas, minúsculas e número."
           >
             <Input
               id="newPassword"

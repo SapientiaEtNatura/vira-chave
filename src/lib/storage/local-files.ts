@@ -3,6 +3,7 @@ import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export const MAX_EVIDENCE_SIZE_BYTES = 5 * 1024 * 1024;
+export const MAX_STUDENT_EVIDENCE_FILES = 50;
 
 export type ValidatedEvidenceType =
   | { mimeType: "application/pdf"; ext: "pdf" }

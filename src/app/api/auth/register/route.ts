@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { registerUser, RegistrationError } from "@/lib/auth/register";
 import { registerSchema } from "@/lib/validations/auth";
 
@@ -30,6 +31,14 @@ export async function POST(request: Request) {
 
   try {
     const user = await registerUser(parsed.data);
+    await recordAuditLog({
+      actorId: user.id,
+      actorRole: user.role,
+      action: AUDIT_ACTIONS.USER_REGISTERED,
+      targetType: "User",
+      targetId: user.id,
+      metadata: { role: user.role },
+    });
     return NextResponse.json({ user }, { status: 201 });
   } catch (error) {
     if (error instanceof RegistrationError) {

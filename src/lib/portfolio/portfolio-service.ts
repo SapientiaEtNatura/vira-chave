@@ -2,10 +2,12 @@ import crypto from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { validateExternalUrlStructure } from "@/lib/link-checker";
 import { hashShareToken } from "@/lib/portfolio/share-token";
 import {
   deleteStoredFile,
   FileValidationError,
+  MAX_STUDENT_EVIDENCE_FILES,
   saveEvidenceFile,
   type SavedEvidenceFile,
 } from "@/lib/storage/local-files";
@@ -180,24 +182,15 @@ function normalizeOptionalExternalUrl(rawUrl?: string | null): string | null {
     );
   }
 
-  let parsed: URL;
-  try {
-    parsed = new URL(trimmed);
-  } catch {
+  const check = validateExternalUrlStructure(trimmed);
+  if (!check.safe || !check.parsed) {
     throw new PortfolioServiceError(
-      "Informe uma URL externa válida (ex.: https://...).",
+      check.reason ?? "Informe uma URL externa válida (ex.: https://...).",
       400,
     );
   }
 
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new PortfolioServiceError(
-      "A URL externa deve começar com http:// ou https://.",
-      400,
-    );
-  }
-
-  return parsed.toString();
+  return check.parsed.toString();
 }
 
 function buildSummaryFromReflection(reflection: string): string {
@@ -408,6 +401,18 @@ export async function createPortfolioProject(
 
   let savedFile: SavedEvidenceFile | null = null;
   if (input.file && input.file.size > 0) {
+    if (typeof prismaClient.evidenceFile?.count === "function") {
+      const existingFileCount = await prismaClient.evidenceFile.count({
+        where: { project: { studentId: input.studentId } },
+      });
+      if (existingFileCount >= MAX_STUDENT_EVIDENCE_FILES) {
+        throw new PortfolioServiceError(
+          "Limite máximo de arquivos atingido na conta.",
+          400,
+        );
+      }
+    }
+
     try {
       savedFile = await saveFile(input.file, input.studentId);
     } catch (error) {

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { authorizeAndReadFile } from "@/lib/files/authorize-file";
+import {
+  extractCookieValue,
+  SHARE_TOKEN_COOKIE_NAME,
+} from "@/lib/portfolio/share-token";
 
 function sanitizeHeaderFilename(name: string): string {
   const cleaned = name
@@ -17,7 +21,9 @@ export async function GET(
   const { fileId } = await context.params;
   const session = await auth();
   const { searchParams } = new URL(request.url);
-  const shareToken = searchParams.get("shareToken");
+  const shareToken =
+    searchParams.get("shareToken") ??
+    extractCookieValue(request.headers.get("cookie"), SHARE_TOKEN_COOKIE_NAME);
 
   const result = await authorizeAndReadFile({
     fileId,

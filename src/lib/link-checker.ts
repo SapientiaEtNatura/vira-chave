@@ -1,7 +1,10 @@
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import http from "node:http";
+import https from "node:https";
+import { isIP, type LookupFunction } from "node:net";
 
 const REQUEST_TIMEOUT_MS = 5000;
+const NATIVE_FETCH = globalThis.fetch;
 
 function isPrivateOrReservedIpv4(ip: string): boolean {
   const parts = ip.split(".");
@@ -108,9 +111,17 @@ function isBlockedHostname(hostname: string): boolean {
   );
 }
 
-export async function isSafeExternalUrl(
+export interface ExternalUrlStructureResult {
+  safe: boolean;
+  reason?: string;
+  parsed?: URL;
+  hostname?: string;
+  isIpLiteral?: boolean;
+}
+
+export function validateExternalUrlStructure(
   rawUrl: string,
-): Promise<{ safe: boolean; reason?: string }> {
+): ExternalUrlStructureResult {
   let parsed: URL;
   try {
     parsed = new URL(rawUrl);
@@ -137,13 +148,34 @@ export async function isSafeExternalUrl(
 
   if (isIP(hostname) !== 0) {
     if (isPrivateOrReservedIp(hostname)) {
-      return { safe: false, reason: "Endereço IP privado ou reservado não é permitido." };
+      return {
+        safe: false,
+        reason: "Endereço IP privado ou reservado não é permitido.",
+      };
     }
+    return { safe: true, parsed, hostname, isIpLiteral: true };
+  }
+
+  return { safe: true, parsed, hostname, isIpLiteral: false };
+}
+
+export async function isSafeExternalUrl(rawUrl: string): Promise<{
+  safe: boolean;
+  reason?: string;
+  resolvedAddress?: string;
+  resolvedFamily?: 4 | 6;
+}> {
+  const structure = validateExternalUrlStructure(rawUrl);
+  if (!structure.safe || !structure.hostname) {
+    return { safe: false, reason: structure.reason };
+  }
+
+  if (structure.isIpLiteral) {
     return { safe: true };
   }
 
   try {
-    const records = await lookup(hostname, { all: true });
+    const records = await lookup(structure.hostname, { all: true });
     if (records.length === 0) {
       return { safe: false, reason: "Nenhum endereço IP resolvido para o host." };
     }
@@ -154,7 +186,12 @@ export async function isSafeExternalUrl(
       }
     }
 
-    return { safe: true };
+    const primary = records[0];
+    return {
+      safe: true,
+      resolvedAddress: primary.address,
+      resolvedFamily: primary.family === 6 ? 6 : 4,
+    };
   } catch {
     return { safe: false, reason: "Falha ao resolver DNS do host." };
   }
@@ -162,11 +199,118 @@ export async function isSafeExternalUrl(
 
 const MAX_REDIRECTS = 3;
 
+interface CheckedResponse {
+  status: number;
+  ok: boolean;
+  location: string | null;
+}
+
+async function sendCheckedRequest(
+  urlStr: string,
+  method: "HEAD" | "GET",
+  pinned?: { address: string; family: 4 | 6 },
+): Promise<CheckedResponse> {
+  if (!pinned || globalThis.fetch !== NATIVE_FETCH) {
+    const response = await globalThis.fetch(urlStr, {
+      method,
+      redirect: "manual",
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    });
+    const location = response.headers.get("location");
+    await response.body?.cancel().catch(() => undefined);
+    return {
+      status: response.status,
+      ok: response.ok,
+      location,
+    };
+  }
+
+  const parsed = new URL(urlStr);
+  const pinnedLookup: LookupFunction = (_host, opts, callback) => {
+    if (typeof opts === "object" && opts !== null && opts.all) {
+      callback(null, [{ address: pinned.address, family: pinned.family }]);
+      return;
+    }
+    callback(null, pinned.address, pinned.family);
+  };
+
+  return new Promise<CheckedResponse>((resolve, reject) => {
+    let settled = false;
+    const finishResolve = (val: CheckedResponse) => {
+      if (settled) return;
+      settled = true;
+      resolve(val);
+    };
+    const finishReject = (err: unknown) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    const requestOptions = {
+      method,
+      timeout: REQUEST_TIMEOUT_MS,
+      headers: {
+        Host: parsed.host,
+        "User-Agent": "ViraChave-LinkChecker/1.0",
+      },
+      lookup: pinnedLookup,
+    };
+
+    const req =
+      parsed.protocol === "https:"
+        ? https.request(
+            parsed,
+            { ...requestOptions, servername: parsed.hostname },
+            (res) => {
+              const status = res.statusCode ?? 0;
+              const rawLocation = res.headers.location;
+              const location = Array.isArray(rawLocation)
+                ? (rawLocation[0] ?? null)
+                : (rawLocation ?? null);
+              res.resume();
+              res.destroy();
+              finishResolve({
+                status,
+                ok: status >= 200 && status < 300,
+                location,
+              });
+            },
+          )
+        : http.request(parsed, requestOptions, (res) => {
+            const status = res.statusCode ?? 0;
+            const rawLocation = res.headers.location;
+            const location = Array.isArray(rawLocation)
+              ? (rawLocation[0] ?? null)
+              : (rawLocation ?? null);
+            res.resume();
+            res.destroy();
+            finishResolve({
+              status,
+              ok: status >= 200 && status < 300,
+              location,
+            });
+          });
+
+    req.on("timeout", () => {
+      const timeoutErr = new Error("Tempo limite excedido ao verificar o link externo.");
+      req.destroy(timeoutErr);
+      finishReject(timeoutErr);
+    });
+
+    req.on("error", (err) => {
+      finishReject(err);
+    });
+
+    req.end();
+  });
+}
+
 async function fetchWithValidatedRedirects(
   initialUrl: string,
   method: "HEAD" | "GET",
 ): Promise<
-  | { response: Response; error?: undefined }
+  | { response: CheckedResponse; error?: undefined }
   | { response?: undefined; error: { ok: false; status: number | null; reason: string } }
 > {
   let currentUrl = initialUrl;
@@ -183,15 +327,14 @@ async function fetchWithValidatedRedirects(
       };
     }
 
-    const response = await fetch(currentUrl, {
-      method,
-      redirect: "manual",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
+    const pinned = safety.resolvedAddress
+      ? { address: safety.resolvedAddress, family: safety.resolvedFamily ?? 4 }
+      : undefined;
+
+    const response = await sendCheckedRequest(currentUrl, method, pinned);
 
     if (response.status >= 300 && response.status < 400) {
-      const location = response.headers.get("location");
-      await response.body?.cancel().catch(() => undefined);
+      const location = response.location;
 
       if (!location) {
         return {
@@ -252,15 +395,12 @@ export async function checkExternalLink(
     let response = result.response;
 
     if (response.status === 405 || response.status === 501) {
-      await response.body?.cancel().catch(() => undefined);
       result = await fetchWithValidatedRedirects(rawUrl, "GET");
       if (result.error) {
         return result.error;
       }
       response = result.response;
     }
-
-    await response.body?.cancel().catch(() => undefined);
 
     return {
       ok: response.ok,

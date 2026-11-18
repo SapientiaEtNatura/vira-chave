@@ -2,15 +2,14 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";
 import { z } from "zod";
+import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import { requireApiRole } from "@/lib/rbac";
+import { strongPasswordSchema } from "@/lib/validations/auth";
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, "Informe sua senha atual."),
-  newPassword: z
-    .string()
-    .min(8, "A nova senha deve ter pelo menos 8 caracteres.")
-    .max(128, "Senha muito longa."),
+  newPassword: strongPasswordSchema,
 });
 
 export async function POST(request: Request) {
@@ -61,6 +60,14 @@ export async function POST(request: Request) {
     user.passwordHash,
   );
   if (!isCurrentValid) {
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.AUTH_PASSWORD_CHANGE_FAILED,
+      targetType: "User",
+      targetId: user.id,
+      metadata: { reason: "invalid_current_password" },
+    });
     return NextResponse.json(
       { error: "A senha atual está incorreta." },
       { status: 400 },
@@ -78,6 +85,14 @@ export async function POST(request: Request) {
   await prisma.user.update({
     where: { id: user.id },
     data: { passwordHash, tokenVersion: { increment: 1 } },
+  });
+
+  await recordAuditLog({
+    actorId: authResult.userId,
+    actorRole: authResult.role,
+    action: AUDIT_ACTIONS.AUTH_PASSWORD_CHANGED,
+    targetType: "User",
+    targetId: user.id,
   });
 
   return NextResponse.json({ message: "Senha alterada com sucesso." });

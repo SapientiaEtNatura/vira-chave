@@ -6,6 +6,14 @@ const emailField = z
   .email("E-mail inválido.")
   .transform((value) => value.toLowerCase());
 
+export const strongPasswordSchema = z
+  .string()
+  .min(8, "A senha deve ter pelo menos 8 caracteres.")
+  .max(128, "Senha muito longa.")
+  .regex(/[a-z]/, "A senha deve conter pelo menos uma letra minúscula.")
+  .regex(/[A-Z]/, "A senha deve conter pelo menos uma letra maiúscula.")
+  .regex(/[0-9]/, "A senha deve conter pelo menos um número.");
+
 const baseRegisterFields = {
   name: z
     .string()
@@ -13,10 +21,7 @@ const baseRegisterFields = {
     .min(2, "Informe seu nome completo.")
     .max(120, "Nome muito longo."),
   email: emailField,
-  password: z
-    .string()
-    .min(8, "A senha deve ter pelo menos 8 caracteres.")
-    .max(128, "Senha muito longa."),
+  password: strongPasswordSchema,
   acceptedTerms: z.literal(true, {
     message: "Você precisa aceitar os Termos de Uso.",
   }),
@@ -72,10 +77,7 @@ export type ResetRequestInput = z.infer<typeof resetRequestSchema>;
 
 export const resetConfirmSchema = z.object({
   token: z.string().trim().min(16, "Token de recuperação inválido."),
-  newPassword: z
-    .string()
-    .min(8, "A nova senha deve ter pelo menos 8 caracteres.")
-    .max(128, "Senha muito longa."),
+  newPassword: strongPasswordSchema,
 });
 
 export type ResetConfirmInput = z.infer<typeof resetConfirmSchema>;

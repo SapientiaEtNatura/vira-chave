@@ -154,7 +154,7 @@ export default function CadastroPage() {
             id="password"
             label="Senha"
             required
-            hint="Mínimo de 8 caracteres."
+            hint="Mínimo de 8 caracteres, com letras maiúsculas, minúsculas e número."
           >
             <Input
               id="password"

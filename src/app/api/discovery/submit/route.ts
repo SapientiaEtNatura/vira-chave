@@ -54,6 +54,17 @@ export async function POST(request: Request) {
     );
   }
 
+  const validQuestionIds = new Set(questions.map((question) => question.id));
+  const hasUnknownQuestion = Object.keys(parsed.data.answers).some(
+    (questionId) => !validQuestionIds.has(questionId),
+  );
+  if (hasUnknownQuestion) {
+    return NextResponse.json(
+      { error: "Respostas do questionário inválidas." },
+      { status: 400 },
+    );
+  }
+
   const missingQuestion = questions.find(
     (question) => parsed.data.answers[question.id] === undefined,
   );
