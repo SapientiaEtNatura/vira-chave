@@ -1,7 +1,7 @@
 .superpowers/
 .agents/
 docs/
-product.md
+PRODUCT.md
 node_modules/
 .next/
 .env
