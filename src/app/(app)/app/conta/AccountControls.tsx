@@ -49,7 +49,6 @@ export function AccountControls({
 
       if (!response.ok) {
         setPasswordError(data.error ?? "Não foi possível alterar a senha.");
-        setPasswordLoading(false);
         return;
       }
 
@@ -83,13 +82,13 @@ export function AccountControls({
         setDeleteError(
           data.error ?? "Não foi possível excluir a conta. Tente novamente.",
         );
-        setDeleteLoading(false);
         return;
       }
 
       await signOut({ callbackUrl: "/" });
     } catch {
       setDeleteError("Erro de conexão ao excluir a conta.");
+    } finally {
       setDeleteLoading(false);
     }
   }

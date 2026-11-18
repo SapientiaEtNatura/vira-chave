@@ -17,7 +17,11 @@ const PUBLIC_LINKS = [
   { href: "/privacidade", label: "Privacidade", sectionId: null },
 ] as const;
 
-export function PublicHeader() {
+export function PublicHeader({
+  dashboardHref = null,
+}: {
+  dashboardHref?: string | null;
+}) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
@@ -37,7 +41,7 @@ export function PublicHeader() {
     return () => {
       window.removeEventListener("scroll", updateScroll);
     };
-  }, [pathname]);
+  }, []);
 
   useEffect(() => {
     if (pathname !== "/") {
@@ -97,18 +101,18 @@ export function PublicHeader() {
 
   function handleNavClick(
     event: MouseEvent<HTMLAnchorElement>,
-    href: string,
+    item: (typeof PUBLIC_LINKS)[number],
     closeMobile = false,
   ) {
     if (closeMobile) {
       setMobileOpen(false);
     }
 
-    if (href !== "/#como-funciona" || pathname !== "/") {
+    if (!item.sectionId || pathname !== "/") {
       return;
     }
 
-    const section = document.getElementById("como-funciona");
+    const section = document.getElementById(item.sectionId);
     if (!section) return;
 
     event.preventDefault();
@@ -117,16 +121,17 @@ export function PublicHeader() {
     ).matches;
     const behavior: ScrollBehavior = prefersReduced ? "auto" : "smooth";
 
+    const hash = `#${item.sectionId}`;
     const rect = section.getBoundingClientRect();
     const isAtSection =
-      window.location.hash === "#como-funciona" ||
+      window.location.hash === hash ||
       (rect.top <= 140 && rect.bottom > 140);
 
-    if (isAtSection) {
+    if (isAtSection && item.sectionId === "como-funciona") {
       window.history.replaceState(null, "", "/");
       window.scrollTo({ top: 0, behavior });
     } else {
-      window.history.replaceState(null, "", "/#como-funciona");
+      window.history.replaceState(null, "", `/${hash}`);
       section.scrollIntoView({ behavior, block: "start" });
     }
   }
@@ -167,7 +172,7 @@ export function PublicHeader() {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "location" : undefined}
-                  onClick={(event) => handleNavClick(event, item.href)}
+                  onClick={(event) => handleNavClick(event, item)}
                   className={cn(
                     "inline-flex min-h-10 items-center rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-200 motion-reduce:transition-none",
                     active
@@ -186,12 +191,20 @@ export function PublicHeader() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <ButtonLink href="/login" variant="ghost" size="md">
-              Entrar
-            </ButtonLink>
-            <ButtonLink href="/cadastro" variant="primary" size="md">
-              Criar conta
-            </ButtonLink>
+            {dashboardHref ? (
+              <ButtonLink href={dashboardHref} variant="primary" size="md">
+                Acessar painel
+              </ButtonLink>
+            ) : (
+              <>
+                <ButtonLink href="/login" variant="ghost" size="md">
+                  Entrar
+                </ButtonLink>
+                <ButtonLink href="/cadastro" variant="primary" size="md">
+                  Criar conta
+                </ButtonLink>
+              </>
+            )}
           </div>
 
           <button
@@ -224,7 +237,7 @@ export function PublicHeader() {
                   key={item.href}
                   href={item.href}
                   aria-current={active ? "location" : undefined}
-                  onClick={(event) => handleNavClick(event, item.href, true)}
+                  onClick={(event) => handleNavClick(event, item, true)}
                   className={cn(
                     "flex min-h-11 items-center rounded-lg px-3 text-sm font-medium transition-colors",
                     active
@@ -237,24 +250,38 @@ export function PublicHeader() {
               );
             })}
             <div className="mt-3 flex flex-col gap-2 border-t border-[var(--border-subtle)] pt-3">
-              <ButtonLink
-                href="/login"
-                variant="outline"
-                size="md"
-                onClick={() => setMobileOpen(false)}
-                className="w-full justify-center"
-              >
-                Entrar
-              </ButtonLink>
-              <ButtonLink
-                href="/cadastro"
-                variant="primary"
-                size="md"
-                onClick={() => setMobileOpen(false)}
-                className="w-full justify-center"
-              >
-                Criar conta
-              </ButtonLink>
+              {dashboardHref ? (
+                <ButtonLink
+                  href={dashboardHref}
+                  variant="primary"
+                  size="md"
+                  onClick={() => setMobileOpen(false)}
+                  className="w-full justify-center"
+                >
+                  Acessar painel
+                </ButtonLink>
+              ) : (
+                <>
+                  <ButtonLink
+                    href="/login"
+                    variant="outline"
+                    size="md"
+                    onClick={() => setMobileOpen(false)}
+                    className="w-full justify-center"
+                  >
+                    Entrar
+                  </ButtonLink>
+                  <ButtonLink
+                    href="/cadastro"
+                    variant="primary"
+                    size="md"
+                    onClick={() => setMobileOpen(false)}
+                    className="w-full justify-center"
+                  >
+                    Criar conta
+                  </ButtonLink>
+                </>
+              )}
             </div>
           </nav>
         </div>

@@ -19,7 +19,7 @@ export interface MobileAccountMenuProps {
   className?: string;
 }
 
-function getInitials(name?: string, fallback?: string): string {
+export function getInitials(name?: string, fallback?: string): string {
   const source = (name || fallback || "VC").trim();
   const parts = source.split(/\s+/).filter(Boolean);
   if (parts.length >= 2) {

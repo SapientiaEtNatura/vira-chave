@@ -4,19 +4,35 @@ import { cn } from "@/lib/cn";
 export interface BrandLogoProps {
   href?: string;
   subtitle?: string;
+  variant?: "default" | "dock";
+  showText?: boolean;
   className?: string;
 }
 
-export function BrandLogo({ href, subtitle, className }: BrandLogoProps) {
+export function BrandLogo({
+  href,
+  subtitle,
+  variant = "default",
+  showText = true,
+  className,
+}: BrandLogoProps) {
+  const isDock = variant === "dock";
+  const iconSize = isDock ? 18 : 20;
+
   const content = (
     <span className="inline-flex items-center gap-2.5">
       <span
         aria-hidden="true"
-        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-primary)] text-white shadow-xs"
+        className={cn(
+          "inline-flex h-9 w-9 shrink-0 items-center justify-center text-white",
+          isDock
+            ? "rounded-full border border-white/15 bg-white/12"
+            : "rounded-lg bg-[var(--brand-primary)] shadow-xs",
+        )}
       >
         <svg
-          width="20"
-          height="20"
+          width={iconSize}
+          height={iconSize}
           viewBox="0 0 24 24"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -37,16 +53,25 @@ export function BrandLogo({ href, subtitle, className }: BrandLogoProps) {
           />
         </svg>
       </span>
-      <span className="flex flex-col leading-tight">
-        <span className="font-display text-base font-bold tracking-tight text-[var(--ink-primary)]">
-          VIRA CHAVE
-        </span>
-        {subtitle ? (
-          <span className="text-xs font-medium text-[var(--ink-muted)]">
-            {subtitle}
+      {showText ? (
+        <span className="flex flex-col leading-tight">
+          <span
+            className={cn(
+              "font-display font-bold tracking-tight whitespace-nowrap",
+              isDock
+                ? "text-sm text-white"
+                : "text-base text-[var(--ink-primary)]",
+            )}
+          >
+            VIRA CHAVE
           </span>
-        ) : null}
-      </span>
+          {subtitle ? (
+            <span className="text-xs font-medium text-[var(--ink-muted)]">
+              {subtitle}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
     </span>
   );
 
@@ -54,8 +79,12 @@ export function BrandLogo({ href, subtitle, className }: BrandLogoProps) {
     return (
       <Link
         href={href}
+        aria-label="Vira Chave — Início"
+        title={!showText ? "Vira Chave" : undefined}
         className={cn(
-          "inline-flex min-h-11 items-center rounded-lg px-1.5 py-1 transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/35",
+          isDock
+            ? "flex h-11 shrink-0 items-center rounded-full transition-colors duration-150 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            : "inline-flex min-h-11 items-center rounded-lg px-1.5 py-1 transition-colors hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/35",
           className,
         )}
       >

@@ -1,20 +1,41 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { BrandLogo } from "@/components/ui";
 import { PublicHeader } from "./PublicHeader";
 
 const AUTH_ROUTES = ["/login", "/cadastro", "/recuperar-senha"];
 
-export function PublicShell({ children }: { children: ReactNode }) {
+export function PublicShell({
+  children,
+  dashboardHref = null,
+}: {
+  children: ReactNode;
+  dashboardHref?: string | null;
+}) {
   const pathname = usePathname() ?? "";
+  const router = useRouter();
   const isAuthRoute = AUTH_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
 
+  useEffect(() => {
+    if (!isAuthRoute || !dashboardHref) return;
+    if (
+      pathname.startsWith("/recuperar-senha") &&
+      new URLSearchParams(window.location.search).has("token")
+    ) {
+      return;
+    }
+    router.replace(dashboardHref);
+  }, [isAuthRoute, dashboardHref, pathname, router]);
+
   if (isAuthRoute) {
+    if (dashboardHref && !pathname.startsWith("/recuperar-senha")) {
+      return null;
+    }
     return (
       <div className="min-h-screen bg-[var(--bg-surface)] text-[var(--ink-primary)]">
         <main>{children}</main>
@@ -24,7 +45,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col bg-[var(--bg-canvas)] text-[var(--ink-primary)]">
-      <PublicHeader />
+      <PublicHeader dashboardHref={dashboardHref} />
 
       <main className="flex-1">{children}</main>
 

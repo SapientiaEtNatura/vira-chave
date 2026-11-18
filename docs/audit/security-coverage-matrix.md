@@ -1,0 +1,40 @@
+# Matriz de Cobertura de Segurança (OWASP & Checklist VIRA-CHAVE)
+
+**Referência:** `.agents/skills/appsec-review/references/owasp-virachave-checklist.md`  
+**Legenda de Estado:**
+- `IMPLEMENTADO` — Controle implementado e verificado estaticamente sem brechas identificadas.
+- `PARCIAL` — Implementação existe, mas possui lacuna ou risco de bypass que exige correção.
+- `AUSENTE` — Controle não implementado ou sem evidência suficiente no ambiente.
+- `N/A NA STACK` — Não aplicável à arquitetura atual (ex.: IA/LLM inexistente).
+
+---
+
+| # | Controle (Checklist) | Onde está implementado | Correto? | Evidência de Funcionamento / Verificação | Falhas ou Brechas | Necessita Correção? |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| 1 | **RBAC (`requireRole` / `requireApiRole`)** | `src/lib/rbac.ts`, layouts `(app)`, `(educator)`, `(admin)`, `/api/**` | Sim (com ressalva do JWT) | `admin-rbac.test.ts` (3/3); checagem de `Role` antes de queries | Depende do JWT stateless sem revalidar `status` no DB (#8) | Sim (via #8 / `SEC-01`) |
+| 2 | **IDOR / Ownership (Queries Prisma)** | `portfolio-service.ts`, `authorize-file.ts`, `classroom-analytics.ts`, `educator/classrooms/[id]/route.ts` | Sim | `educator-privacy.test.ts` (2/2), `portfolio-share.test.ts` (2/2) | Nenhuma nas rotas auditadas | Não |
+| 3 | **Public Portfolio Share (`/p/[token]`)** | `portfolio-service.ts`, `/api/portfolio/share`, `share-token.ts` | Parcial | Token `randomBytes(24)`, hash SHA-256, `isIncludedInShare: true` | Não verifica `student.status === "ACTIVE"` (`SEC-10`); sem rate-limit dedicado no Nginx (`SEC-03`) | **Sim** |
+| 4 | **SSRF (`externalUrl` & Link Checker)** | `src/lib/link-checker.ts`, `portfolio-service.ts`, `admin/content/route.ts` | Parcial | Validação `http:`/`https:`, bloqueio de IPs privados/DNS | `checkExternalLink` usa `redirect: "follow"` permitindo bypass via `302` (`SEC-02`) | **Sim** |
+| 5 | **Password Storage (`bcryptjs`)** | `register.ts`, `reset-password/route.ts`, `account/password/route.ts`, `auth.ts` | Parcial | `bcrypt.hash(..., 12)`, `passwordHash` nunca retornado | Política mínima apenas `min(8)` sem complexidade; permite `newPassword === currentPassword` (`SEC-12` / `QA-04`) | Parcial |
+| 6 | **Cookie Flags (`HttpOnly`, `Secure`, `SameSite`)** | `src/lib/auth.ts` (NextAuth v5 defaults) + `AUTH_TRUST_HOST` | Parcial | Padrões NextAuth v5; `nginx.conf` encaminha `X-Forwarded-Proto` | `X-Forwarded-Proto` sem restrição de proxy confiável e ausência de `AUTH_URL` (`SEC-06`); não testado em runtime | **Sim** |
+| 7 | **Stored Tokens (Hashing & Entropia)** | `reset-password/route.ts`, `portfolio-service.ts`, `share-token.ts` | Sim | `crypto.randomBytes(24/32)` + hash SHA-256 em `tokenHash` | Fluxo de reset sem envio de e-mail em produção (`QA-01`) | Parcial (`QA-01`) |
+| 8 | **Account Lifecycle (`ACTIVE` & Revogação)** | `src/lib/auth.ts` (`authorize` checa `status === "ACTIVE"`) | Parcial | Bloqueia novos logins de contas suspensas | JWT de 8h continua válido após suspensão ou troca/reset de senha (`SEC-01`) | **Sim** |
+| 9 | **Registration & Reset (Anti-Enumeração / Mass Assignment)** | `register.ts`, `validations/auth.ts`, `reset-password/route.ts` | Parcial | `discriminatedUnion` impede `role: ADMIN`; reset não enumera e-mail | `register` retorna `409 EMAIL_INUSE` (`SEC-03`); auto-cadastro de educador só via `institutionCode` (`SEC-13`) | Parcial |
+| 10 | **Rate Limiting & Bot Protection** | `infra/server/nginx.conf` (`limit_req_zone`) | Parcial | `15r/m` + `burst=10` em `/api/auth/(register\|reset-password\|callback)` | `$binary_remote_addr` lê IP do `cloudflared` (DoS global), faltam rotas de upload/arquivos/`/p/*` e falta Turnstile (`SEC-03`) | **Sim** |
+| 11 | **SQL Injection (Prisma Parametrizado)** | `src/lib/db.ts`, queries Prisma em `src/**` | Sim | Zero `$queryRawUnsafe`/`$executeRawUnsafe`; único `$queryRaw` é `SELECT 1` | Nenhuma | Não |
+| 12 | **XSS (`dangerouslySetInnerHTML` & CSP)** | `next.config.ts`, `portfolio-service.ts`, `submit-challenge.ts` | Parcial | Sem `dangerouslySetInnerHTML`; `externalUrl` restrito a `http:`/`https:` | CSP de produção tem `script-src 'self' 'unsafe-inline'` (`SEC-07`); PDFs servidos `inline` (`SEC-08`) | **Sim** |
+| 13 | **CSRF (`SameSite` & Métodos HTTP)** | NextAuth CSRF + `SameSite=Lax` + `POST`/`PATCH`/`DELETE` | Sim | Nenhuma rota mutável utiliza `GET` | Nenhuma | Não |
+| 14 | **Zod Validation, Mass Assignment & Exceções** | `validations/auth.ts`, `api-patch-validation.test.ts` (17/17) | Parcial | Allowlists em `PATCH` e rotas admin | `POST /api/portfolio/projects` sem `maxLength` (`QA-02`); JSON `null` gera HTTP 500 em 2 rotas (`SEC-04`) | **Sim** |
+| 15 | **Error Handling & Logs** | `src/lib/audit.ts`, blocos `try/catch` em `/api/**` | Parcial | `audit.ts` sanitiza `SENSITIVE_KEYS` | Sem `src/app/error.tsx` / `global-error.tsx`; `register/route.ts` loga `error` bruto (`SEC-05`); `AUTH_LOGIN_FAILED` não chamado (`SEC-12`) | **Sim** |
+| 16 | **File Upload Security** | `src/lib/storage/local-files.ts`, `/api/challenges/[desafioId]/submit` | Sim | `experimentar-files.test.ts` (3/3): magic bytes, extensão, 5 MB, UUID, `resolveSafeStoragePath` | Nenhuma | Não |
+| 17 | **File Download Security** | `src/app/api/files/[fileId]/route.ts`, `authorize-file.ts` | Parcial | `authorizeAndReadFile`, `nosniff`, `Cache-Control: private, no-store` | `Content-Disposition: inline` para PDFs sem `CSP: sandbox` (`SEC-08`) e sem checar `student.status` (`SEC-10`) | **Sim** |
+| 18 | **Adolescent Data (LGPD Art. 14)** | `classroom-analytics.ts`, `portfolio-service.ts`, `register.ts` | Parcial | `educator-privacy.test.ts` (2/2): zero `reflection`, `notes`, e-mail ou respostas no painel do educador | Consentimento de menor por autoaceite escolar (`SEC-13`); educador vê alunos suspensos (`QA-05`) | Parcial |
+| 19 | **API Response Trimming (Minimização)** | `admin/*`, `educator/*`, `portfolio/*` | Sim | Uso consistente de `select` mínimo e DTOs | Nenhuma identificada | Não |
+| 20 | **Account Deletion (LGPD)** | `src/lib/lgpd/delete-account.ts`, `/api/account/delete` | Sim | `lgpd-delete.test.ts` (2/2): anonimiza consentimentos e apaga arquivos físicos | UI exibida para `ADMIN` em preview apesar do `403` na API (`QA-06`) | Não (só UI em `QA-06`) |
+| 21 | **Server -> Client Boundary** | Layouts `(app)`, `(educator)`, `(admin)`, páginas RSC | Sim | Passa apenas `name` e flags mínimas aos Client Components; zero `NEXT_PUBLIC_*` sensível | Nenhuma | Não |
+| 22 | **External AI / LLM Guardrails (+ IA)** | — | N/A | Confirmado que não há integração com IA/LLM no repositório | N/A | N/A na stack |
+| 23 | **Secrets & Git History** | `infra/server/init-env.sh`, `.gitignore`, `.env.example` | Parcial | `git log --all --name-only` não encontrou `.env`, `.pem` ou `.htpasswd` | `gitleaks` não instalado para varredura profunda de conteúdo em diffs históricos | Parcial (rodar CI) |
+| 24 | **DB Privilege & Encryption at Rest** | `infra/server/init-env.sh`, `docker-compose.yml` | Parcial | Porta `5432` não exposta fora da rede Docker | `init-env.sh` cria usuário `virachave` como dono do DB; criptografia em disco depende do host Ubuntu | Parcial (infra) |
+| 25 | **Nginx, TLS, Headers & Deploy** | `infra/server/nginx.conf`, `docker-compose.yml`, `deploy.sh`, `ci-cd.yml` | Parcial | `server_tokens off`, `no-new-privileges:true`, `127.0.0.1:3000`, `nextjs` non-root | Sem HSTS (`SEC-07`), `cloudflared:latest` efêmero, `prisma db push` em prod, runner sem approval gate (`SEC-09`) | **Sim** |
+| 26 | **Dependencies & Supply Chain** | `package.json`, `package-lock.json` | Parcial | `npm audit --omit=dev` executado diretamente | **5 vulnerabilidades** (1 moderada, 4 altas em `deepmerge-ts`/`prisma` e `postcss`/`next`); `next-auth` em `beta` (`SEC-11`) | **Sim** |
+| 27 | **Pre-Delivery Audit Gate** | Suítes Vitest + Playwright | Parcial | 61/61 testes unitários aprovados; Playwright configurado | 3 specs E2E não executadas nesta fase; faltam testes unitários para várias rotas API (`qa-audit-report.md`) | **Sim** |

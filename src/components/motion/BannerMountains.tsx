@@ -26,6 +26,15 @@ const STAGE_WAVE_COLORS: Record<
   },
 };
 
+const WAVE_ANIMATIONS = [
+  { selector: "[data-wave-back]", xPercent: -4, duration: 12 },
+  { selector: "[data-wave-mid]", xPercent: 4.5, duration: 9 },
+  { selector: "[data-wave-cutout]", xPercent: -3.5, duration: 11 },
+] as const;
+
+const WAVE_BASE_CLASS =
+  "absolute -left-[12%] w-[124%] will-change-transform";
+
 interface BannerMountainsProps {
   stage: StageKey;
 }
@@ -46,52 +55,23 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
 
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const backWave = container.querySelector<SVGSVGElement>("[data-wave-back]");
-        const midWave = container.querySelector<SVGSVGElement>("[data-wave-mid]");
-        const cutoutWave = container.querySelector<SVGSVGElement>("[data-wave-cutout]");
-
         const tl = gsap.timeline();
 
-        if (backWave) {
-          tl.to(
-            backWave,
-            {
-              xPercent: -4,
-              duration: 12,
-              repeat: -1,
-              yoyo: true,
-              ease: "sine.inOut",
-            },
-            0,
-          );
-        }
-
-        if (midWave) {
-          tl.to(
-            midWave,
-            {
-              xPercent: 4.5,
-              duration: 9,
-              repeat: -1,
-              yoyo: true,
-              ease: "sine.inOut",
-            },
-            0,
-          );
-        }
-
-        if (cutoutWave) {
-          tl.to(
-            cutoutWave,
-            {
-              xPercent: -3.5,
-              duration: 11,
-              repeat: -1,
-              yoyo: true,
-              ease: "sine.inOut",
-            },
-            0,
-          );
+        for (const { selector, xPercent, duration } of WAVE_ANIMATIONS) {
+          const wave = container.querySelector<SVGSVGElement>(selector);
+          if (wave) {
+            tl.to(
+              wave,
+              {
+                xPercent,
+                duration,
+                repeat: -1,
+                yoyo: true,
+                ease: "sine.inOut",
+              },
+              0,
+            );
+          }
         }
 
         timelineRef.current = tl;
@@ -137,7 +117,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-back
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className="absolute bottom-0 -left-[12%] h-full w-[124%] will-change-transform"
+        className={`${WAVE_BASE_CLASS} bottom-0 h-full`}
       >
         <defs>
           <linearGradient id={accentGradId} x1="0" y1="0" x2="0" y2="1">
@@ -155,7 +135,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-mid
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className="absolute bottom-0 -left-[12%] h-full w-[124%] will-change-transform"
+        className={`${WAVE_BASE_CLASS} bottom-0 h-full`}
       >
         <defs>
           <linearGradient id={mainGradId} x1="0" y1="0" x2="0" y2="1">
@@ -173,7 +153,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-cutout
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className="absolute -bottom-[2px] -left-[12%] h-[calc(100%+2px)] w-[124%] will-change-transform"
+        className={`${WAVE_BASE_CLASS} -bottom-[2px] h-[calc(100%+2px)]`}
       >
         <path
           d="M0,84 C190,116 360,58 590,82 C810,104 970,52 1170,76 C1300,92 1385,78 1440,68 L1440,120 L0,120 Z"

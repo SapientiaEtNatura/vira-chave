@@ -35,6 +35,11 @@ export {
   type JourneyStepStatus,
 } from "./JourneyBar";
 export { Label, type LabelProps } from "./Label";
+export {
+  MacroAreaFilterBar,
+  type MacroAreaFilterBarProps,
+  type MacroAreaFilterItem,
+} from "./MacroAreaFilterBar";
 export { PageHeader, type PageHeaderProps } from "./PageHeader";
 export {
   Progress,

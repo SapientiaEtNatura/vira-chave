@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Rocket, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, Rocket } from "lucide-react";
 import { FilterGridReveal } from "@/components/motion/FilterGridReveal";
 import {
   Badge,
   ButtonLink,
   Card,
   EmptyState,
+  MacroAreaFilterBar,
   StageBanner,
 } from "@/components/ui";
 import { prisma } from "@/lib/db";
@@ -72,22 +73,6 @@ export default async function ExperimentarPage({
     },
   });
 
-  const visibleMacroAreas = macroAreas.filter((m) => m._count.challenges > 0);
-  const totalChallengesCount = visibleMacroAreas.reduce(
-    (sum, m) => sum + m._count.challenges,
-    0,
-  );
-  const recommendedChallengesCount = visibleMacroAreas
-    .filter((m) => recommendedSlugs.includes(m.slug))
-    .reduce((sum, m) => sum + m._count.challenges, 0);
-
-  const chipBaseClass =
-    "min-h-11 inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150";
-  const chipActiveClass =
-    "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-xs";
-  const chipInactiveClass =
-    "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--ink-primary)]";
-
   return (
     <div className="space-y-6">
       <StageBanner
@@ -97,55 +82,18 @@ export default async function ExperimentarPage({
         subtitle="Resolva desafios reais por macroárea e transforme entregas em projetos no seu portfólio."
       />
 
-      <nav
-        aria-label="Filtrar desafios por macroárea"
-        className="flex flex-wrap items-center gap-2"
-      >
-        <Link
-          href="/app/experimentar"
-          scroll={false}
-          aria-current={!activeArea ? "page" : undefined}
-          className={`${chipBaseClass} ${!activeArea ? chipActiveClass : chipInactiveClass}`}
-        >
-          <span>Todas as áreas</span>
-          <span className="text-xs opacity-80 tabular-nums">
-            ({totalChallengesCount})
-          </span>
-        </Link>
-
-        {recommendedSlugs.length > 0 && recommendedChallengesCount > 0 ? (
-          <Link
-            href="/app/experimentar?area=recomendadas"
-            scroll={false}
-            aria-current={isRecommendedFilter ? "page" : undefined}
-            className={`${chipBaseClass} ${isRecommendedFilter ? chipActiveClass : chipInactiveClass}`}
-          >
-            <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span>Para você</span>
-            <span className="text-xs opacity-80 tabular-nums">
-              ({recommendedChallengesCount})
-            </span>
-          </Link>
-        ) : null}
-
-        {visibleMacroAreas.map((macroArea) => {
-          const isActive = activeArea === macroArea.slug;
-          return (
-            <Link
-              key={macroArea.id}
-              href={`/app/experimentar?area=${encodeURIComponent(macroArea.slug)}`}
-              scroll={false}
-              aria-current={isActive ? "page" : undefined}
-              className={`${chipBaseClass} ${isActive ? chipActiveClass : chipInactiveClass}`}
-            >
-              <span>{macroArea.name}</span>
-              <span className="text-xs opacity-80 tabular-nums">
-                ({macroArea._count.challenges})
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
+      <MacroAreaFilterBar
+        basePath="/app/experimentar"
+        ariaLabel="Filtrar desafios por macroárea"
+        activeArea={activeArea}
+        recommendedSlugs={recommendedSlugs}
+        items={macroAreas.map((m) => ({
+          id: m.id,
+          slug: m.slug,
+          name: m.name,
+          count: m._count.challenges,
+        }))}
+      />
 
       {challenges.length === 0 ? (
         <EmptyState
