@@ -165,23 +165,22 @@ export default async function DescobrirPage() {
       : null;
 
   return (
-    <div className="space-y-6">
-      <StageBanner
-        stage="DESCOBRIR"
-        stageLabel="Etapa 1 · Descobrir"
-        title="Descubra suas afinidades"
-        subtitle="Responda cenários práticos e informe seu ponto de partida para gerar seu perfil de prontidão."
-      />
-
-      <DiscoveryQuizClient
-        questions={formattedQuestions}
-        macroAreas={macroAreas}
-        tracks={formattedTracks}
-        challenges={formattedChallenges}
-        provenPractice={provenPractice}
-        initialResult={initialResult}
-        initialComparison={initialComparison}
-      />
-    </div>
+    <DiscoveryQuizClient
+      header={
+        <StageBanner
+          stage="DESCOBRIR"
+          stageLabel="Etapa 1 · Descobrir"
+          title="Descubra suas afinidades"
+          subtitle="Responda cenários práticos e informe seu ponto de partida para gerar seu perfil de prontidão."
+        />
+      }
+      questions={formattedQuestions}
+      macroAreas={macroAreas}
+      tracks={formattedTracks}
+      challenges={formattedChallenges}
+      provenPractice={provenPractice}
+      initialResult={initialResult}
+      initialComparison={initialComparison}
+    />
   );
 }

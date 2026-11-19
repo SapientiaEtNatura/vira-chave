@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -13,6 +13,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { AffinityChart } from "@/components/discovery/AffinityChart";
+import { ScenarioFlashcardDeck } from "@/components/discovery/ScenarioFlashcardDeck";
 import {
   Alert,
   Badge,
@@ -76,6 +77,7 @@ export interface DiscoveryResultView {
 }
 
 interface DiscoveryQuizClientProps {
+  header?: ReactNode;
   questions: QuizQuestionItem[];
   macroAreas: MacroAreaSummary[];
   tracks: RecommendedTrackSummary[];
@@ -83,6 +85,32 @@ interface DiscoveryQuizClientProps {
   provenPractice: ProvenPracticeSummary;
   initialResult: DiscoveryResultView | null;
   initialComparison: DiscoveryComparison | null;
+}
+
+const MOBILE_MEDIA_QUERY = "(max-width: 1023px)";
+
+function subscribeMobileViewport(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const mediaQuery = window.matchMedia(MOBILE_MEDIA_QUERY);
+  mediaQuery.addEventListener("change", onStoreChange);
+  return () => mediaQuery.removeEventListener("change", onStoreChange);
+}
+
+function getMobileViewportSnapshot(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia(MOBILE_MEDIA_QUERY).matches;
+}
+
+function getMobileViewportServerSnapshot(): boolean {
+  return false;
+}
+
+function useIsMobileViewport(): boolean {
+  return useSyncExternalStore(
+    subscribeMobileViewport,
+    getMobileViewportSnapshot,
+    getMobileViewportServerSnapshot,
+  );
 }
 
 const SELF_PRACTICE_OPTIONS: ReadonlyArray<{
@@ -103,6 +131,7 @@ function formatDatePtBr(isoString: string): string {
 }
 
 export function DiscoveryQuizClient({
+  header,
   questions,
   macroAreas,
   tracks,
@@ -112,6 +141,7 @@ export function DiscoveryQuizClient({
   initialComparison,
 }: DiscoveryQuizClientProps) {
   const router = useRouter();
+  const isMobileViewport = useIsMobileViewport();
   const [result, setResult] = useState<DiscoveryResultView | null>(
     initialResult,
   );
@@ -120,6 +150,7 @@ export function DiscoveryQuizClient({
   );
   const [isRetaking, setIsRetaking] = useState<boolean>(initialResult === null);
   const [step, setStep] = useState<1 | 2>(1);
+  const [activeScenarioIndex, setActiveScenarioIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [selfPractice, setSelfPractice] = useState<
     Record<string, SelfPracticeLevel>
@@ -218,6 +249,7 @@ export function DiscoveryQuizClient({
       setComparison(nextComparison);
       setIsRetaking(false);
       setStep(1);
+      setActiveScenarioIndex(0);
       router.refresh();
     } catch {
       setError("Erro de conexão ao enviar o questionário. Tente novamente.");
@@ -230,142 +262,214 @@ export function DiscoveryQuizClient({
     setAnswers({});
     setSelfPractice({});
     setStep(1);
+    setActiveScenarioIndex(0);
     setError(null);
     setIsRetaking(true);
   }
 
+  function handleSelectAnswer(questionId: string, optionId: string) {
+    setError(null);
+    setAnswers((prev) => ({
+      ...prev,
+      [questionId]: optionId,
+    }));
+  }
+
   if (isRetaking || !result) {
+    const showMobileDeck = isMobileViewport && step === 1;
+    const scenarioPercent = Math.round(
+      (answeredCount / (questions.length || 1)) * 100,
+    );
+
     return (
-      <form onSubmit={handleSubmit} className="space-y-6">
-        <Card className="space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-0.5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--stage-discover-ink)]">
-                {step === 1
-                  ? "Passo 1 de 2 · Cenários situacionais"
-                  : "Passo 2 de 2 · Ponto de partida"}
-              </p>
-              <p className="text-sm font-semibold text-[var(--ink-primary)]">
-                {step === 1
-                  ? `${answeredCount} de ${questions.length} cenários respondidos`
-                  : `${practiceCount} de ${macroAreas.length} áreas preenchidas`}
-              </p>
-            </div>
+      <div className="space-y-6">
+        {header ? <div className="hidden lg:block">{header}</div> : null}
+        <h1 className="sr-only lg:hidden">Descubra suas afinidades</h1>
 
-            {result ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsRetaking(false);
-                  setStep(1);
-                  setError(null);
-                }}
-              >
-                Voltar ao resultado
-              </Button>
-            ) : (
-              <span className="text-xs text-[var(--ink-muted)]">
-                {step === 1
-                  ? "Escolha a reação que mais combina com você"
-                  : "Indique o que você já testou na prática"}
-              </span>
-            )}
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+          {showMobileDeck ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--stage-discover-ink)]">
+                  Passo 1 de 2 · {answeredCount} de {questions.length} respondidos
+                </p>
 
-          <Progress
-            value={step === 1 ? answeredCount : practiceCount}
-            max={
-              step === 1 ? questions.length || 1 : macroAreas.length || 1
-            }
-            tone="discover"
-            label={
-              step === 1
-                ? `Progresso dos cenários: ${answeredCount} de ${questions.length}`
-                : `Progresso do ponto de partida: ${practiceCount} de ${macroAreas.length}`
-            }
-            showValue
-          />
-        </Card>
-
-        {step === 1 ? (
-          <>
-            {questions.length === 0 ? (
-              <Alert variant="warning">
-                Nenhum cenário de descoberta está disponível no momento.
-              </Alert>
-            ) : (
-              <div className="space-y-5">
-                {questions.map((question, index) => {
-                  const selectedOptionId = answers[question.id];
-                  return (
-                    <Card key={question.id} as="div" className="p-6 sm:p-7">
-                      <fieldset>
-                        <legend className="font-display text-base font-semibold leading-snug text-[var(--ink-primary)]">
-                          <span className="mr-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--stage-discover-bg)] font-mono text-xs font-bold text-[var(--stage-discover-ink)]">
-                            {index + 1}
-                          </span>
-                          {question.prompt}
-                        </legend>
-
-                        <div className="mt-5 grid grid-cols-1 gap-2.5 md:grid-cols-2">
-                          {question.options.map((option) => {
-                            const isSelected = selectedOptionId === option.id;
-                            return (
-                              <label
-                                key={option.id}
-                                className={`flex min-h-11 cursor-pointer items-center rounded-xl border px-4 py-3 text-left text-sm transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
-                                  isSelected
-                                    ? "border-[var(--stage-discover-ink)] bg-[var(--stage-discover-bg)] font-semibold text-[var(--stage-discover-ink)] ring-1 ring-[var(--stage-discover-ink)]"
-                                    : "border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)]"
-                                }`}
-                              >
-                                <input
-                                  type="radio"
-                                  name={`question-${question.id}`}
-                                  value={option.id}
-                                  checked={isSelected}
-                                  onChange={() =>
-                                    setAnswers((prev) => ({
-                                      ...prev,
-                                      [question.id]: option.id,
-                                    }))
-                                  }
-                                  className="sr-only"
-                                />
-                                <span className="leading-snug">
-                                  {option.label}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      </fieldset>
-                    </Card>
-                  );
-                })}
+                {result ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => {
+                      setIsRetaking(false);
+                      setStep(1);
+                      setActiveScenarioIndex(0);
+                      setError(null);
+                    }}
+                  >
+                    Voltar ao resultado
+                  </Button>
+                ) : (
+                  <span className="font-mono text-xs font-semibold text-[var(--ink-muted)] tabular-nums">
+                    {scenarioPercent}%
+                  </span>
+                )}
               </div>
-            )}
 
-            {error ? <Alert variant="danger">{error}</Alert> : null}
-
-            <div className="flex items-center justify-end gap-3">
-              <Button
-                type="button"
-                variant="primary"
-                size="lg"
-                disabled={!allAnswered}
-                onClick={handleGoToStep2}
-                rightIcon={
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                }
-              >
-                Avançar para ponto de partida
-              </Button>
+              <Progress
+                value={answeredCount}
+                max={questions.length || 1}
+                tone="discover"
+                label={`Progresso dos cenários: ${answeredCount} de ${questions.length}`}
+              />
             </div>
-          </>
-        ) : (
+          ) : (
+            <Card className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="space-y-0.5">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--stage-discover-ink)]">
+                    {step === 1
+                      ? "Passo 1 de 2 · Cenários situacionais"
+                      : "Passo 2 de 2 · Ponto de partida"}
+                  </p>
+                  <p className="text-sm font-semibold text-[var(--ink-primary)]">
+                    {step === 1
+                      ? `${answeredCount} de ${questions.length} cenários respondidos`
+                      : `${practiceCount} de ${macroAreas.length} áreas preenchidas`}
+                  </p>
+                </div>
+
+                {result ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setIsRetaking(false);
+                      setStep(1);
+                      setActiveScenarioIndex(0);
+                      setError(null);
+                    }}
+                  >
+                    Voltar ao resultado
+                  </Button>
+                ) : (
+                  <span className="text-xs text-[var(--ink-muted)]">
+                    {step === 1
+                      ? "Escolha a reação que mais combina com você"
+                      : "Indique o que você já testou na prática"}
+                  </span>
+                )}
+              </div>
+
+              <Progress
+                value={step === 1 ? answeredCount : practiceCount}
+                max={
+                  step === 1 ? questions.length || 1 : macroAreas.length || 1
+                }
+                tone="discover"
+                label={
+                  step === 1
+                    ? `Progresso dos cenários: ${answeredCount} de ${questions.length}`
+                    : `Progresso do ponto de partida: ${practiceCount} de ${macroAreas.length}`
+                }
+                showValue
+              />
+            </Card>
+          )}
+
+          {step === 1 ? (
+            <>
+              {questions.length === 0 ? (
+                <Alert variant="warning">
+                  Nenhum cenário de descoberta está disponível no momento.
+                </Alert>
+              ) : isMobileViewport ? (
+                <>
+                  <ScenarioFlashcardDeck
+                    questions={questions}
+                    answers={answers}
+                    activeIndex={activeScenarioIndex}
+                    onActiveIndexChange={setActiveScenarioIndex}
+                    onSelectAnswer={handleSelectAnswer}
+                    onCompleteScenarios={handleGoToStep2}
+                  />
+                  {error ? <Alert variant="danger">{error}</Alert> : null}
+                </>
+              ) : (
+                <div className="hidden space-y-6 lg:block">
+                  <div className="space-y-5">
+                    {questions.map((question, index) => {
+                      const selectedOptionId = answers[question.id];
+                      return (
+                        <Card key={question.id} as="div" className="p-6 sm:p-7">
+                          <fieldset>
+                            <legend className="font-display text-base font-semibold leading-snug text-[var(--ink-primary)]">
+                              <span className="mr-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--stage-discover-bg)] font-mono text-xs font-bold text-[var(--stage-discover-ink)]">
+                                {index + 1}
+                              </span>
+                              {question.prompt}
+                            </legend>
+
+                            <div className="mt-5 grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                              {question.options.map((option) => {
+                                const isSelected =
+                                  selectedOptionId === option.id;
+                                return (
+                                  <label
+                                    key={option.id}
+                                    className={`flex min-h-11 cursor-pointer items-center rounded-xl border px-4 py-3 text-left text-sm transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
+                                      isSelected
+                                        ? "border-[var(--stage-discover-ink)] bg-[var(--stage-discover-bg)] font-semibold text-[var(--stage-discover-ink)] ring-1 ring-[var(--stage-discover-ink)]"
+                                        : "border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)]"
+                                    }`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name={`question-${question.id}`}
+                                      value={option.id}
+                                      checked={isSelected}
+                                      onChange={() =>
+                                        handleSelectAnswer(
+                                          question.id,
+                                          option.id,
+                                        )
+                                      }
+                                      className="sr-only"
+                                    />
+                                    <span className="leading-snug">
+                                      {option.label}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </fieldset>
+                        </Card>
+                      );
+                    })}
+                  </div>
+
+                  {error ? <Alert variant="danger">{error}</Alert> : null}
+
+                  <div className="flex items-center justify-end gap-3">
+                    <Button
+                      type="button"
+                      variant="primary"
+                      size="lg"
+                      disabled={!allAnswered}
+                      onClick={handleGoToStep2}
+                      rightIcon={
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      }
+                    >
+                      Avançar para ponto de partida
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
           <>
             {macroAreas.length === 0 ? (
               <Alert variant="warning">
@@ -450,7 +554,8 @@ export function DiscoveryQuizClient({
             </div>
           </>
         )}
-      </form>
+        </form>
+      </div>
     );
   }
 
@@ -476,8 +581,10 @@ export function DiscoveryQuizClient({
   const formattedDate = formatDatePtBr(result.completedAt);
 
   return (
-    <div className="space-y-8">
-      <Card as="section">
+    <div className="space-y-6">
+      {header}
+      <div className="space-y-8">
+        <Card as="section">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
@@ -752,6 +859,7 @@ export function DiscoveryQuizClient({
           </div>
         )}
       </section>
+      </div>
     </div>
   );
 }
