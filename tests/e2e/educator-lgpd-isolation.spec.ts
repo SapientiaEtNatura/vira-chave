@@ -68,18 +68,29 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
 
       // Responde Descobrir para gerar dados agregados de macroárea
       await studentPage.goto("/app/descobrir");
-      const questionFieldsets = studentPage.locator("fieldset");
-      const questionCount = await questionFieldsets.count();
-      expect(questionCount).toBeGreaterThan(0);
+      const scenarioFieldsets = studentPage.locator("fieldset");
+      const scenarioCount = await scenarioFieldsets.count();
+      expect(scenarioCount).toBeGreaterThan(0);
 
-      for (let i = 0; i < questionCount; i += 1) {
-        await questionFieldsets
+      for (let i = 0; i < scenarioCount; i += 1) {
+        await scenarioFieldsets.nth(i).locator("label").first().click();
+      }
+      await studentPage
+        .getByRole("button", { name: "Avançar para ponto de partida" })
+        .click();
+
+      const areaFieldsets = studentPage.locator("fieldset");
+      const areaCount = await areaFieldsets.count();
+      expect(areaCount).toBeGreaterThan(0);
+
+      for (let i = 0; i < areaCount; i += 1) {
+        await areaFieldsets
           .nth(i)
-          .locator("label", { hasText: "Tudo a ver comigo" })
+          .locator("label", { hasText: "Já testei" })
           .click();
       }
       await studentPage
-        .getByRole("button", { name: "Ver meu mapa de afinidades" })
+        .getByRole("button", { name: "Gerar meu perfil de prontidão" })
         .click();
       await expect(
         studentPage.getByRole("heading", { name: /Seu Mapa de Afinidades/i }),
