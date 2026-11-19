@@ -32,13 +32,22 @@ interface MacroFormSnapshot {
   name: string;
   slug: string;
   description: string;
+  entryRolesInput: string;
 }
 
 const EMPTY_SNAPSHOT: MacroFormSnapshot = {
   name: "",
   slug: "",
   description: "",
+  entryRolesInput: "",
 };
+
+function parseEntryRolesInput(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
 export function MacroAreasTab({
   macroAreas,
@@ -55,6 +64,8 @@ export function MacroAreasTab({
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [description, setDescription] = useState("");
+  const [entryRolesInput, setEntryRolesInput] = useState("");
+  const [entryRolesError, setEntryRolesError] = useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] =
     useState<MacroFormSnapshot>(EMPTY_SNAPSHOT);
 
@@ -62,7 +73,8 @@ export function MacroAreasTab({
     drawerOpen &&
     (name !== initialSnapshot.name ||
       slug !== initialSnapshot.slug ||
-      description !== initialSnapshot.description);
+      description !== initialSnapshot.description ||
+      entryRolesInput !== initialSnapshot.entryRolesInput);
 
   const filteredMacroAreas = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -71,7 +83,8 @@ export function MacroAreasTab({
       (area) =>
         area.name.toLowerCase().includes(q) ||
         area.slug.toLowerCase().includes(q) ||
-        area.description.toLowerCase().includes(q),
+        area.description.toLowerCase().includes(q) ||
+        area.entryRoles.some((role) => role.toLowerCase().includes(q)),
     );
   }, [macroAreas, searchQuery]);
 
@@ -80,19 +93,25 @@ export function MacroAreasTab({
     setName("");
     setSlug("");
     setDescription("");
+    setEntryRolesInput("");
+    setEntryRolesError(null);
     setInitialSnapshot(EMPTY_SNAPSHOT);
     setDrawerOpen(true);
   }
 
   function openEditDrawer(area: AdminMacroArea) {
+    const formattedRoles = area.entryRoles.join(", ");
     setEditingId(area.id);
     setName(area.name);
     setSlug(area.slug);
     setDescription(area.description);
+    setEntryRolesInput(formattedRoles);
+    setEntryRolesError(null);
     setInitialSnapshot({
       name: area.name,
       slug: area.slug,
       description: area.description,
+      entryRolesInput: formattedRoles,
     });
     setDrawerOpen(true);
   }
@@ -100,10 +119,27 @@ export function MacroAreasTab({
   function closeDrawer() {
     setDrawerOpen(false);
     setEditingId(null);
+    setEntryRolesError(null);
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const entryRoles = parseEntryRolesInput(entryRolesInput);
+    if (entryRoles.length > 8) {
+      setEntryRolesError("Informe no máximo 8 atuações de entrada.");
+      return;
+    }
+    const invalidRole = entryRoles.find(
+      (role) => role.length < 2 || role.length > 60,
+    );
+    if (invalidRole) {
+      setEntryRolesError(
+        `Cada atuação deve ter entre 2 e 60 caracteres (verifique "${invalidRole}").`,
+      );
+      return;
+    }
+    setEntryRolesError(null);
+
     const payload = await sendContentRequest<{ item: AdminMacroArea }>(
       editingId ? "PATCH" : "POST",
       editingId
@@ -113,12 +149,14 @@ export function MacroAreasTab({
             name,
             slug,
             description,
+            entryRoles,
           }
         : {
             kind: "macroArea",
             name,
             slug,
             description,
+            entryRoles,
           },
     );
     if (!payload?.item) return;
@@ -221,6 +259,15 @@ export function MacroAreasTab({
                 <p className="text-sm leading-relaxed text-[var(--ink-secondary)]">
                   {area.description}
                 </p>
+                {area.entryRoles.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 pt-1">
+                    {area.entryRoles.map((role, index) => (
+                      <Badge key={`${role}-${index}`} variant="brand">
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[var(--border-subtle)] pt-3">
                 <Button
@@ -312,6 +359,23 @@ export function MacroAreasTab({
               rows={4}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+            />
+          </FormField>
+
+          <FormField
+            id="macro-entry-roles"
+            label="Atuações de entrada (separadas por vírgula)"
+            hint="Opcional. Até 8 atuações, cada uma com 2 a 60 caracteres."
+            error={entryRolesError ?? undefined}
+          >
+            <Input
+              type="text"
+              value={entryRolesInput}
+              onChange={(e) => {
+                setEntryRolesInput(e.target.value);
+                if (entryRolesError) setEntryRolesError(null);
+              }}
+              placeholder="Ex: Suporte Técnico, Análise de Dados"
             />
           </FormField>
         </form>

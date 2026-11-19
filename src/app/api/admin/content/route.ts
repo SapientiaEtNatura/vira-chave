@@ -3,10 +3,55 @@ import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
+import {
+  deriveQuestionAreaWeights,
+  parseQuestionOptions,
+} from "@/lib/discovery/types";
 import { validateExternalUrlStructure } from "@/lib/link-checker";
 import { requireApiRole } from "@/lib/rbac";
 
 const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+const entryRolesSchema = z
+  .array(
+    z
+      .string()
+      .trim()
+      .min(2, "Cada atuação de entrada deve ter entre 2 e 60 caracteres.")
+      .max(60, "Cada atuação de entrada deve ter entre 2 e 60 caracteres."),
+  )
+  .max(8, "Informe no máximo 8 atuações de entrada.");
+
+const questionOptionSchema = z.object({
+  id: z.string().trim().min(1, "Informe o identificador de cada opção."),
+  label: z
+    .string()
+    .trim()
+    .min(5, "O texto de cada opção deve ter entre 5 e 220 caracteres.")
+    .max(220, "O texto de cada opção deve ter entre 5 e 220 caracteres."),
+  weightsByArea: z
+    .record(z.string().trim().min(1), z.coerce.number().int().min(0).max(10))
+    .refine(
+      (weights) => Object.values(weights).some((weight) => weight > 0),
+      "Cada opção deve atribuir peso maior que zero a pelo menos uma MacroÁrea.",
+    ),
+});
+
+const questionOptionsArraySchema = z
+  .array(questionOptionSchema)
+  .min(2, "Informe entre 2 e 4 opções situacionais.")
+  .max(4, "Informe entre 2 e 4 opções situacionais.")
+  .refine(
+    (options) => new Set(options.map((opt) => opt.id)).size === options.length,
+    "Os identificadores das opções devem ser únicos.",
+  );
+
+function serializeQuestion<T extends { optionsJson: unknown }>(question: T) {
+  return {
+    ...question,
+    options: parseQuestionOptions(question.optionsJson),
+  };
+}
 
 const httpExternalUrlSchema = z
   .string()
@@ -29,12 +74,13 @@ const createContentSchema = z.discriminatedUnion("kind", [
       .max(80)
       .regex(slugRegex, "Slug deve conter apenas letras minúsculas, números e hífens."),
     description: z.string().trim().min(4, "Informe uma descrição.").max(500),
+    entryRoles: entryRolesSchema.optional().default([]),
   }),
   z.object({
     kind: z.literal("question"),
     prompt: z.string().trim().min(5, "Informe o enunciado da pergunta.").max(400),
     order: z.coerce.number().int().min(1, "Ordem deve ser maior que zero."),
-    weightsByArea: z.record(z.string(), z.coerce.number().int().min(0).max(10)),
+    options: questionOptionsArraySchema,
   }),
   z.object({
     kind: z.literal("track"),
@@ -67,12 +113,14 @@ const updateContentSchema = z.discriminatedUnion("kind", [
     name: z.string().trim().min(2).max(120).optional(),
     slug: z.string().trim().toLowerCase().min(2).max(80).regex(slugRegex).optional(),
     description: z.string().trim().min(4).max(500).optional(),
+    entryRoles: entryRolesSchema.optional(),
   }),
   z.object({
     kind: z.literal("question"),
     id: z.string().trim().min(1),
     prompt: z.string().trim().min(5).max(400).optional(),
     order: z.coerce.number().int().min(1).optional(),
+    options: questionOptionsArraySchema.optional(),
     weightsByArea: z.record(z.string(), z.coerce.number().int().min(0).max(10)).optional(),
   }),
   z.object({
@@ -158,7 +206,7 @@ export async function GET() {
 
   return NextResponse.json({
     macroAreas,
-    questions,
+    questions: questions.map(serializeQuestion),
     tracks,
     courseItems,
     challenges,
@@ -196,18 +244,21 @@ export async function POST(request: Request) {
             name: data.name,
             slug: data.slug,
             description: data.description,
+            entryRoles: data.entryRoles,
           },
         });
         break;
       }
       case "question": {
-        item = await prisma.discoveryQuestion.create({
+        const created = await prisma.discoveryQuestion.create({
           data: {
             prompt: data.prompt,
             order: data.order,
-            weightsByArea: data.weightsByArea,
+            optionsJson: data.options as unknown as Prisma.InputJsonValue,
+            weightsByArea: deriveQuestionAreaWeights(data.options),
           },
         });
+        item = serializeQuestion(created);
         break;
       }
       case "track": {
@@ -303,21 +354,30 @@ export async function PATCH(request: Request) {
             ...(data.description !== undefined
               ? { description: data.description }
               : {}),
+            ...(data.entryRoles !== undefined
+              ? { entryRoles: data.entryRoles }
+              : {}),
           },
         });
         break;
       }
       case "question": {
-        item = await prisma.discoveryQuestion.update({
+        const updated = await prisma.discoveryQuestion.update({
           where: { id: data.id },
           data: {
             ...(data.prompt !== undefined ? { prompt: data.prompt } : {}),
             ...(data.order !== undefined ? { order: data.order } : {}),
-            ...(data.weightsByArea !== undefined
-              ? { weightsByArea: data.weightsByArea }
-              : {}),
+            ...(data.options !== undefined
+              ? {
+                  optionsJson: data.options as unknown as Prisma.InputJsonValue,
+                  weightsByArea: deriveQuestionAreaWeights(data.options),
+                }
+              : data.weightsByArea !== undefined
+                ? { weightsByArea: data.weightsByArea }
+                : {}),
           },
         });
+        item = serializeQuestion(updated);
         break;
       }
       case "track": {

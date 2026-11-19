@@ -1,8 +1,11 @@
+import type { DiscoveryQuestionOption } from "@/lib/discovery/types";
+
 export interface AdminMacroArea {
   id: string;
   name: string;
   slug: string;
   description: string;
+  entryRoles: string[];
 }
 
 export interface AdminDiscoveryQuestion {
@@ -10,6 +13,7 @@ export interface AdminDiscoveryQuestion {
   prompt: string;
   order: number;
   weightsByArea: Record<string, number>;
+  options: DiscoveryQuestionOption[];
 }
 
 export interface AdminTrack {
