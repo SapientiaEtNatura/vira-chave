@@ -110,10 +110,11 @@ model ClassroomEnrollment {
 }
 
 model MacroArea {
-  id          String @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  slug        String @unique
+  slug        String   @unique
   description String
+  entryRoles  String[] @default([])
 
   tracks     Track[]
   challenges Challenge[]
@@ -123,15 +124,17 @@ model DiscoveryQuestion {
   id            String @id @default(cuid())
   prompt        String
   order         Int    @unique
-  weightsByArea Json
+  weightsByArea Json   @default("{}")
+  optionsJson   Json   @default("[]")
 }
 
 model DiscoveryResult {
-  id          String   @id @default(cuid())
-  studentId   String
-  scoresJson  Json
-  topAreas    String[]
-  completedAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  studentId        String
+  scoresJson       Json
+  topAreas         String[]
+  selfPracticeJson Json?
+  completedAt      DateTime @default(now())
 
   student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
@@ -233,12 +236,13 @@ model EvidenceFile {
 }
 
 model PortfolioShareLink {
-  id        String    @id @default(cuid())
-  studentId String
-  tokenHash String    @unique
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now())
-  revokedAt DateTime?
+  id               String    @id @default(cuid())
+  studentId        String
+  tokenHash        String    @unique
+  active           Boolean   @default(true)
+  includeReadiness Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  revokedAt        DateTime?
 
   student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
