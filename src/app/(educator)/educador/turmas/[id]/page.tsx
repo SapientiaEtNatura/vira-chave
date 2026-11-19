@@ -64,6 +64,7 @@ export default async function EducatorClassroomDetailPage({
       <ClassroomCharts
         stageDistribution={view.stageDistribution}
         macroAreaDistribution={view.macroAreaDistribution}
+        topGapArea={view.topGapArea}
       />
 
       <Card as="section" padding="sm" className="overflow-hidden p-0 sm:p-0">

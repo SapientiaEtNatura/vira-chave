@@ -5,13 +5,15 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { Card } from "@/components/ui";
+import { Alert, Card } from "@/components/ui";
 import type {
+  ClassroomTopGapArea,
   MacroAreaDistributionItem,
   StageDistributionItem,
 } from "@/lib/educator/classroom-analytics";
@@ -19,6 +21,7 @@ import type {
 interface ClassroomChartsProps {
   stageDistribution: StageDistributionItem[];
   macroAreaDistribution: MacroAreaDistributionItem[];
+  topGapArea?: ClassroomTopGapArea | null;
 }
 
 const STAGE_COLORS = [
@@ -31,6 +34,7 @@ const STAGE_COLORS = [
 export function ClassroomCharts({
   stageDistribution,
   macroAreaDistribution,
+  topGapArea = null,
 }: ClassroomChartsProps) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -92,22 +96,34 @@ export function ClassroomCharts({
       <Card as="section" padding="md">
         <div className="mb-4">
           <h2 className="font-display text-base font-semibold text-[var(--ink-primary)]">
-            Principais macroáreas de afinidade
+            Interesse × Prática comprovada por macroárea
           </h2>
           <p className="text-xs text-[var(--ink-muted)]">
-            Agregação das áreas mais frequentes identificadas na turma.
+            Comparação agregada entre interesse identificado e prática
+            comprovada na turma.
           </p>
         </div>
 
+        {topGapArea ? (
+          <Alert variant="warning" className="mb-4 px-3.5 py-2.5 text-xs">
+            <span>
+              <strong>Maior oportunidade de capacitação:</strong>{" "}
+              {topGapArea.area} ({topGapArea.interestCount} interessados ·{" "}
+              {topGapArea.practiceCount} com prática comprovada)
+            </span>
+          </Alert>
+        ) : null}
+
         {macroAreaDistribution.length === 0 ? (
           <div className="flex h-64 items-center justify-center rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--bg-surface-subtle)] p-6 text-center text-sm text-[var(--ink-muted)]">
-            Nenhum estudante da turma concluiu a etapa Descobrir ainda.
+            Nenhum estudante da turma concluiu a etapa Descobrir ou registrou
+            prática comprovada ainda.
           </div>
         ) : (
           <div
             className="h-64 w-full"
             role="img"
-            aria-label="Gráfico de distribuição de macroáreas de afinidade na turma"
+            aria-label="Gráfico comparativo de interesse e prática comprovada por macroárea na turma"
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -131,7 +147,10 @@ export function ClassroomCharts({
                   tick={{ fill: "var(--chart-axis)", fontSize: 11 }}
                 />
                 <Tooltip
-                  formatter={(value) => [`${value ?? 0}`, "Estudantes"]}
+                  formatter={(value, name) => [
+                    `${value ?? 0}`,
+                    String(name ?? "Estudantes"),
+                  ]}
                   contentStyle={{
                     borderRadius: "0.75rem",
                     borderColor: "var(--border-subtle)",
@@ -140,9 +159,17 @@ export function ClassroomCharts({
                     fontSize: "0.875rem",
                   }}
                 />
+                <Legend wrapperStyle={{ fontSize: "0.75rem" }} />
                 <Bar
-                  dataKey="count"
+                  dataKey="interestCount"
+                  name="Interesse na turma"
                   fill="var(--chart-primary)"
+                  radius={[0, 6, 6, 0]}
+                />
+                <Bar
+                  dataKey="practiceCount"
+                  name="Com prática comprovada"
+                  fill="var(--chart-2)"
                   radius={[0, 6, 6, 0]}
                 />
               </BarChart>
