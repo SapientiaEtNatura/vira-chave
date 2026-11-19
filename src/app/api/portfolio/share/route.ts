@@ -47,35 +47,33 @@ export async function GET() {
   });
 }
 
-export async function POST(request?: Request) {
+export async function POST(request: Request) {
   const authResult = await requireApiRole(STUDENT_PORTAL_ROLES);
   if (authResult instanceof NextResponse) {
     return authResult;
   }
 
   let includeReadiness = false;
-  if (request) {
-    const rawBody = await request.text();
-    if (rawBody.trim().length > 0) {
-      let body: unknown;
-      try {
-        body = JSON.parse(rawBody);
-      } catch {
-        return NextResponse.json(
-          { error: "Payload JSON inválido." },
-          { status: 400 },
-        );
-      }
-
-      const parsed = createShareLinkSchema.safeParse(body);
-      if (!parsed.success) {
-        return NextResponse.json(
-          { error: parsed.error.issues[0]?.message ?? "Dados inválidos." },
-          { status: 400 },
-        );
-      }
-      includeReadiness = parsed.data.includeReadiness ?? false;
+  const rawBody = await request.text();
+  if (rawBody.trim().length > 0) {
+    let body: unknown;
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json(
+        { error: "Payload JSON inválido." },
+        { status: 400 },
+      );
     }
+
+    const parsed = createShareLinkSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Dados inválidos." },
+        { status: 400 },
+      );
+    }
+    includeReadiness = parsed.data.includeReadiness ?? false;
   }
 
   const result = await generateShareLink(authResult.userId, prisma, {
