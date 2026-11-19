@@ -1,4 +1,5 @@
 .superpowers/
+.worktrees/
 .agents/
 docs/
 PRODUCT.md
