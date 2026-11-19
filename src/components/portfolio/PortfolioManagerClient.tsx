@@ -26,6 +26,7 @@ import {
   FileUploadField,
   FormField,
   Input,
+  Switch,
   Textarea,
 } from "@/components/ui";
 
@@ -53,6 +54,7 @@ export interface PortfolioProjectItem {
 export interface InitialShareState {
   hasActiveLink: boolean;
   createdAt: string | null;
+  includeReadiness: boolean;
 }
 
 interface PortfolioManagerClientProps {
@@ -78,6 +80,10 @@ export function PortfolioManagerClient({
     initialShareState.createdAt,
   );
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
+  const [includeReadiness, setIncludeReadiness] = useState(
+    initialShareState.includeReadiness,
+  );
+  const [readinessBusy, setReadinessBusy] = useState(false);
   const [copied, setCopied] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -125,6 +131,8 @@ export function PortfolioManagerClient({
     try {
       const response = await fetch("/api/portfolio/share", {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ includeReadiness }),
       });
       const data = await response.json();
       if (!response.ok) {
@@ -134,10 +142,47 @@ export function PortfolioManagerClient({
       setGeneratedToken(data.rawToken);
       setHasActiveLink(true);
       setShareCreatedAt(data.createdAt);
+      setIncludeReadiness(Boolean(data.includeReadiness));
     } catch {
       setShareError("Erro de conexão ao gerar o link de compartilhamento.");
     } finally {
       setShareBusy(false);
+    }
+  }
+
+  async function handleToggleIncludeReadiness(nextChecked: boolean) {
+    setShareError(null);
+
+    if (!hasActiveLink) {
+      setIncludeReadiness(nextChecked);
+      return;
+    }
+
+    const previousValue = includeReadiness;
+    setIncludeReadiness(nextChecked);
+    setReadinessBusy(true);
+
+    try {
+      const response = await fetch("/api/portfolio/share", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ includeReadiness: nextChecked }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setIncludeReadiness(previousValue);
+        setShareError(
+          data.error ||
+            "Não foi possível atualizar a exibição do Cartão de Prontidão.",
+        );
+        return;
+      }
+      setIncludeReadiness(Boolean(data.includeReadiness));
+    } catch {
+      setIncludeReadiness(previousValue);
+      setShareError("Erro de conexão ao atualizar preferência de prontidão.");
+    } finally {
+      setReadinessBusy(false);
     }
   }
 
@@ -158,6 +203,7 @@ export function PortfolioManagerClient({
       setGeneratedToken(null);
       setHasActiveLink(false);
       setShareCreatedAt(null);
+      setIncludeReadiness(false);
     } catch {
       setShareError("Erro de conexão ao revogar o link.");
     } finally {
@@ -354,6 +400,28 @@ export function PortfolioManagerClient({
               {showCreateForm ? "Cancelar" : "Novo projeto"}
             </Button>
           </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/70 px-3.5 py-2.5">
+          <div className="space-y-0.5">
+            <label
+              htmlFor="share-include-readiness"
+              className="block cursor-pointer text-sm font-medium text-[var(--ink-primary)]"
+            >
+              Exibir Cartão de Prontidão no link compartilhado
+            </label>
+            <p className="text-xs text-[var(--ink-muted)]">
+              Opcional: mostra áreas de interesse, cursos e desafios concluídos e
+              funções de entrada, sem dados pessoais ou autodeclaração.
+            </p>
+          </div>
+          <Switch
+            id="share-include-readiness"
+            checked={includeReadiness}
+            onCheckedChange={handleToggleIncludeReadiness}
+            disabled={shareBusy || readinessBusy}
+            label="Exibir Cartão de Prontidão no link compartilhado"
+          />
         </div>
 
         {shareError && <Alert variant="danger">{shareError}</Alert>}

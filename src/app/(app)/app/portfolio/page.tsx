@@ -36,6 +36,7 @@ export default async function PortfolioPage() {
       orderBy: { createdAt: "desc" },
       select: {
         createdAt: true,
+        includeReadiness: true,
       },
     }),
   ]);
@@ -70,6 +71,7 @@ export default async function PortfolioPage() {
           createdAt: activeShareLink
             ? activeShareLink.createdAt.toISOString()
             : null,
+          includeReadiness: activeShareLink?.includeReadiness ?? false,
         }}
       />
     </div>

@@ -1,6 +1,24 @@
-import { ExternalLink, FileText, FolderKanban, ShieldCheck } from "lucide-react";
-import { Badge, BrandLogo, Card } from "@/components/ui";
+import {
+  Award,
+  ExternalLink,
+  FileText,
+  FolderKanban,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  Badge,
+  BrandLogo,
+  Card,
+  type BadgeVariant,
+} from "@/components/ui";
+import type { PublicReadinessLabel } from "@/lib/discovery/readiness";
 import type { SharedPortfolioView as SharedPortfolioData } from "@/lib/portfolio/portfolio-service";
+
+function getReadinessBadgeVariant(label: PublicReadinessLabel): BadgeVariant {
+  if (label === "Prática comprovada") return "success";
+  if (label === "Em formação") return "brand";
+  return "neutral";
+}
 
 function formatFileSize(sizeBytes: number): string {
   if (sizeBytes < 1024) return `${sizeBytes} B`;
@@ -84,6 +102,108 @@ export function SharedPortfolioView({
           </Badge>
         </div>
       </Card>
+
+      {!compact && portfolio.readinessSummary ? (
+        <Card
+          as="section"
+          aria-labelledby="shared-readiness-heading"
+          padding="md"
+          className="space-y-4"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Award
+                  className="h-4 w-4 text-[var(--brand-primary)]"
+                  aria-hidden="true"
+                />
+                <h2
+                  id="shared-readiness-heading"
+                  className="font-display text-lg font-bold text-[var(--ink-primary)]"
+                >
+                  Cartão de Prontidão
+                </h2>
+              </div>
+              <p className="text-xs text-[var(--ink-muted)]">
+                Evidências públicas de prática, trilhas concluídas e funções de
+                entrada associadas.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="neutral">
+                {portfolio.readinessSummary.completedCoursesCount}{" "}
+                {portfolio.readinessSummary.completedCoursesCount === 1
+                  ? "curso concluído"
+                  : "cursos concluídos"}
+              </Badge>
+              <Badge variant="neutral">
+                {portfolio.readinessSummary.completedChallengesCount}{" "}
+                {portfolio.readinessSummary.completedChallengesCount === 1
+                  ? "desafio concluído"
+                  : "desafios concluídos"}
+              </Badge>
+              <Badge variant="neutral">
+                {portfolio.readinessSummary.totalProjectsCount}{" "}
+                {portfolio.readinessSummary.totalProjectsCount === 1
+                  ? "projeto compartilhado"
+                  : "projetos compartilhados"}
+              </Badge>
+            </div>
+          </div>
+
+          {portfolio.readinessSummary.topAreas.length > 0 ? (
+            <div className="grid gap-3 md:grid-cols-3">
+              {portfolio.readinessSummary.topAreas.map((area) => (
+                <div
+                  key={area.slug}
+                  className="flex flex-col justify-between gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4"
+                >
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3 className="font-display text-sm font-bold text-[var(--ink-primary)]">
+                        {area.name}
+                      </h3>
+                      <Badge
+                        variant={getReadinessBadgeVariant(
+                          area.publicStatusLabel,
+                        )}
+                      >
+                        {area.publicStatusLabel}
+                      </Badge>
+                    </div>
+
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--ink-secondary)]">
+                      {area.affinityScore !== null ? (
+                        <span>Afinidade: {area.affinityScore}%</span>
+                      ) : null}
+                      <span>Prática comprovada: {area.provenScore}%</span>
+                    </div>
+                  </div>
+
+                  {area.entryRoles.length > 0 ? (
+                    <div className="space-y-1.5 border-t border-[var(--border-subtle)] pt-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
+                        Funções de entrada
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {area.entryRoles.slice(0, 3).map((role) => (
+                          <span
+                            key={role}
+                            className="inline-flex rounded-md border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-2 py-0.5 text-[11px] text-[var(--ink-secondary)]"
+                          >
+                            {role}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
 
       {visibleProjects.length === 0 ? (
         <Card padding="lg" className="border-dashed text-center">
