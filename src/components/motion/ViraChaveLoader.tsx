@@ -1,0 +1,280 @@
+"use client";
+
+import { useId, useRef } from "react";
+import { cn } from "@/lib/cn";
+import { gsap, MOTION_EASE, useGSAP } from "@/lib/gsap";
+
+// Paths extraídos diretamente de public/svg/anim.svg (alinhados no viewBox da coluna 3: 1120 40 560 1320)
+const KEY_PATH =
+  "M1342.94 675.774C1316.56 671.352 1288.26 654.138 1271.12 633.7C1249.64 608.078 1239.67 579.171 1241.44 545.749C1243.49 507.123 1264.47 472.879 1296.52 451.595C1320.89 435.412 1355.1 427.272 1384.25 430.942C1407.18 433.829 1426.27 440.3 1445.43 453.623C1488.99 483.916 1508.38 536.406 1493.84 587.501C1481.05 632.457 1443.08 666.108 1397.56 675.391L1397.51 721.879C1412.72 731.043 1415.06 749.526 1399.82 760.3C1399.25 760.703 1398.68 761.092 1398.1 761.49L1398.16 1084.31L1528.19 1084.49L1528.28 1123.65L1438.52 1123.69L1438.57 1139.52L1528.13 1139.72L1528.2 1178.53L1438.62 1178.73L1438.64 1194.74L1528.15 1194.82L1528.2 1233.94L1398.42 1234L1398.3 1245.64C1402.79 1248.62 1406.96 1252.17 1409.13 1257.22C1413.49 1267.43 1410.49 1276.47 1402.66 1283.8C1401.29 1285.07 1399.9 1286.32 1398.51 1287.57C1398.65 1293.77 1398.99 1300.41 1397.53 1306.5C1393.07 1325.11 1370.68 1332.73 1355 1322.5C1342.32 1314.22 1342.23 1301.21 1342.62 1287.56C1341.13 1286.4 1339.69 1285.17 1338.28 1283.92C1325.14 1272.29 1327.26 1254.11 1342.76 1245.87L1342.82 762.709C1326.57 752.121 1325.89 732.457 1342.9 722.519L1342.94 675.774ZM1394.3 624.719C1411.33 617.657 1420.05 613.753 1432.06 599.281C1457.42 568.71 1452.57 518.92 1420.53 494.914C1389.91 471.969 1344.54 471.769 1315.55 497.768C1299.93 511.777 1291.01 531.828 1291.12 552.75C1291.29 582.921 1308.35 608.699 1336 620.888C1339.44 622.404 1342.96 623.456 1346.53 624.606C1346.99 623.896 1347.43 623.166 1347.92 622.477C1358.43 607.747 1380.9 607.85 1392.04 621.729C1392.83 622.71 1393.56 623.697 1394.3 624.719Z";
+
+const CAP_PATH =
+  "M2259.91 343.355C2268.64 342.431 2277.14 340.102 2285.75 338.436C2285.75 338.435 2288.5 337.924 2288.5 337.923C2337.02 329.124 2385.62 320.73 2434.09 311.724C2454.82 307.873 2475.71 304.653 2496.5 301.118C2499.16 300.665 2501.8 300.282 2504.48 299.936C2508 301.416 2511.24 303.489 2514.4 305.651C2538.4 322.086 2562.04 339.047 2586 355.558C2594.27 361.258 2602.54 366.959 2610.75 372.756C2610.75 372.758 2612.18 373.799 2612.18 373.801C2644.18 397.017 2676.82 419.366 2708.64 442.832C2711.2 444.717 2713.55 446.861 2716.11 448.733C2713.95 449.489 2711.75 450.148 2709.5 450.577C2683.05 455.628 2656.48 460.089 2630 465.003C2618.84 467.074 2607.65 469.019 2596.5 471.133C2595.38 471.345 2594.26 471.503 2593.13 471.642L2575.25 545.586C2573.35 544.695 2571.46 543.801 2569.47 543.127C2568.89 542.945 2568.31 542.737 2567.75 542.484C2551.26 535.018 2534.89 527.267 2518.5 519.579C2516.73 520.051 2514.98 520.611 2513.18 520.943C2512.43 519.36 2511.62 517.805 2510.8 516.261C2509.73 515.601 2508.64 514.99 2507.5 514.453C2499.83 510.837 2489.94 506.915 2481.91 504.203C2458.87 496.418 2429.81 490.026 2404.83 488.172C2402.15 487.811 2399.45 487.539 2396.75 487.304C2378 485.667 2359.27 483.9 2340.49 482.491C2340.49 482.491 2338.95 482.395 2338.95 482.395C2340.52 476.354 2342.2 470.341 2343.57 464.25C2346.69 450.301 2349.46 436.236 2352.42 422.248C2352.82 420.359 2353.23 418.614 2353.75 416.745C2348.82 412.518 2344.08 408.071 2339 404.027C2329.38 396.368 2319.46 389.034 2309.74 381.491C2308.51 380.53 2307.3 379.658 2306.12 378.614L2300.14 406.092C2308.86 416.991 2307.51 425.416 2294.88 431.897L2290.31 510.778L2251.33 501.385C2259.23 483.76 2266.66 465.919 2274.42 448.23C2277.24 441.802 2279.93 435.302 2282.05 428.612C2281.52 427.83 2280.97 427.06 2280.47 426.256C2275.62 418.401 2276.47 410.859 2284.79 405.591C2286.11 404.756 2287.43 403.932 2288.74 403.081C2292.14 392.63 2292.86 381.491 2295.81 370.906L2259.91 343.355Z";
+
+const SPEED_LINE_PATHS = [
+  "M1376.63 66.8357C1377.65 73.8479 1378.11 80.9169 1378.75 87.9699C1380.22 104.111 1381.3 120.293 1381.42 136.5C1381.44 138.683 1381.37 161.432 1376.75 161.007C1369.96 160.382 1372.6 114.885 1373.07 109.75C1373.07 109.747 1373.21 108.264 1373.21 108.26C1374.13 96.3431 1374.83 84.4132 1375.84 72.5009C1375.93 71.4419 1376.05 70.3846 1376.22 69.3348C1376.22 69.3336 1376.63 66.8369 1376.63 66.8357Z",
+  "M1346.61 109.485C1346.88 111.237 1347.2 112.986 1347.4 114.749C1349.11 129.706 1349.9 144.753 1351.12 159.75C1351.55 165.017 1351.45 170.467 1351.3 175.75C1351.25 177.572 1350.11 194.498 1346.25 193.861C1342.49 193.24 1341.79 179.837 1341.77 177.25C1341.66 156.698 1343.58 136.202 1345.61 115.75C1345.75 114.312 1345.95 112.879 1346.22 111.459C1346.22 111.458 1346.6 109.486 1346.61 109.485Z",
+  "M1407.99 120.981C1408.24 122.281 1408.52 123.575 1408.76 124.876C1409.64 129.636 1415.76 176.793 1408.25 176.397C1402.25 176.082 1403.85 156.739 1404.11 154.001C1405.17 142.961 1405.83 131.858 1407.99 120.981Z",
+] as const;
+
+const IMPACT_ARC_PATHS = [
+  "M2079.98 562.851C2080.19 563.537 2080.41 564.221 2080.62 564.906C2083.43 574.012 2083.12 585.662 2082.07 595C2080 613.444 2071.69 629.404 2059.97 643.499C2057.48 646.499 2043.07 659.906 2039.25 658.694C2037.33 658.085 2041.86 652.815 2041.93 652.729C2044.14 649.99 2046.43 647.316 2048.59 644.538C2063.29 625.651 2073.69 605.154 2078.05 581.751C2079.21 575.521 2079.62 569.178 2079.98 562.851Z",
+  "M1997.25 687.406C1997.98 686.588 1998.7 685.759 1999.44 684.944C2001.34 682.841 2017.72 667.358 2021.02 673.75C2024.22 679.937 2005.38 685.74 2002.25 686.459C2000.6 686.839 1998.92 687.101 1997.25 687.406Z",
+] as const;
+
+export interface ViraChaveLoaderProps {
+  /** Altura do ícone em pixels (proporção natural ~0.42:1). */
+  size?: number;
+  label?: string;
+  className?: string;
+}
+
+export function ViraChaveLoader({
+  size = 88,
+  label = "Carregando conteúdo...",
+  className,
+}: ViraChaveLoaderProps) {
+  const scopeRef = useRef<HTMLDivElement>(null);
+  const keyGroupRef = useRef<SVGGElement>(null);
+  const keyClipRectRef = useRef<SVGRectElement>(null);
+  const capGroupRef = useRef<SVGGElement>(null);
+  const speedLinesRef = useRef<SVGGElement>(null);
+  const impactArcsRef = useRef<SVGGElement>(null);
+  const clipId = useId();
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add("(prefers-reduced-motion: no-preference)", () => {
+        const keyGroup = keyGroupRef.current;
+        const keyClipRect = keyClipRectRef.current;
+        const capGroup = capGroupRef.current;
+        const speedLines = speedLinesRef.current;
+        const impactArcs = impactArcsRef.current;
+
+        if (!keyGroup || !keyClipRect || !capGroup || !speedLines || !impactArcs) {
+          return;
+        }
+
+        const speedLineItems =
+          speedLines.querySelectorAll<SVGPathElement>("[data-speed-line]");
+
+        const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.14 });
+
+        // Estado inicial do ciclo (estágio 1: só a cabeça da chave prestes a surgir)
+        tl.set(keyGroup, {
+          opacity: 0,
+          scale: 0.86,
+          y: 0,
+          svgOrigin: "1370 555",
+        })
+          .set(keyClipRect, { attr: { height: 265 } })
+          .set(capGroup, {
+            opacity: 0,
+            y: -175,
+            rotation: -8,
+            svgOrigin: "1395 430",
+          })
+          .set(speedLines, { opacity: 1 })
+          .set(speedLineItems, { opacity: 0, y: -42 })
+          .set(impactArcs, {
+            opacity: 0,
+            scale: 0.72,
+            svgOrigin: "1510 625",
+          });
+
+        // 1. Cabeça/arco da chave surge
+        tl.to(
+          keyGroup,
+          {
+            opacity: 1,
+            scale: 1,
+            duration: 0.28,
+            ease: MOTION_EASE.emphasis,
+          },
+          0,
+        );
+
+        // 2. Haste e dentes da chave descem revelando a chave completa
+        tl.to(
+          keyClipRect,
+          {
+            attr: { height: 930 },
+            duration: 0.4,
+            ease: MOTION_EASE.enter,
+          },
+          0.18,
+        );
+
+        // 3. Capelo cai de cima acompanhado dos 3 risquinhos de velocidade
+        tl.to(
+          capGroup,
+          {
+            opacity: 1,
+            y: 8,
+            rotation: 2,
+            duration: 0.44,
+            ease: "power2.in",
+          },
+          0.48,
+        )
+          .to(
+            speedLineItems,
+            {
+              opacity: 0.85,
+              y: 18,
+              duration: 0.22,
+              stagger: 0.04,
+              ease: "power1.out",
+            },
+            0.52,
+          )
+          .to(
+            speedLineItems,
+            {
+              opacity: 0,
+              y: 44,
+              duration: 0.2,
+              stagger: 0.03,
+              ease: "power1.in",
+            },
+            0.74,
+          );
+
+        // 4. Impacto: capelo assenta com rebote, chave dá leve recuo e arco lateral pisca
+        tl.to(
+          capGroup,
+          {
+            y: 0,
+            rotation: 0,
+            duration: 0.36,
+            ease: "back.out(2.2)",
+          },
+          0.92,
+        )
+          .to(
+            keyGroup,
+            {
+              y: 12,
+              duration: 0.1,
+              ease: "power2.out",
+            },
+            0.91,
+          )
+          .to(
+            keyGroup,
+            {
+              y: 0,
+              duration: 0.3,
+              ease: MOTION_EASE.emphasis,
+            },
+            1.01,
+          )
+          .to(
+            impactArcs,
+            {
+              opacity: 0.9,
+              scale: 1.06,
+              duration: 0.14,
+              ease: "power2.out",
+            },
+            0.92,
+          )
+          .to(
+            impactArcs,
+            {
+              opacity: 0,
+              scale: 1.14,
+              duration: 0.28,
+              ease: "power2.in",
+            },
+            1.1,
+          );
+
+        // 5. Pausa curta na logo estabilizada e saída suave para reiniciar o loop
+        tl.to(
+          [keyGroup, capGroup],
+          {
+            opacity: 0,
+            duration: 0.28,
+            ease: "power2.inOut",
+          },
+          1.78,
+        );
+      });
+    },
+    { scope: scopeRef },
+  );
+
+  const width = Math.round((size * 560) / 1320);
+
+  return (
+    <div
+      ref={scopeRef}
+      role="status"
+      aria-live="polite"
+      aria-label={label}
+      className={cn(
+        "inline-flex flex-col items-center justify-center select-none",
+        className,
+      )}
+    >
+      <svg
+        width={width}
+        height={size}
+        viewBox="1120 40 560 1320"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        className="overflow-visible drop-shadow-[0_6px_18px_rgba(15,92,110,0.16)]"
+      >
+        <defs>
+          <clipPath id={clipId}>
+            <rect
+              ref={keyClipRectRef}
+              x="1200"
+              y="420"
+              width="380"
+              height="930"
+            />
+          </clipPath>
+        </defs>
+
+        {/* 3 risquinhos de velocidade acima da queda do capelo */}
+        <g ref={speedLinesRef} className="opacity-0">
+          {SPEED_LINE_PATHS.map((d, index) => (
+            <path
+              key={index}
+              data-speed-line
+              fill="#13606D"
+              d={d}
+            />
+          ))}
+        </g>
+
+        {/* Chave completa com recorte progressivo de cima para baixo */}
+        <g ref={keyGroupRef}>
+          <path fill="#13606D" clipPath={`url(#${clipId})`} d={KEY_PATH} />
+        </g>
+
+        {/* Capelo laranja alinhado da coluna 5 (-1072px) para o topo da chave */}
+        <g ref={capGroupRef}>
+          <g transform="translate(-1072 0)">
+            <path fill="#DD7300" d={CAP_PATH} />
+          </g>
+        </g>
+
+        {/* Arcos de impacto alinhados da coluna 4 (-535px) na lateral direita */}
+        <g ref={impactArcsRef} className="opacity-0">
+          <g transform="translate(-535 0)">
+            {IMPACT_ARC_PATHS.map((d, index) => (
+              <path key={index} fill="#13606D" d={d} />
+            ))}
+          </g>
+        </g>
+      </svg>
+
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
