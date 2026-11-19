@@ -27,8 +27,19 @@ export interface StageDistributionItem {
 }
 
 export interface MacroAreaDistributionItem {
+  slug: string;
   area: string;
   count: number;
+  interestCount: number;
+  practiceCount: number;
+}
+
+export interface ClassroomTopGapArea {
+  slug: string;
+  area: string;
+  interestCount: number;
+  practiceCount: number;
+  gap: number;
 }
 
 export interface EducationalViewStudent {
@@ -49,6 +60,7 @@ export interface ClassroomEducationalView {
   totalStudents: number;
   stageDistribution: StageDistributionItem[];
   macroAreaDistribution: MacroAreaDistributionItem[];
+  topGapArea: ClassroomTopGapArea | null;
   students: EducationalViewStudent[];
 }
 
@@ -104,6 +116,15 @@ export async function getClassroomEducationalView(
               portfolioProjects: {
                 select: {
                   challengeId: true,
+                  challenge: {
+                    select: {
+                      macroArea: {
+                        select: {
+                          slug: true,
+                        },
+                      },
+                    },
+                  },
                 },
               },
               courseProgress: {
@@ -112,6 +133,19 @@ export async function getClassroomEducationalView(
                 },
                 select: {
                   status: true,
+                  courseItem: {
+                    select: {
+                      track: {
+                        select: {
+                          macroArea: {
+                            select: {
+                              slug: true,
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
                 },
               },
             },
@@ -141,7 +175,8 @@ export async function getClassroomEducationalView(
     EXPERIMENTAR: 0,
     CONSTRUIR: 0,
   };
-  const macroAreaCounts = new Map<string, number>();
+  const interestCountsBySlug = new Map<string, number>();
+  const practiceCountsBySlug = new Map<string, number>();
 
   const activeEnrollments = classroom.enrollments.filter(
     ({ student }) => (student.status ?? "ACTIVE") === "ACTIVE",
@@ -156,7 +191,8 @@ export async function getClassroomEducationalView(
       const challengeSubmissionCount = portfolioProjects.filter(
         (project) => project.challengeId !== null,
       ).length;
-      const activeCourseCount = (student.courseProgress ?? []).filter(
+      const courseProgress = student.courseProgress ?? [];
+      const activeCourseCount = courseProgress.filter(
         (progress) =>
           progress.status === "EM_ANDAMENTO" ||
           progress.status === "CONCLUIDO",
@@ -174,8 +210,33 @@ export async function getClassroomEducationalView(
         (slug) => macroAreaMap.get(slug) ?? slug,
       );
 
-      for (const area of topMacroAreas) {
-        macroAreaCounts.set(area, (macroAreaCounts.get(area) ?? 0) + 1);
+      for (const slug of new Set(latestTopAreas)) {
+        interestCountsBySlug.set(
+          slug,
+          (interestCountsBySlug.get(slug) ?? 0) + 1,
+        );
+      }
+
+      const practicedSlugs = new Set<string>();
+      for (const project of portfolioProjects) {
+        const slug = project.challenge?.macroArea?.slug;
+        if (slug) {
+          practicedSlugs.add(slug);
+        }
+      }
+      for (const progress of courseProgress) {
+        if (progress.status === "CONCLUIDO") {
+          const slug = progress.courseItem?.track?.macroArea?.slug;
+          if (slug) {
+            practicedSlugs.add(slug);
+          }
+        }
+      }
+      for (const slug of practicedSlugs) {
+        practiceCountsBySlug.set(
+          slug,
+          (practiceCountsBySlug.get(slug) ?? 0) + 1,
+        );
       }
 
       return {
@@ -195,14 +256,54 @@ export async function getClassroomEducationalView(
     }),
   );
 
+  const allMacroAreaSlugs = new Set<string>([
+    ...interestCountsBySlug.keys(),
+    ...practiceCountsBySlug.keys(),
+  ]);
+
   const macroAreaDistribution: MacroAreaDistributionItem[] = Array.from(
-    macroAreaCounts.entries(),
+    allMacroAreaSlugs,
   )
-    .map(([area, count]) => ({ area, count }))
+    .map((slug) => {
+      const interestCount = interestCountsBySlug.get(slug) ?? 0;
+      const practiceCount = practiceCountsBySlug.get(slug) ?? 0;
+      return {
+        slug,
+        area: macroAreaMap.get(slug) ?? slug,
+        count: interestCount,
+        interestCount,
+        practiceCount,
+      };
+    })
     .sort((a, b) => {
-      const diff = b.count - a.count;
-      return diff !== 0 ? diff : a.area.localeCompare(b.area);
+      if (b.interestCount !== a.interestCount) {
+        return b.interestCount - a.interestCount;
+      }
+      if (b.practiceCount !== a.practiceCount) {
+        return b.practiceCount - a.practiceCount;
+      }
+      return a.area.localeCompare(b.area);
     });
+
+  const topGapArea: ClassroomTopGapArea | null =
+    macroAreaDistribution
+      .map((item) => ({
+        slug: item.slug,
+        area: item.area,
+        interestCount: item.interestCount,
+        practiceCount: item.practiceCount,
+        gap: item.interestCount - item.practiceCount,
+      }))
+      .filter((item) => item.gap > 0)
+      .sort((a, b) => {
+        if (b.gap !== a.gap) {
+          return b.gap - a.gap;
+        }
+        if (b.interestCount !== a.interestCount) {
+          return b.interestCount - a.interestCount;
+        }
+        return a.area.localeCompare(b.area);
+      })[0] ?? null;
 
   return {
     classroom: {
@@ -215,6 +316,7 @@ export async function getClassroomEducationalView(
     totalStudents: students.length,
     stageDistribution,
     macroAreaDistribution,
+    topGapArea,
     students,
   };
 }

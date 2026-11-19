@@ -1,6 +1,7 @@
-import type { PrismaClient } from "@prisma/client";
+import type { Prisma, PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import {
+  LEGACY_SEED_QUESTION_IDS,
   SEED_CHALLENGES,
   SEED_MACRO_AREAS,
   SEED_QUESTIONS,
@@ -99,29 +100,42 @@ export async function seedDatabase(client: PrismaClient): Promise<void> {
         name: area.name,
         slug: area.slug,
         description: area.description,
+        entryRoles: area.entryRoles,
       },
       create: {
         id: area.id,
         name: area.name,
         slug: area.slug,
         description: area.description,
+        entryRoles: area.entryRoles,
       },
     });
   }
 
   for (const question of SEED_QUESTIONS) {
+    const optionsJson = question.options as unknown as Prisma.InputJsonValue;
     await client.discoveryQuestion.upsert({
       where: { id: question.id },
       update: {
         order: question.order,
         prompt: question.prompt,
         weightsByArea: question.weightsByArea,
+        optionsJson,
       },
       create: {
         id: question.id,
         order: question.order,
         prompt: question.prompt,
         weightsByArea: question.weightsByArea,
+        optionsJson,
+      },
+    });
+  }
+
+  if (client.discoveryQuestion?.deleteMany) {
+    await client.discoveryQuestion.deleteMany({
+      where: {
+        id: { in: [...LEGACY_SEED_QUESTION_IDS] },
       },
     });
   }

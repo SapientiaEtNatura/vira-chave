@@ -1,17 +1,20 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { calculateAffinityScores } from "@/lib/discovery/scoring";
+import { calculateSituationalAffinityScores } from "@/lib/discovery/scoring";
+import { parseQuestionOptions } from "@/lib/discovery/types";
 import { requireApiRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
 const submitDiscoverySchema = z.object({
   answers: z.record(
     z.string().min(1),
-    z
-      .number({ message: "Cada resposta deve ser um número de 1 a 5." })
-      .int("Cada resposta deve ser um número inteiro de 1 a 5.")
-      .min(1, "A escala mínima é 1.")
-      .max(5, "A escala máxima é 5."),
+    z.string().min(1, "Selecione uma opção válida para cada cenário."),
+  ),
+  selfPractice: z.record(
+    z.string().min(1),
+    z.union([z.literal(0), z.literal(1), z.literal(2)], {
+      message: "O nível de prática deve ser 0, 1 ou 2.",
+    }),
   ),
 });
 
@@ -43,13 +46,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const questions = await prisma.discoveryQuestion.findMany({
-    orderBy: { order: "asc" },
-  });
+  const [questions, macroAreas] = await Promise.all([
+    prisma.discoveryQuestion.findMany({
+      orderBy: { order: "asc" },
+    }),
+    prisma.macroArea.findMany({
+      select: { slug: true },
+    }),
+  ]);
 
-  if (questions.length === 0) {
+  if (questions.length === 0 || macroAreas.length === 0) {
     return NextResponse.json(
-      { error: "Nenhuma pergunta cadastrada no momento." },
+      { error: "Configuração de descoberta indisponível no momento." },
       { status: 400 },
     );
   }
@@ -65,31 +73,66 @@ export async function POST(request: Request) {
     );
   }
 
-  const missingQuestion = questions.find(
-    (question) => parsed.data.answers[question.id] === undefined,
+  const situationalQuestions = questions.map((q) => ({
+    id: q.id,
+    options: parseQuestionOptions(q.optionsJson),
+  }));
+
+  for (const question of situationalQuestions) {
+    const selectedOptionId = parsed.data.answers[question.id];
+    if (
+      !selectedOptionId ||
+      !question.options.some((opt) => opt.id === selectedOptionId)
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            "Responda todos os cenários com uma opção válida antes de enviar.",
+        },
+        { status: 400 },
+      );
+    }
+  }
+
+  const knownSlugs = macroAreas.map((area) => area.slug);
+  const validAreaSlugs = new Set(knownSlugs);
+
+  const hasUnknownArea = Object.keys(parsed.data.selfPractice).some(
+    (slug) => !validAreaSlugs.has(slug),
   );
-  if (missingQuestion) {
+  if (hasUnknownArea) {
     return NextResponse.json(
-      { error: "Responda todas as perguntas do questionário antes de enviar." },
+      { error: "Mapa de ponto de partida inválido." },
       { status: 400 },
     );
   }
 
-  const scoringQuestions = questions.map((q) => ({
-    id: q.id,
-    weightsByArea:
-      q.weightsByArea && typeof q.weightsByArea === "object"
-        ? (q.weightsByArea as Record<string, number>)
-        : {},
-  }));
+  const missingArea = knownSlugs.find(
+    (slug) => parsed.data.selfPractice[slug] === undefined,
+  );
+  if (missingArea) {
+    return NextResponse.json(
+      {
+        error:
+          "Informe seu ponto de partida para todas as macroáreas antes de enviar.",
+      },
+      { status: 400 },
+    );
+  }
 
-  const result = calculateAffinityScores(parsed.data.answers, scoringQuestions);
+  const result = calculateSituationalAffinityScores(
+    parsed.data.answers,
+    situationalQuestions,
+    knownSlugs,
+    parsed.data.selfPractice,
+  );
 
   const saved = await prisma.discoveryResult.create({
     data: {
       studentId: authResult.userId,
       scoresJson: result.scores,
       topAreas: result.topAreas,
+      selfPracticeJson: parsed.data.selfPractice,
       completedAt: new Date(),
     },
   });
@@ -99,6 +142,7 @@ export async function POST(request: Request) {
       id: saved.id,
       scores: result.scores,
       topAreas: result.topAreas,
+      selfPractice: parsed.data.selfPractice,
       completedAt: saved.completedAt.toISOString(),
     },
     { status: 201 },

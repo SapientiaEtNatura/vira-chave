@@ -4,6 +4,48 @@ export const DEMO_PORTFOLIO_TOKEN = "exemplo";
 
 export const DEMO_PORTFOLIO: SharedPortfolioView = {
   studentDisplayName: "Marina Oliveira",
+  readinessSummary: {
+    completedCoursesCount: 2,
+    completedChallengesCount: 2,
+    totalProjectsCount: 2,
+    topAreas: [
+      {
+        slug: "sustentabilidade-impacto",
+        name: "Sustentabilidade e Impacto Social",
+        affinityScore: 86,
+        provenScore: 85,
+        publicStatusLabel: "Prática comprovada",
+        entryRoles: [
+          "Jovem Aprendiz em Projetos Sociais",
+          "Auxiliar de Educação Ambiental",
+          "Assistente de Ações Comunitárias",
+        ],
+      },
+      {
+        slug: "comunicacao-conteudo",
+        name: "Comunicação e Conteúdo",
+        affinityScore: 82,
+        provenScore: 50,
+        publicStatusLabel: "Prática comprovada",
+        entryRoles: [
+          "Jovem Aprendiz em Comunicação",
+          "Assistente de Mídias Sociais",
+          "Auxiliar de Redação e Roteiro",
+        ],
+      },
+      {
+        slug: "tecnologia-dados",
+        name: "Tecnologia e Dados",
+        affinityScore: 74,
+        provenScore: 35,
+        publicStatusLabel: "Em formação",
+        entryRoles: [
+          "Jovem Aprendiz em Suporte de TI",
+          "Auxiliar de Dados e Planilhas",
+        ],
+      },
+    ],
+  },
   projects: [
     {
       id: "demo-projeto-01",

@@ -2,6 +2,7 @@ import { Role } from "@prisma/client";
 import { AdminContentClient } from "@/components/admin/AdminContentClient";
 import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
+import { parseQuestionOptions } from "@/lib/discovery/types";
 import { requireRole } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
@@ -39,11 +40,20 @@ export default async function AdminContentPage() {
       }),
     ]);
 
+  const serializedMacroAreas = macroAreas.map((area) => ({
+    id: area.id,
+    name: area.name,
+    slug: area.slug,
+    description: area.description,
+    entryRoles: area.entryRoles,
+  }));
+
   const serializedQuestions = questions.map((q) => ({
     id: q.id,
     prompt: q.prompt,
     order: q.order,
     weightsByArea: normalizeWeights(q.weightsByArea),
+    options: parseQuestionOptions(q.optionsJson),
   }));
 
   const serializedCourseItems = courseItems.map((item) => ({
@@ -75,7 +85,7 @@ export default async function AdminContentPage() {
       </Card>
 
       <AdminContentClient
-        initialMacroAreas={macroAreas}
+        initialMacroAreas={serializedMacroAreas}
         initialQuestions={serializedQuestions}
         initialTracks={tracks}
         initialCourseItems={serializedCourseItems}

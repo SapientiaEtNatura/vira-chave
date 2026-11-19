@@ -26,25 +26,37 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
     await page.getByRole("button", { name: "Criar conta" }).click();
     await expect(page).toHaveURL(/\/app$/, { timeout: 15000 });
 
-    // 2. Etapa 1: Descobrir
+    // 2. Etapa 1: Descobrir (fluxo em 2 passos: cenários + ponto de partida)
     await page.goto("/app/descobrir");
     await expect(
       page.getByRole("heading", { name: /Descubra suas afinidades/i }),
     ).toBeVisible();
 
-    const questionFieldsets = page.locator("fieldset");
-    const questionCount = await questionFieldsets.count();
-    expect(questionCount).toBeGreaterThan(0);
+    const scenarioFieldsets = page.locator("fieldset");
+    const scenarioCount = await scenarioFieldsets.count();
+    expect(scenarioCount).toBeGreaterThan(0);
 
-    for (let i = 0; i < questionCount; i += 1) {
-      await questionFieldsets
+    for (let i = 0; i < scenarioCount; i += 1) {
+      await scenarioFieldsets.nth(i).locator("label").first().click();
+    }
+
+    await page
+      .getByRole("button", { name: "Avançar para ponto de partida" })
+      .click();
+
+    const areaFieldsets = page.locator("fieldset");
+    const areaCount = await areaFieldsets.count();
+    expect(areaCount).toBeGreaterThan(0);
+
+    for (let i = 0; i < areaCount; i += 1) {
+      await areaFieldsets
         .nth(i)
-        .locator("label", { hasText: "Bastante a ver comigo" })
+        .locator("label", { hasText: "Já testei" })
         .click();
     }
 
     await page
-      .getByRole("button", { name: "Ver meu mapa de afinidades" })
+      .getByRole("button", { name: "Gerar meu perfil de prontidão" })
       .click();
 
     await expect(
@@ -128,9 +140,31 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
         anonymousPage.getByText("Visualização somente leitura"),
       ).toBeVisible();
       await expect(anonymousPage.getByText(projectTitle)).toBeVisible();
+      await expect(
+        anonymousPage.getByRole("heading", { name: "Cartão de Prontidão" }),
+      ).toHaveCount(0);
 
       const publicBodyText = await anonymousPage.locator("body").innerText();
       expect(publicBodyText).not.toContain(studentEmail);
+
+      // Ativar Cartão de Prontidão opt-in no contexto autenticado do estudante
+      const readinessSwitch = page.getByRole("switch", {
+        name: /Exibir Cartão de Prontidão no link compartilhado/i,
+      });
+      await expect(readinessSwitch).toHaveAttribute("aria-checked", "false");
+      await readinessSwitch.click();
+      await expect(readinessSwitch).toHaveAttribute("aria-checked", "true");
+      await expect(readinessSwitch).toBeEnabled();
+
+      // Recarregar link público e confirmar exibição sem vazamento de e-mail
+      const updatedResponse = await anonymousPage.reload();
+      expect(updatedResponse?.status()).toBe(200);
+      await expect(
+        anonymousPage.getByRole("heading", { name: "Cartão de Prontidão" }),
+      ).toBeVisible();
+
+      const updatedPublicBodyText = await anonymousPage.locator("body").innerText();
+      expect(updatedPublicBodyText).not.toContain(studentEmail);
 
       // Revogar link no contexto autenticado do estudante
       await page.getByRole("button", { name: /^Revogar$/i }).click();

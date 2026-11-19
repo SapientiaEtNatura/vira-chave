@@ -51,15 +51,38 @@ describe("Área do Educador — Visão Educacional e Privacidade por Padrão", (
               {
                 topAreas: ["tecnologia-dados", "design-criacao"],
                 scoresJson: { "tecnologia-dados": 95, "design-criacao": 80 },
+                selfPracticeJson: {
+                  "tecnologia-dados": "pratica_guiada",
+                  "design-criacao": "nunca_pratiquei",
+                },
               },
             ],
             portfolioProjects: [
-              { id: "proj-1", challengeId: null, title: "Projeto Secreto", reflection: "Reflexão íntima" },
-              { id: "proj-2", challengeId: "chal-1", title: "Desafio Privado" },
+              {
+                id: "proj-1",
+                challengeId: null,
+                title: "Projeto Secreto",
+                reflection: "Reflexão íntima",
+                challenge: null,
+              },
+              {
+                id: "proj-2",
+                challengeId: "chal-1",
+                title: "Desafio Privado",
+                challenge: { macroArea: { slug: "tecnologia-dados" } },
+              },
             ],
             courseProgress: [
-              { status: "CONCLUIDO", notes: "Anotação pessoal do aluno" },
-              { status: "NAO_INICIADO", notes: "Outra nota privada" },
+              {
+                status: "CONCLUIDO",
+                notes: "Anotação pessoal do aluno",
+                courseItem: { track: { macroArea: { slug: "tecnologia-dados" } } },
+              },
+              {
+                status: "NAO_INICIADO",
+                notes: "Outra nota privada",
+                courseItem: { track: { macroArea: { slug: "design-criacao" } } },
+              },
             ],
             evidenceFiles: [{ id: "ev-1", originalName: "certificado.pdf" }],
           },
@@ -73,10 +96,23 @@ describe("Área do Educador — Visão Educacional e Privacidade por Padrão", (
               {
                 topAreas: ["tecnologia-dados", "comunicacao-conteudo"],
                 scoresJson: { "tecnologia-dados": 88 },
+                selfPracticeJson: { "tecnologia-dados": "em_andamento" },
               },
             ],
-            portfolioProjects: [{ id: "proj-3", challengeId: "chal-2" }],
-            courseProgress: [{ status: "EM_ANDAMENTO", notes: "Nota privada 2" }],
+            portfolioProjects: [
+              {
+                id: "proj-3",
+                challengeId: "chal-2",
+                challenge: { macroArea: { slug: "comunicacao-conteudo" } },
+              },
+            ],
+            courseProgress: [
+              {
+                status: "EM_ANDAMENTO",
+                notes: "Nota privada 2",
+                courseItem: { track: { macroArea: { slug: "design-criacao" } } },
+              },
+            ],
           },
         },
       ],
@@ -136,18 +172,57 @@ describe("Área do Educador — Visão Educacional e Privacidade por Padrão", (
       ]),
     );
 
-    expect(result?.macroAreaDistribution).toEqual(
-      expect.arrayContaining([
-        { area: "Tecnologia e Dados", count: 2 },
-        { area: "Design e Criação Digital", count: 1 },
-        { area: "Comunicação e Conteúdo", count: 1 },
-      ]),
-    );
+    expect(result?.macroAreaDistribution).toEqual([
+      {
+        slug: "tecnologia-dados",
+        area: "Tecnologia e Dados",
+        count: 2,
+        interestCount: 2,
+        practiceCount: 1,
+      },
+      {
+        slug: "comunicacao-conteudo",
+        area: "Comunicação e Conteúdo",
+        count: 1,
+        interestCount: 1,
+        practiceCount: 1,
+      },
+      {
+        slug: "design-criacao",
+        area: "Design e Criação Digital",
+        count: 1,
+        interestCount: 1,
+        practiceCount: 0,
+      },
+    ]);
+
+    expect(result?.topGapArea).toEqual({
+      slug: "tecnologia-dados",
+      area: "Tecnologia e Dados",
+      interestCount: 2,
+      practiceCount: 1,
+      gap: 1,
+    });
+
+    for (const student of result?.students ?? []) {
+      expect(Object.keys(student).sort()).toEqual([
+        "currentStage",
+        "name",
+        "studentId",
+        "topMacroAreas",
+      ]);
+    }
 
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain("lucas.privado@escola.edu.br");
     expect(serialized).not.toContain("mariana.privada@escola.edu.br");
+    expect(serialized).not.toContain("email");
     expect(serialized).not.toContain("scoresJson");
+    expect(serialized).not.toContain("selfPracticeJson");
+    expect(serialized).not.toContain("pratica_guiada");
+    expect(serialized).not.toContain("nunca_pratiquei");
+    expect(serialized).not.toContain("notes");
+    expect(serialized).not.toContain("reflection");
     expect(serialized).not.toContain("Projeto Secreto");
     expect(serialized).not.toContain("Reflexão íntima");
     expect(serialized).not.toContain("Anotação pessoal do aluno");
@@ -155,5 +230,72 @@ describe("Área do Educador — Visão Educacional e Privacidade por Padrão", (
     expect(serialized).not.toContain("certificado.pdf");
     expect(serialized).not.toContain("evidenceFiles");
     expect(serialized).not.toContain("portfolioProjects");
+  });
+
+  it("test_educational_view_returns_null_topGapArea_when_practice_covers_interest", async () => {
+    const findUniqueClassroom = vi.fn().mockResolvedValue({
+      id: "class-2",
+      name: "3º Ano C",
+      inviteCode: "VC-NO-GAP",
+      active: true,
+      educatorId: "educator-1",
+      institution: { name: "Instituto Federal Teste" },
+      enrollments: [
+        {
+          student: {
+            id: "student-1",
+            name: "Ana Lima",
+            status: "ACTIVE",
+            discoveryResults: [{ topAreas: ["tecnologia-dados"] }],
+            portfolioProjects: [
+              {
+                id: "proj-1",
+                challengeId: "chal-1",
+                challenge: { macroArea: { slug: "design-criacao" } },
+              },
+            ],
+            courseProgress: [
+              {
+                status: "CONCLUIDO",
+                courseItem: { track: { macroArea: { slug: "tecnologia-dados" } } },
+              },
+            ],
+          },
+        },
+      ],
+    });
+
+    const findManyMacroAreas = vi.fn().mockResolvedValue([
+      { slug: "tecnologia-dados", name: "Tecnologia e Dados" },
+      { slug: "design-criacao", name: "Design e Criação Digital" },
+    ]);
+
+    const result = await getClassroomEducationalView(
+      "class-2",
+      "educator-1",
+      {
+        classroom: { findUnique: findUniqueClassroom },
+        macroArea: { findMany: findManyMacroAreas },
+      } as never,
+    );
+
+    expect(result).not.toBeNull();
+    expect(result?.macroAreaDistribution).toEqual([
+      {
+        slug: "tecnologia-dados",
+        area: "Tecnologia e Dados",
+        count: 1,
+        interestCount: 1,
+        practiceCount: 1,
+      },
+      {
+        slug: "design-criacao",
+        area: "Design e Criação Digital",
+        count: 0,
+        interestCount: 0,
+        practiceCount: 1,
+      },
+    ]);
+    expect(result?.topGapArea).toBeNull();
   });
 });

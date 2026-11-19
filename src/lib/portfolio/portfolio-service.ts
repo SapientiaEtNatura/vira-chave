@@ -2,6 +2,12 @@ import crypto from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import {
+  calculateProvenPractice,
+  resolvePublicReadinessStatus,
+  type PublicReadinessLabel,
+} from "@/lib/discovery/readiness";
+import { isSafeAreaSlug } from "@/lib/discovery/types";
 import { validateExternalUrlStructure } from "@/lib/link-checker";
 import { hashShareToken } from "@/lib/portfolio/share-token";
 import {
@@ -154,20 +160,182 @@ export interface SharedPortfolioProject {
   evidenceFiles: SharedPortfolioEvidenceFile[];
 }
 
+export interface SharedPortfolioReadinessArea {
+  slug: string;
+  name: string;
+  affinityScore: number | null;
+  provenScore: number;
+  publicStatusLabel: PublicReadinessLabel;
+  entryRoles: string[];
+}
+
+export interface SharedPortfolioReadinessSummary {
+  completedCoursesCount: number;
+  completedChallengesCount: number;
+  totalProjectsCount: number;
+  topAreas: SharedPortfolioReadinessArea[];
+}
+
 export interface SharedPortfolioView {
   studentDisplayName: string;
   projects: SharedPortfolioProject[];
+  readinessSummary?: SharedPortfolioReadinessSummary | null;
 }
 
 export interface GenerateShareLinkResult {
   rawToken: string;
   createdAt: Date;
+  includeReadiness: boolean;
 }
 
-type SharePrismaClient = Pick<
+type ShareReadPrismaClient = Pick<
   PrismaClient,
-  "portfolioShareLink" | "portfolioProject" | "$transaction"
->;
+  "portfolioShareLink" | "portfolioProject"
+> &
+  Partial<
+    Pick<PrismaClient, "discoveryResult" | "courseProgress" | "macroArea">
+  >;
+
+function parseScoresRecord(raw: unknown): Record<string, number> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return {};
+  }
+
+  const parsed: Record<string, number> = {};
+  for (const [slug, value] of Object.entries(raw)) {
+    const normalizedSlug = slug.trim();
+    if (
+      isSafeAreaSlug(normalizedSlug) &&
+      typeof value === "number" &&
+      Number.isFinite(value)
+    ) {
+      parsed[normalizedSlug] = value;
+    }
+  }
+  return parsed;
+}
+
+async function buildSharedReadinessSummary(
+  studentId: string,
+  sharedChallengeSlugs: string[],
+  sharedProjectsCount: number,
+  prismaClient: ShareReadPrismaClient,
+): Promise<SharedPortfolioReadinessSummary | null> {
+  const [latestDiscovery, completedCourses, macroAreas] = await Promise.all([
+    prismaClient.discoveryResult
+      ? prismaClient.discoveryResult.findFirst({
+          where: { studentId },
+          orderBy: { completedAt: "desc" },
+          select: {
+            scoresJson: true,
+            topAreas: true,
+          },
+        })
+      : Promise.resolve(null),
+    prismaClient.courseProgress
+      ? prismaClient.courseProgress.findMany({
+          where: {
+            studentId,
+            status: "CONCLUIDO",
+          },
+          select: {
+            courseItem: {
+              select: {
+                track: {
+                  select: {
+                    macroArea: {
+                      select: {
+                        slug: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        })
+      : Promise.resolve([]),
+    prismaClient.macroArea
+      ? prismaClient.macroArea.findMany({
+          select: {
+            slug: true,
+            name: true,
+            entryRoles: true,
+          },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const completedCourseSlugs = completedCourses
+    .map((item) => item.courseItem?.track?.macroArea?.slug)
+    .filter((slug): slug is string => typeof slug === "string" && slug.length > 0);
+
+  const areaBySlug = new Map(macroAreas.map((area) => [area.slug, area]));
+  const provenPractice = calculateProvenPractice({
+    completedCourseAreaSlugs: completedCourseSlugs,
+    challengeProjectAreaSlugs: sharedChallengeSlugs,
+    totalProjects: sharedProjectsCount,
+    knownAreaSlugs: macroAreas.map((area) => area.slug),
+  });
+
+  if (latestDiscovery) {
+    const scores = parseScoresRecord(latestDiscovery.scoresJson);
+    const topAreas: SharedPortfolioReadinessArea[] = latestDiscovery.topAreas
+      .slice(0, 3)
+      .map((slug) => {
+        const area = areaBySlug.get(slug);
+        const provenScore = provenPractice.byArea[slug]?.score ?? 0;
+        return {
+          slug,
+          name: area?.name ?? slug,
+          affinityScore: typeof scores[slug] === "number" ? scores[slug] : null,
+          provenScore,
+          publicStatusLabel: resolvePublicReadinessStatus(provenScore),
+          entryRoles: area?.entryRoles ?? [],
+        };
+      });
+
+    return {
+      completedCoursesCount: provenPractice.totalCompletedCourses,
+      completedChallengesCount: provenPractice.totalChallengeProjects,
+      totalProjectsCount: provenPractice.totalProjects,
+      topAreas,
+    };
+  }
+
+  const provenTopEntries = Object.entries(provenPractice.byArea)
+    .filter(([, metrics]) => metrics.score > 0)
+    .sort((a, b) => {
+      const diff = b[1].score - a[1].score;
+      return diff !== 0 ? diff : a[0].localeCompare(b[0]);
+    })
+    .slice(0, 3);
+
+  if (provenTopEntries.length === 0) {
+    return null;
+  }
+
+  const topAreas: SharedPortfolioReadinessArea[] = provenTopEntries.map(
+    ([slug, metrics]) => {
+      const area = areaBySlug.get(slug);
+      return {
+        slug,
+        name: area?.name ?? slug,
+        affinityScore: null,
+        provenScore: metrics.score,
+        publicStatusLabel: resolvePublicReadinessStatus(metrics.score),
+        entryRoles: area?.entryRoles ?? [],
+      };
+    },
+  );
+
+  return {
+    completedCoursesCount: provenPractice.totalCompletedCourses,
+    completedChallengesCount: provenPractice.totalChallengeProjects,
+    totalProjectsCount: provenPractice.totalProjects,
+    topAreas,
+  };
+}
 
 function normalizeOptionalExternalUrl(rawUrl?: string | null): string | null {
   const trimmed = (rawUrl ?? "").trim();
@@ -221,6 +389,32 @@ export async function revokeShareLinks(
 }
 
 /**
+ * Atualiza a preferência de exibição do Cartão de Prontidão no link ativo
+ * sem alterar ou revogar o `tokenHash`.
+ */
+export async function updateShareLinkPreferences(
+  studentId: string,
+  includeReadiness: boolean,
+  prismaClient: Pick<PrismaClient, "portfolioShareLink"> = prisma,
+): Promise<{ updated: boolean; includeReadiness: boolean }> {
+  const result = await prismaClient.portfolioShareLink.updateMany({
+    where: {
+      studentId,
+      active: true,
+      revokedAt: null,
+    },
+    data: {
+      includeReadiness,
+    },
+  });
+
+  return {
+    updated: result.count > 0,
+    includeReadiness,
+  };
+}
+
+/**
  * Revoga links ativos anteriores do estudante e gera um novo link de compartilhamento,
  * armazenando apenas o hash SHA-256 do token no banco.
  */
@@ -230,10 +424,12 @@ export async function generateShareLink(
     PrismaClient,
     "portfolioShareLink" | "$transaction"
   > = prisma,
+  options?: { includeReadiness?: boolean },
 ): Promise<GenerateShareLinkResult> {
   const rawToken = crypto.randomBytes(24).toString("base64url");
   const tokenHash = hashShareToken(rawToken);
   const now = new Date();
+  const includeReadiness = Boolean(options?.includeReadiness);
 
   const created = await prismaClient.$transaction(async (tx) => {
     await tx.portfolioShareLink.updateMany({
@@ -252,9 +448,11 @@ export async function generateShareLink(
         studentId,
         tokenHash,
         active: true,
+        includeReadiness,
       },
       select: {
         createdAt: true,
+        includeReadiness: true,
       },
     });
   });
@@ -262,6 +460,7 @@ export async function generateShareLink(
   return {
     rawToken,
     createdAt: created.createdAt,
+    includeReadiness: created.includeReadiness ?? includeReadiness,
   };
 }
 
@@ -271,10 +470,7 @@ export async function generateShareLink(
  */
 export async function getSharedPortfolioByToken(
   rawToken: string,
-  prismaClient: Pick<
-    SharePrismaClient,
-    "portfolioShareLink" | "portfolioProject"
-  > = prisma,
+  prismaClient: ShareReadPrismaClient = prisma,
 ): Promise<SharedPortfolioView | null> {
   const trimmedToken = rawToken?.trim();
   if (!trimmedToken) {
@@ -288,6 +484,7 @@ export async function getSharedPortfolioByToken(
       studentId: true,
       active: true,
       revokedAt: true,
+      includeReadiness: true,
       student: {
         select: {
           name: true,
@@ -321,6 +518,11 @@ export async function getSharedPortfolioByToken(
       challenge: {
         select: {
           title: true,
+          macroArea: {
+            select: {
+              slug: true,
+            },
+          },
         },
       },
       evidenceFiles: {
@@ -335,22 +537,44 @@ export async function getSharedPortfolioByToken(
     },
   });
 
+  const mappedProjects: SharedPortfolioProject[] = projects.map((project) => ({
+    id: project.id,
+    title: project.title,
+    summary: project.summary,
+    reflection: project.reflection,
+    externalUrl: project.externalUrl,
+    challengeTitle: project.challenge?.title ?? null,
+    evidenceFiles: project.evidenceFiles.map((file) => ({
+      id: file.id,
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+    })),
+  }));
+
+  if (shareLink.includeReadiness !== true) {
+    return {
+      studentDisplayName: shareLink.student.name,
+      projects: mappedProjects,
+      readinessSummary: null,
+    };
+  }
+
+  const sharedChallengeSlugs = projects
+    .map((project) => project.challenge?.macroArea?.slug)
+    .filter((slug): slug is string => typeof slug === "string" && slug.length > 0);
+
+  const readinessSummary = await buildSharedReadinessSummary(
+    shareLink.studentId,
+    sharedChallengeSlugs,
+    projects.length,
+    prismaClient,
+  );
+
   return {
     studentDisplayName: shareLink.student.name,
-    projects: projects.map((project) => ({
-      id: project.id,
-      title: project.title,
-      summary: project.summary,
-      reflection: project.reflection,
-      externalUrl: project.externalUrl,
-      challengeTitle: project.challenge?.title ?? null,
-      evidenceFiles: project.evidenceFiles.map((file) => ({
-        id: file.id,
-        originalName: file.originalName,
-        mimeType: file.mimeType,
-        sizeBytes: file.sizeBytes,
-      })),
-    })),
+    projects: mappedProjects,
+    readinessSummary,
   };
 }
 

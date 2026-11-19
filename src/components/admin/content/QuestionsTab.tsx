@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Compass, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -13,6 +14,7 @@ import {
   Select,
   Textarea,
 } from "@/components/ui";
+import type { DiscoveryQuestionOption } from "@/lib/discovery/types";
 import {
   buildWeightsState,
   type AdminDiscoveryQuestion,
@@ -32,10 +34,62 @@ interface QuestionsTabProps {
   onFeedback: (message: string) => void;
 }
 
+interface OptionDraft {
+  id: string;
+  label: string;
+  weights: Record<string, string>;
+}
+
 interface QuestionFormSnapshot {
   order: string;
   prompt: string;
-  weights: Record<string, string>;
+  options: OptionDraft[];
+}
+
+const OPTION_ID_POOL = ["a", "b", "c", "d"] as const;
+
+function nextOptionId(existing: OptionDraft[]): string {
+  const used = new Set(existing.map((o) => o.id));
+  for (const candidate of OPTION_ID_POOL) {
+    if (!used.has(candidate)) return candidate;
+  }
+  return `opt-${existing.length + 1}`;
+}
+
+function cloneOptions(options: OptionDraft[]): OptionDraft[] {
+  return options.map((opt) => ({
+    id: opt.id,
+    label: opt.label,
+    weights: { ...opt.weights },
+  }));
+}
+
+function buildDefaultOptions(macroAreas: AdminMacroArea[]): OptionDraft[] {
+  return [
+    { id: "a", label: "", weights: buildWeightsState(macroAreas) },
+    { id: "b", label: "", weights: buildWeightsState(macroAreas) },
+  ];
+}
+
+function buildEditOptions(
+  question: AdminDiscoveryQuestion,
+  macroAreas: AdminMacroArea[],
+): OptionDraft[] {
+  const drafts: OptionDraft[] = question.options.slice(0, 4).map((opt) => ({
+    id: opt.id,
+    label: opt.label,
+    weights: buildWeightsState(macroAreas, opt.weightsByArea),
+  }));
+
+  while (drafts.length < 2) {
+    drafts.push({
+      id: nextOptionId(drafts),
+      label: "",
+      weights: buildWeightsState(macroAreas),
+    });
+  }
+
+  return drafts;
 }
 
 function areWeightsEqual(
@@ -49,6 +103,16 @@ function areWeightsEqual(
     }
   }
   return true;
+}
+
+function areOptionsEqual(a: OptionDraft[], b: OptionDraft[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (opt, index) =>
+      opt.id === b[index].id &&
+      opt.label === b[index].label &&
+      areWeightsEqual(opt.weights, b[index].weights),
+  );
 }
 
 export function QuestionsTab({
@@ -67,13 +131,14 @@ export function QuestionsTab({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [order, setOrder] = useState("1");
   const [prompt, setPrompt] = useState("");
-  const [weights, setWeights] = useState<Record<string, string>>(() =>
-    buildWeightsState(macroAreas),
+  const [options, setOptions] = useState<OptionDraft[]>(() =>
+    buildDefaultOptions(macroAreas),
   );
+  const [formError, setFormError] = useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] = useState<QuestionFormSnapshot>({
     order: "1",
     prompt: "",
-    weights: buildWeightsState(macroAreas),
+    options: buildDefaultOptions(macroAreas),
   });
 
   const macroAreaNameBySlug = useMemo(() => {
@@ -84,16 +149,16 @@ export function QuestionsTab({
     return map;
   }, [macroAreas]);
 
-  const legacySlugs = useMemo(() => {
-    const knownSlugs = new Set(macroAreas.map((area) => area.slug));
-    return Object.keys(weights).filter((slug) => !knownSlugs.has(slug));
-  }, [macroAreas, weights]);
+  const knownSlugs = useMemo(
+    () => new Set(macroAreas.map((area) => area.slug)),
+    [macroAreas],
+  );
 
   const isDirty =
     drawerOpen &&
     (order !== initialSnapshot.order ||
       prompt !== initialSnapshot.prompt ||
-      !areWeightsEqual(weights, initialSnapshot.weights));
+      !areOptionsEqual(options, initialSnapshot.options));
 
   const filteredQuestions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -110,32 +175,37 @@ export function QuestionsTab({
   }, [questions, searchQuery, filterMacroSlug]);
 
   function openCreateDrawer() {
-    const maxOrder = questions.reduce((max, item) => Math.max(max, item.order), 0);
+    const maxOrder = questions.reduce(
+      (max, item) => Math.max(max, item.order),
+      0,
+    );
     const nextOrder = String(maxOrder + 1);
-    const nextWeights = buildWeightsState(macroAreas);
+    const initialOptions = buildDefaultOptions(macroAreas);
     setEditingId(null);
     setOrder(nextOrder);
     setPrompt("");
-    setWeights(nextWeights);
+    setOptions(initialOptions);
+    setFormError(null);
     setInitialSnapshot({
       order: nextOrder,
       prompt: "",
-      weights: { ...nextWeights },
+      options: cloneOptions(initialOptions),
     });
     setDrawerOpen(true);
   }
 
   function openEditDrawer(question: AdminDiscoveryQuestion) {
     const nextOrder = String(question.order);
-    const nextWeights = buildWeightsState(macroAreas, question.weightsByArea);
+    const editOptions = buildEditOptions(question, macroAreas);
     setEditingId(question.id);
     setOrder(nextOrder);
     setPrompt(question.prompt);
-    setWeights(nextWeights);
+    setOptions(editOptions);
+    setFormError(null);
     setInitialSnapshot({
       order: nextOrder,
       prompt: question.prompt,
-      weights: { ...nextWeights },
+      options: cloneOptions(editOptions),
     });
     setDrawerOpen(true);
   }
@@ -143,22 +213,123 @@ export function QuestionsTab({
   function closeDrawer() {
     setDrawerOpen(false);
     setEditingId(null);
+    setFormError(null);
+  }
+
+  function addOption() {
+    if (options.length >= 4) return;
+    setFormError(null);
+    setOptions((prev) => [
+      ...prev,
+      {
+        id: nextOptionId(prev),
+        label: "",
+        weights: buildWeightsState(macroAreas),
+      },
+    ]);
+  }
+
+  function removeOption(index: number) {
+    if (options.length <= 2) return;
+    setFormError(null);
+    setOptions((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateOptionLabel(index: number, value: string) {
+    if (formError) setFormError(null);
+    setOptions((prev) =>
+      prev.map((opt, i) => (i === index ? { ...opt, label: value } : opt)),
+    );
+  }
+
+  function updateOptionWeight(index: number, slug: string, value: string) {
+    if (formError) setFormError(null);
+    setOptions((prev) =>
+      prev.map((opt, i) =>
+        i === index
+          ? { ...opt, weights: { ...opt.weights, [slug]: value } }
+          : opt,
+      ),
+    );
+  }
+
+  function failValidation(message: string) {
+    setFormError(message);
+    onValidationError(message);
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const parsedWeights: Record<string, number> = {};
+    setFormError(null);
 
-    for (const [slug, rawValue] of Object.entries(weights)) {
-      const trimmed = rawValue.trim();
-      const numeric = trimmed === "" ? 0 : Number(trimmed);
-      if (!Number.isInteger(numeric) || numeric < 0 || numeric > 10) {
-        onValidationError(
-          `O peso de "${macroAreaNameBySlug.get(slug) ?? slug}" deve ser um número inteiro entre 0 e 10.`,
+    const parsedOrder = Number(order);
+    if (!Number.isInteger(parsedOrder) || parsedOrder < 1) {
+      failValidation("A ordem da pergunta deve ser um número inteiro maior que zero.");
+      return;
+    }
+
+    const trimmedPrompt = prompt.trim();
+    if (trimmedPrompt.length < 5 || trimmedPrompt.length > 400) {
+      failValidation("O enunciado deve ter entre 5 e 400 caracteres.");
+      return;
+    }
+
+    if (options.length < 2 || options.length > 4) {
+      failValidation("Informe entre 2 e 4 opções situacionais.");
+      return;
+    }
+
+    const seenIds = new Set<string>();
+    const serializedOptions: DiscoveryQuestionOption[] = [];
+
+    for (let i = 0; i < options.length; i++) {
+      const opt = options[i];
+      const trimmedId = opt.id.trim();
+      const trimmedLabel = opt.label.trim();
+
+      if (!trimmedId || seenIds.has(trimmedId)) {
+        failValidation(
+          `A opção ${i + 1} precisa de um identificador único e não vazio.`,
         );
         return;
       }
-      parsedWeights[slug] = numeric;
+      seenIds.add(trimmedId);
+
+      if (trimmedLabel.length < 5 || trimmedLabel.length > 220) {
+        failValidation(
+          `A opção ${i + 1} deve ter texto entre 5 e 220 caracteres.`,
+        );
+        return;
+      }
+
+      const parsedWeights: Record<string, number> = {};
+      for (const [slug, rawValue] of Object.entries(opt.weights)) {
+        const trimmed = rawValue.trim();
+        const numeric = trimmed === "" ? 0 : Number(trimmed);
+        if (!Number.isInteger(numeric) || numeric < 0 || numeric > 10) {
+          failValidation(
+            `Na opção ${i + 1}, o peso de "${macroAreaNameBySlug.get(slug) ?? slug}" deve ser um inteiro entre 0 e 10.`,
+          );
+          return;
+        }
+        parsedWeights[slug] = numeric;
+      }
+
+      const hasPositiveWeight = Object.values(parsedWeights).some(
+        (weight) => weight > 0,
+      );
+      if (!hasPositiveWeight) {
+        failValidation(
+          `A opção ${i + 1} deve atribuir peso maior que zero a pelo menos uma MacroÁrea.`,
+        );
+        return;
+      }
+
+      serializedOptions.push({
+        id: trimmedId,
+        label: trimmedLabel,
+        weightsByArea: parsedWeights,
+      });
     }
 
     const payload = await sendContentRequest<{ item: AdminDiscoveryQuestion }>(
@@ -167,15 +338,15 @@ export function QuestionsTab({
         ? {
             kind: "question",
             id: editingId,
-            prompt,
-            order: Number(order),
-            weightsByArea: parsedWeights,
+            prompt: trimmedPrompt,
+            order: parsedOrder,
+            options: serializedOptions,
           }
         : {
             kind: "question",
-            prompt,
-            order: Number(order),
-            weightsByArea: parsedWeights,
+            prompt: trimmedPrompt,
+            order: parsedOrder,
+            options: serializedOptions,
           },
     );
     if (!payload?.item) return;
@@ -280,6 +451,7 @@ export function QuestionsTab({
             const activeWeights = Object.entries(question.weightsByArea).filter(
               ([, weight]) => weight > 0,
             );
+            const optionCount = question.options.length;
 
             return (
               <Card
@@ -297,6 +469,9 @@ export function QuestionsTab({
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
+                    <Badge variant="brand" className="tabular-nums">
+                      {optionCount} {optionCount === 1 ? "opção" : "opções"}
+                    </Badge>
                     {activeWeights.length === 0 ? (
                       <span className="text-xs text-[var(--ink-muted)]">
                         Sem pesos atribuídos
@@ -353,7 +528,7 @@ export function QuestionsTab({
         open={drawerOpen}
         onClose={closeDrawer}
         title={editingId ? "Editar pergunta" : "Nova pergunta do Descobrir"}
-        subtitle="Configure a ordem, o enunciado e os pesos por MacroÁrea (0 a 10)."
+        subtitle="Configure a ordem, o enunciado situacional e de 2 a 4 opções com pesos por MacroÁrea (0 a 10)."
         isDirty={isDirty}
         footer={
           <div className="flex flex-wrap items-center justify-end gap-2">
@@ -379,6 +554,8 @@ export function QuestionsTab({
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+          {formError ? <Alert variant="danger">{formError}</Alert> : null}
+
           <FormField id="question-order" label="Ordem" required>
             <Input
               type="number"
@@ -399,53 +576,121 @@ export function QuestionsTab({
             />
           </FormField>
 
-          <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4">
-            <div>
-              <p className="text-sm font-medium text-[var(--ink-primary)]">
-                Pesos por MacroÁrea
-              </p>
-              <p className="text-xs text-[var(--ink-muted)]">
-                Defina de 0 a 10 o quanto esta pergunta pontua para cada
-                MacroÁrea.
-              </p>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <p className="text-sm font-medium text-[var(--ink-primary)]">
+                  Opções situacionais ({options.length}/4)
+                </p>
+                <p className="text-xs text-[var(--ink-muted)]">
+                  Cada opção precisa de texto (5 a 220 caracteres) e ao menos 1
+                  peso maior que zero.
+                </p>
+              </div>
+              {options.length < 4 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  leftIcon={<Plus className="h-3.5 w-3.5" />}
+                  onClick={addOption}
+                  className="min-h-11 shrink-0"
+                >
+                  Adicionar opção
+                </Button>
+              ) : null}
             </div>
 
-            {macroAreas.length === 0 ? (
-              <p className="text-xs text-[var(--ink-muted)]">
-                Cadastre ao menos uma MacroÁrea para configurar pesos.
-              </p>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {macroAreas.map((area) => (
+            {options.map((opt, index) => {
+              const legacySlugs = Object.keys(opt.weights).filter(
+                (slug) => !knownSlugs.has(slug),
+              );
+
+              return (
+                <div
+                  key={opt.id}
+                  className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-[var(--ink-primary)]">
+                        Opção {index + 1}
+                      </span>
+                      <Badge variant="neutral" className="font-mono">
+                        {opt.id}
+                      </Badge>
+                    </div>
+                    {options.length > 2 ? (
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        leftIcon={<Trash2 className="h-3.5 w-3.5" />}
+                        onClick={() => removeOption(index)}
+                        className="min-h-11"
+                      >
+                        Remover opção
+                      </Button>
+                    ) : null}
+                  </div>
+
                   <FormField
-                    key={area.id}
-                    id={`question-weight-${area.slug}`}
-                    label={area.name}
+                    id={`question-option-${index}-label`}
+                    label="Texto da opção"
+                    required
                   >
-                    <Input
-                      type="number"
-                      min={0}
-                      max={10}
-                      step={1}
-                      value={weights[area.slug] ?? "0"}
-                      onChange={(e) =>
-                        setWeights((prev) => ({
-                          ...prev,
-                          [area.slug]: e.target.value,
-                        }))
-                      }
-                      className="tabular-nums"
+                    <Textarea
+                      required
+                      rows={2}
+                      minLength={5}
+                      maxLength={220}
+                      value={opt.label}
+                      onChange={(e) => updateOptionLabel(index, e.target.value)}
+                      placeholder="Descreva a atitude ou decisão do estudante neste cenário..."
                     />
                   </FormField>
-                ))}
-              </div>
-            )}
 
-            {legacySlugs.length > 0 ? (
-              <p className="text-xs text-[var(--ink-muted)]">
-                Chaves legadas preservadas ao salvar: {legacySlugs.join(", ")}
-              </p>
-            ) : null}
+                  {macroAreas.length === 0 ? (
+                    <p className="text-xs text-[var(--ink-muted)]">
+                      Cadastre ao menos uma MacroÁrea para configurar pesos.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {macroAreas.map((area) => (
+                        <FormField
+                          key={area.id}
+                          id={`question-option-${index}-weight-${area.slug}`}
+                          label={area.name}
+                        >
+                          <Input
+                            type="number"
+                            min={0}
+                            max={10}
+                            step={1}
+                            value={opt.weights[area.slug] ?? "0"}
+                            onChange={(e) =>
+                              updateOptionWeight(
+                                index,
+                                area.slug,
+                                e.target.value,
+                              )
+                            }
+                            className="tabular-nums"
+                          />
+                        </FormField>
+                      ))}
+                    </div>
+                  )}
+
+                  {legacySlugs.length > 0 ? (
+                    <p className="text-xs text-[var(--ink-muted)]">
+                      Chaves legadas preservadas ao salvar:{" "}
+                      {legacySlugs.join(", ")}
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         </form>
       </Drawer>

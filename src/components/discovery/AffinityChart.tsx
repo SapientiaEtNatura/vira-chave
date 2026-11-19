@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Legend,
   PolarAngleAxis,
   PolarGrid,
   PolarRadiusAxis,
@@ -14,6 +15,7 @@ export interface AffinityChartDatum {
   slug: string;
   name: string;
   score: number;
+  provenScore?: number;
 }
 
 interface AffinityChartProps {
@@ -32,12 +34,12 @@ export function AffinityChart({ data }: AffinityChartProps) {
   return (
     <div className="w-full">
       <div
-        className="h-80 w-full"
+        className="h-80 w-full sm:h-[22rem]"
         role="img"
-        aria-label="Mapa de afinidades por macroárea"
+        aria-label="Mapa de afinidades por macroárea com camadas de afinidade situacional e prática comprovada"
       >
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="72%" data={data}>
+          <RadarChart cx="50%" cy="48%" outerRadius="68%" data={data}>
             <PolarGrid stroke="var(--chart-grid)" />
             <PolarAngleAxis
               dataKey="name"
@@ -49,14 +51,28 @@ export function AffinityChart({ data }: AffinityChartProps) {
               tick={{ fill: "var(--chart-axis)", fontSize: 10 }}
             />
             <Radar
-              name="Afinidade"
+              name="Afinidade situacional"
               dataKey="score"
               stroke="var(--chart-1)"
               fill="var(--chart-1)"
-              fillOpacity={0.3}
+              fillOpacity={0.28}
+            />
+            <Radar
+              name="Prática comprovada"
+              dataKey="provenScore"
+              stroke="var(--chart-2)"
+              fill="var(--chart-2)"
+              fillOpacity={0.2}
+              strokeDasharray="4 3"
+            />
+            <Legend
+              wrapperStyle={{
+                fontSize: "0.75rem",
+                paddingTop: "0.5rem",
+              }}
             />
             <Tooltip
-              formatter={(value) => [`${value ?? 0}%`, "Afinidade"]}
+              formatter={(value, name) => [`${value ?? 0}%`, String(name ?? "")]}
               contentStyle={{
                 borderRadius: "0.75rem",
                 borderColor: "var(--border-subtle)",
