@@ -7,6 +7,7 @@ import {
   resolvePublicReadinessStatus,
   type PublicReadinessLabel,
 } from "@/lib/discovery/readiness";
+import { isSafeAreaSlug } from "@/lib/discovery/types";
 import { validateExternalUrlStructure } from "@/lib/link-checker";
 import { hashShareToken } from "@/lib/portfolio/share-token";
 import {
@@ -202,8 +203,13 @@ function parseScoresRecord(raw: unknown): Record<string, number> {
 
   const parsed: Record<string, number> = {};
   for (const [slug, value] of Object.entries(raw)) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      parsed[slug] = value;
+    const normalizedSlug = slug.trim();
+    if (
+      isSafeAreaSlug(normalizedSlug) &&
+      typeof value === "number" &&
+      Number.isFinite(value)
+    ) {
+      parsed[normalizedSlug] = value;
     }
   }
   return parsed;

@@ -60,7 +60,7 @@ function makeJsonRequest(method: "POST" | "PATCH", body: unknown) {
   return new Request("http://localhost/api/admin/content", {
     method,
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: typeof body === "string" ? body : JSON.stringify(body),
   });
 }
 
@@ -187,6 +187,70 @@ describe("API /api/admin/content — Cenários Situacionais e entryRoles", () =>
     expect(payload.item.options).toEqual(updatedOptions);
   });
 
+  it("PATCH question sem options ignora weightsByArea arbitrário e não grava weightsByArea no Prisma", async () => {
+    mocks.prisma.discoveryQuestion.update.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: "q-1",
+        prompt: "Enunciado atualizado",
+        order: 2,
+        optionsJson: VALID_OPTIONS,
+        weightsByArea: { "tecnologia-dados": 3 },
+        ...data,
+      }),
+    );
+
+    const response = await PATCH(
+      makeJsonRequest("PATCH", {
+        kind: "question",
+        id: "q-1",
+        prompt: "Enunciado atualizado",
+        weightsByArea: { "tecnologia-dados": 9, "design-criacao": 8 },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.prisma.discoveryQuestion.update).toHaveBeenCalledWith({
+      where: { id: "q-1" },
+      data: {
+        prompt: "Enunciado atualizado",
+      },
+    });
+  });
+
+  it("PATCH question com options sempre deriva weightsByArea das options, ignorando weightsByArea no topo", async () => {
+    const updatedOptions = VALID_OPTIONS.slice(0, 2);
+    mocks.prisma.discoveryQuestion.update.mockImplementation(
+      async ({ data }: { data: Record<string, unknown> }) => ({
+        id: "q-1",
+        prompt: "Enunciado existente",
+        order: 1,
+        ...data,
+      }),
+    );
+
+    const response = await PATCH(
+      makeJsonRequest("PATCH", {
+        kind: "question",
+        id: "q-1",
+        options: updatedOptions,
+        weightsByArea: { "saude-bem-estar": 10 },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.prisma.discoveryQuestion.update).toHaveBeenCalledWith({
+      where: { id: "q-1" },
+      data: {
+        optionsJson: updatedOptions,
+        weightsByArea: {
+          "tecnologia-dados": 3,
+          "negocios-empreendedorismo": 1,
+          "design-criacao": 4,
+        },
+      },
+    });
+  });
+
   it("GET retorna questions serializadas com options normalizado via parseQuestionOptions", async () => {
     mocks.prisma.macroArea.findMany.mockResolvedValue([]);
     mocks.prisma.discoveryQuestion.findMany.mockResolvedValue([
@@ -274,6 +338,76 @@ describe("API /api/admin/content — Cenários Situacionais e entryRoles", () =>
     expect(mocks.prisma.discoveryQuestion.create).not.toHaveBeenCalled();
     expect(mocks.prisma.discoveryQuestion.update).not.toHaveBeenCalled();
   });
+
+  it.each([
+    { label: 'peso string "1"', badWeight: "1" },
+    { label: "peso booleano true", badWeight: true },
+    { label: "peso booleano false", badWeight: false },
+    { label: "peso null", badWeight: null },
+  ])(
+    "POST e PATCH question rejeitam com 400 sem chamar Prisma quando weightsByArea contém $label",
+    async ({ badWeight }) => {
+      const options = [
+        {
+          id: "a",
+          label: "Opção válida com texto suficiente.",
+          weightsByArea: { "tecnologia-dados": badWeight, "design-criacao": 2 },
+        },
+        VALID_OPTIONS[1],
+      ];
+
+      const postRes = await POST(
+        makeJsonRequest("POST", {
+          kind: "question",
+          prompt: "Qual é a sua primeira atitude diante de um novo desafio?",
+          order: 1,
+          options,
+        }),
+      );
+      expect(postRes.status).toBe(400);
+
+      const patchRes = await PATCH(
+        makeJsonRequest("PATCH", {
+          kind: "question",
+          id: "q-1",
+          options,
+        }),
+      );
+      expect(patchRes.status).toBe(400);
+
+      expect(mocks.prisma.discoveryQuestion.create).not.toHaveBeenCalled();
+      expect(mocks.prisma.discoveryQuestion.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["constructor", "__proto__", "prototype"])(
+    "POST e PATCH question rejeitam com 400 sem chamar Prisma quando weightsByArea usa chave reservada %s",
+    async (unsafeKey) => {
+      const makeRawBody = (extra: string) =>
+        `{${extra},"options":[{"id":"a","label":"Opção válida com texto suficiente.","weightsByArea":{"${unsafeKey}":3,"tecnologia-dados":2}},${JSON.stringify(VALID_OPTIONS[1])}]}`;
+
+      const postRes = await POST(
+        makeJsonRequest(
+          "POST",
+          makeRawBody(
+            `"kind":"question","prompt":"Qual é a sua primeira atitude diante de um novo desafio?","order":1`,
+          ),
+        ),
+      );
+      expect(postRes.status).toBe(400);
+
+      const patchRes = await PATCH(
+        makeJsonRequest(
+          "PATCH",
+          makeRawBody(`"kind":"question","id":"q-1"`),
+        ),
+      );
+      expect(patchRes.status).toBe(400);
+
+      expect(mocks.prisma.discoveryQuestion.create).not.toHaveBeenCalled();
+      expect(mocks.prisma.discoveryQuestion.update).not.toHaveBeenCalled();
+    },
+  );
 
   it("POST e PATCH macroArea persistem entryRoles válidos e POST sem entryRoles usa [] por padrão", async () => {
     mocks.prisma.macroArea.create.mockImplementation(

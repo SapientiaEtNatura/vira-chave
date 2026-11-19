@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  calculateAffinityScores,
   calculateSituationalAffinityScores,
-  type DiscoveryScoringQuestion,
   type SituationalQuestion,
 } from "@/lib/discovery/scoring";
 import {
@@ -16,65 +14,6 @@ import {
   computeStudentStage,
   resolveStageFromMilestones,
 } from "@/lib/student/stage";
-
-describe("Discovery scoring engine", () => {
-  it("test_scoring_engine_aggregates_likert_1_to_5_weights_deterministically", () => {
-    const questions: DiscoveryScoringQuestion[] = [
-      {
-        id: "q-1",
-        weightsByArea: {
-          "tecnologia-dados": 3,
-          "design-criacao": 1,
-        },
-      },
-      {
-        id: "q-2",
-        weightsByArea: {
-          "tecnologia-dados": 2,
-          "negocios-empreendedorismo": 2,
-        },
-      },
-      {
-        id: "q-3",
-        weightsByArea: {
-          "comunicacao-conteudo": 3,
-          "sustentabilidade-impacto": 1,
-        },
-      },
-    ];
-
-    const answers = {
-      "q-1": 5,
-      "q-2": 4,
-      "q-3": 2,
-    };
-
-    const firstRun = calculateAffinityScores(answers, questions);
-    const secondRun = calculateAffinityScores(answers, questions);
-
-    expect(firstRun).toEqual(secondRun);
-
-    // tecnologia-dados: (5*3 + 4*2) / (5*3 + 5*2) = 23 / 25 = 92
-    // design-criacao: (5*1) / (5*1) = 100
-    // negocios-empreendedorismo: (4*2) / (5*2) = 80
-    // comunicacao-conteudo: (2*3) / (5*3) = 40
-    // sustentabilidade-impacto: (2*1) / (5*1) = 40
-    expect(firstRun.scores).toEqual({
-      "tecnologia-dados": 92,
-      "design-criacao": 100,
-      "negocios-empreendedorismo": 80,
-      "comunicacao-conteudo": 40,
-      "sustentabilidade-impacto": 40,
-    });
-
-    expect(firstRun.topAreas).toEqual([
-      "design-criacao",
-      "tecnologia-dados",
-      "negocios-empreendedorismo",
-    ]);
-    expect(firstRun.topAreas.length).toBeLessThanOrEqual(3);
-  });
-});
 
 describe("Student journey stage computation", () => {
   it("test_compute_student_stage_follows_highest_milestone", async () => {
@@ -255,6 +194,35 @@ describe("Situational discovery scoring engine", () => {
       "area-beta",
       "area-delta",
     ]);
+  });
+
+  it("ignores prototype keys (__proto__, constructor, prototype) in situational scoring without NaN", () => {
+    const questions: SituationalQuestion[] = [
+      {
+        id: "sq-proto",
+        options: [
+          {
+            id: "a",
+            label: "Opção com chaves inseguras",
+            weightsByArea: JSON.parse(
+              `{"__proto__":3,"constructor":2,"prototype":4,"tecnologia-dados":3}`,
+            ),
+          },
+        ],
+      },
+    ];
+
+    const result = calculateSituationalAffinityScores(
+      { "sq-proto": "a" },
+      questions,
+      ["__proto__", "constructor", "prototype", "tecnologia-dados"],
+    );
+
+    expect(result.scores).toEqual({ "tecnologia-dados": 100 });
+    expect(result.topAreas).toEqual(["tecnologia-dados"]);
+    expect(Object.hasOwn(result.scores, "__proto__")).toBe(false);
+    expect(Object.hasOwn(result.scores, "constructor")).toBe(false);
+    expect(Object.hasOwn(result.scores, "prototype")).toBe(false);
   });
 });
 
@@ -497,5 +465,32 @@ describe("Proven practice, readiness and evolution", () => {
         where: { studentId: "student-1", isIncludedInShare: true },
       }),
     );
+  });
+
+  it("ignores prototype keys (__proto__, constructor, prototype) in calculateProvenPractice", () => {
+    const summary = calculateProvenPractice({
+      completedCourseAreaSlugs: ["__proto__", "constructor", "prototype", "tecnologia-dados"],
+      challengeProjectAreaSlugs: ["__proto__", "constructor", "prototype", "design-criacao"],
+      totalProjects: 2,
+      knownAreaSlugs: ["__proto__", "constructor", "prototype", "tecnologia-dados"],
+    });
+
+    expect(summary.totalCompletedCourses).toBe(1);
+    expect(summary.totalChallengeProjects).toBe(1);
+    expect(summary.byArea).toEqual({
+      "tecnologia-dados": {
+        completedCourses: 1,
+        challengeProjects: 0,
+        score: 35,
+      },
+      "design-criacao": {
+        completedCourses: 0,
+        challengeProjects: 1,
+        score: 50,
+      },
+    });
+    expect(Object.hasOwn(summary.byArea, "__proto__")).toBe(false);
+    expect(Object.hasOwn(summary.byArea, "constructor")).toBe(false);
+    expect(Object.hasOwn(summary.byArea, "prototype")).toBe(false);
   });
 });

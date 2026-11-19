@@ -1,6 +1,6 @@
 import type { PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import type { SelfPracticeLevel } from "@/lib/discovery/types";
+import { isSafeAreaSlug, type SelfPracticeLevel } from "@/lib/discovery/types";
 
 export type AreaReadinessStatus =
   | "PRONTO_PARA_EXPERIMENTAR"
@@ -49,8 +49,8 @@ export function calculateProvenPractice(input: {
 
   const ensureArea = (slug: string): ProvenPracticeAreaMetrics | null => {
     const normalized = slug.trim();
-    if (!normalized) return null;
-    if (!(normalized in byArea)) {
+    if (!isSafeAreaSlug(normalized)) return null;
+    if (!Object.hasOwn(byArea, normalized)) {
       byArea[normalized] = {
         completedCourses: 0,
         challengeProjects: 0,

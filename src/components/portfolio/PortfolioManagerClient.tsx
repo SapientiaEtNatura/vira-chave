@@ -372,6 +372,7 @@ export function PortfolioManagerClient({
               variant="outline"
               onClick={handleGenerateShareLink}
               loading={shareBusy}
+              disabled={readinessBusy}
               leftIcon={<Link2 className="h-4 w-4" aria-hidden="true" />}
             >
               {hasActiveLink
@@ -384,7 +385,7 @@ export function PortfolioManagerClient({
                 type="button"
                 variant="danger"
                 onClick={handleRevokeShareLink}
-                disabled={shareBusy}
+                disabled={shareBusy || readinessBusy}
                 leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
               >
                 Revogar

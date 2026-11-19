@@ -5,6 +5,7 @@ import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
 import { prisma } from "@/lib/db";
 import {
   deriveQuestionAreaWeights,
+  isSafeAreaSlug,
   parseQuestionOptions,
 } from "@/lib/discovery/types";
 import { validateExternalUrlStructure } from "@/lib/link-checker";
@@ -30,10 +31,40 @@ const questionOptionSchema = z.object({
     .min(5, "O texto de cada opção deve ter entre 5 e 220 caracteres.")
     .max(220, "O texto de cada opção deve ter entre 5 e 220 caracteres."),
   weightsByArea: z
-    .record(z.string().trim().min(1), z.coerce.number().int().min(0).max(10))
-    .refine(
-      (weights) => Object.values(weights).some((weight) => weight > 0),
-      "Cada opção deve atribuir peso maior que zero a pelo menos uma MacroÁrea.",
+    .unknown()
+    .superRefine((val, ctx) => {
+      if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+        for (const key of Object.getOwnPropertyNames(val)) {
+          if (!isSafeAreaSlug(key)) {
+            ctx.addIssue({
+              code: "custom",
+              message: "Identificador de MacroÁrea inválido.",
+            });
+            return;
+          }
+        }
+      }
+    })
+    .pipe(
+      z
+        .record(
+          z
+            .string()
+            .trim()
+            .min(1)
+            .refine(isSafeAreaSlug, "Identificador de MacroÁrea inválido."),
+          z
+            .number({
+              message: "Cada peso deve ser um número inteiro entre 0 e 10.",
+            })
+            .int("Cada peso deve ser um número inteiro entre 0 e 10.")
+            .min(0)
+            .max(10),
+        )
+        .refine(
+          (weights) => Object.values(weights).some((weight) => weight > 0),
+          "Cada opção deve atribuir peso maior que zero a pelo menos uma MacroÁrea.",
+        ),
     ),
 });
 
@@ -121,7 +152,6 @@ const updateContentSchema = z.discriminatedUnion("kind", [
     prompt: z.string().trim().min(5).max(400).optional(),
     order: z.coerce.number().int().min(1).optional(),
     options: questionOptionsArraySchema.optional(),
-    weightsByArea: z.record(z.string(), z.coerce.number().int().min(0).max(10)).optional(),
   }),
   z.object({
     kind: z.literal("track"),
@@ -372,9 +402,7 @@ export async function PATCH(request: Request) {
                   optionsJson: data.options as unknown as Prisma.InputJsonValue,
                   weightsByArea: deriveQuestionAreaWeights(data.options),
                 }
-              : data.weightsByArea !== undefined
-                ? { weightsByArea: data.weightsByArea }
-                : {}),
+              : {}),
           },
         });
         item = serializeQuestion(updated);

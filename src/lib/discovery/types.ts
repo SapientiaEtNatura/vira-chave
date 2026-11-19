@@ -6,6 +6,13 @@ export interface DiscoveryQuestionOption {
   weightsByArea: Record<string, number>;
 }
 
+const UNSAFE_AREA_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+export function isSafeAreaSlug(slug: string): boolean {
+  const trimmed = slug.trim();
+  return trimmed.length > 0 && !UNSAFE_AREA_KEYS.has(trimmed);
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -31,7 +38,7 @@ export function parseQuestionOptions(raw: unknown): DiscoveryQuestionOption[] {
     for (const [slug, weight] of Object.entries(item.weightsByArea)) {
       const normalizedSlug = slug.trim();
       if (
-        normalizedSlug &&
+        isSafeAreaSlug(normalizedSlug) &&
         typeof weight === "number" &&
         Number.isFinite(weight) &&
         weight > 0
@@ -58,8 +65,17 @@ export function deriveQuestionAreaWeights(
 
   for (const option of options) {
     for (const [slug, weight] of Object.entries(option.weightsByArea)) {
-      if (typeof weight === "number" && Number.isFinite(weight) && weight > 0) {
-        derived[slug] = Math.max(derived[slug] ?? 0, weight);
+      const normalizedSlug = slug.trim();
+      if (
+        isSafeAreaSlug(normalizedSlug) &&
+        typeof weight === "number" &&
+        Number.isFinite(weight) &&
+        weight > 0
+      ) {
+        const current = Object.hasOwn(derived, normalizedSlug)
+          ? derived[normalizedSlug]
+          : 0;
+        derived[normalizedSlug] = Math.max(current, weight);
       }
     }
   }
@@ -81,7 +97,10 @@ export function parseSelfPracticeMap(
 
   for (const [slug, level] of Object.entries(raw)) {
     const normalizedSlug = slug.trim();
-    if (normalizedSlug && (level === 0 || level === 1 || level === 2)) {
+    if (
+      isSafeAreaSlug(normalizedSlug) &&
+      (level === 0 || level === 1 || level === 2)
+    ) {
       parsed[normalizedSlug] = level;
     }
   }

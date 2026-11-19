@@ -94,6 +94,47 @@ describe("Discovery Types & Normalizers", () => {
       "saude-bem-estar": 0,
     });
   });
+
+  it("ignores prototype-polluting keys (__proto__, constructor, prototype) in discovery normalizers", () => {
+    const rawOptions = JSON.parse(
+      `[{"id":"a","label":"Cenário seguro","weightsByArea":{"__proto__":3,"constructor":2,"prototype":4,"tecnologia-dados":3}}]`,
+    );
+
+    const parsedOptions = parseQuestionOptions(rawOptions);
+    expect(parsedOptions).toEqual([
+      {
+        id: "a",
+        label: "Cenário seguro",
+        weightsByArea: { "tecnologia-dados": 3 },
+      },
+    ]);
+    expect(Object.hasOwn(parsedOptions[0].weightsByArea, "__proto__")).toBe(false);
+    expect(Object.hasOwn(parsedOptions[0].weightsByArea, "constructor")).toBe(false);
+    expect(Object.hasOwn(parsedOptions[0].weightsByArea, "prototype")).toBe(false);
+
+    const unsafeOption = {
+      id: "b",
+      label: "Com chave insegura direta",
+      weightsByArea: JSON.parse(
+        `{"__proto__":3,"constructor":4,"prototype":2,"design-criacao":2}`,
+      ),
+    };
+    const derived = deriveQuestionAreaWeights([unsafeOption]);
+    expect(derived).toEqual({ "design-criacao": 2 });
+    expect(Number.isNaN(derived["__proto__"] as number)).toBe(false);
+    expect(Object.hasOwn(derived, "__proto__")).toBe(false);
+    expect(Object.hasOwn(derived, "constructor")).toBe(false);
+    expect(Object.hasOwn(derived, "prototype")).toBe(false);
+
+    const rawSelfPractice = JSON.parse(
+      `{"__proto__":2,"constructor":1,"prototype":0,"tecnologia-dados":1}`,
+    );
+    const parsedPractice = parseSelfPracticeMap(rawSelfPractice);
+    expect(parsedPractice).toEqual({ "tecnologia-dados": 1 });
+    expect(Object.hasOwn(parsedPractice!, "__proto__")).toBe(false);
+    expect(Object.hasOwn(parsedPractice!, "constructor")).toBe(false);
+    expect(Object.hasOwn(parsedPractice!, "prototype")).toBe(false);
+  });
 });
 
 describe("Schema & Seed Integrity", () => {

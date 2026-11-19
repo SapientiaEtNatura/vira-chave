@@ -6,6 +6,7 @@ import {
   getStudentProvenPractice,
 } from "@/lib/discovery/readiness";
 import {
+  isSafeAreaSlug,
   parseQuestionOptions,
   parseSelfPracticeMap,
 } from "@/lib/discovery/types";
@@ -20,8 +21,13 @@ function parseScoresJson(raw: unknown): Record<string, number> {
 
   const scores: Record<string, number> = {};
   for (const [slug, value] of Object.entries(raw)) {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      scores[slug] = value;
+    const normalizedSlug = slug.trim();
+    if (
+      isSafeAreaSlug(normalizedSlug) &&
+      typeof value === "number" &&
+      Number.isFinite(value)
+    ) {
+      scores[normalizedSlug] = value;
     }
   }
   return scores;
@@ -140,19 +146,19 @@ export default async function DescobrirPage() {
   const previousResult = previousRow ? mapResultRow(previousRow) : null;
 
   const initialComparison =
-    latestRow && initialResult
+    initialResult
       ? buildDiscoveryComparison(
           {
             scores: initialResult.scores,
             topAreas: initialResult.topAreas,
-            isSituational: latestRow.selfPracticeJson !== null,
+            isSituational: initialResult.selfPractice !== null,
           },
-          previousRow && previousResult
+          previousResult
             ? {
                 scores: previousResult.scores,
                 topAreas: previousResult.topAreas,
                 completedAt: previousResult.completedAt,
-                isSituational: previousRow.selfPracticeJson !== null,
+                isSituational: previousResult.selfPractice !== null,
               }
             : null,
         )
