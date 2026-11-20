@@ -20,6 +20,19 @@ function hasSessionCookie(request: NextRequest): boolean {
   );
 }
 
+function normalizeExpectedHostForProtocol(
+  expectedHost: string,
+  protocol: string,
+): string {
+  if (protocol === "http:" && expectedHost.endsWith(":80")) {
+    return expectedHost.slice(0, -3);
+  }
+  if (protocol === "https:" && expectedHost.endsWith(":443")) {
+    return expectedHost.slice(0, -4);
+  }
+  return expectedHost;
+}
+
 function matchesExpectedOrigin(
   rawUrl: string,
   expectedHost: string,
@@ -27,10 +40,14 @@ function matchesExpectedOrigin(
 ): boolean {
   try {
     const parsed = new URL(rawUrl);
-    if (parsed.host !== expectedHost) {
+    if (forwardedProto && parsed.protocol !== `${forwardedProto}:`) {
       return false;
     }
-    if (forwardedProto && parsed.protocol !== `${forwardedProto}:`) {
+    const normalizedExpected = normalizeExpectedHostForProtocol(
+      expectedHost,
+      parsed.protocol,
+    );
+    if (parsed.host !== normalizedExpected) {
       return false;
     }
     return true;

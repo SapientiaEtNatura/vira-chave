@@ -113,6 +113,33 @@ describe("Fase 4 — Hardening CSRF, Share Token Cookie, SSRF, Limites e Políti
     const sameOriginRes = middleware(sameOriginReq);
     expect(sameOriginRes.status).toBe(200);
 
+    const defaultHttpPortReq = new NextRequest(
+      "http://web:80/api/auth/callback/credentials",
+      {
+        method: "POST",
+        headers: {
+          host: "web:80",
+          "x-forwarded-host": "web:80",
+          "x-forwarded-proto": "http",
+          origin: "http://web:80",
+        },
+      },
+    );
+    expect(middleware(defaultHttpPortReq).status).toBe(200);
+
+    const mismatchedPortReq = new NextRequest(
+      "https://example.com/api/portfolio/projects",
+      {
+        method: "POST",
+        headers: {
+          host: "example.com:80",
+          "x-forwarded-proto": "https",
+          origin: "https://example.com",
+        },
+      },
+    );
+    expect(middleware(mismatchedPortReq).status).toBe(403);
+
     const token = "AbCdEfGhIjKlMnOpQrStUvWx1234";
     const sharePageReq = new NextRequest(`http://localhost:3000/p/${token}`, {
       method: "GET",
