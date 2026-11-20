@@ -153,7 +153,7 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
 
       await expect(
         studentPage.locator("main").getByRole("alert"),
-      ).toContainText("E-mail ou senha inválidos, ou conta inativa.");
+      ).toContainText("E-mail ou senha incorretos, ou conta desativada.");
       await expect(studentPage).toHaveURL(/\/login$/);
     } finally {
       await studentContext.close();
