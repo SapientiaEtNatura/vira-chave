@@ -45,6 +45,7 @@ POSTGRES_DB="${POSTGRES_DB:-virachave}"
 
 umask 077
 mkdir -p "$BACKUP_DIR"
+BACKUP_DIR="$(cd "$BACKUP_DIR" && pwd)"
 chmod 700 "$BACKUP_DIR"
 
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
@@ -77,7 +78,8 @@ if [ "$DB_ONLY" = false ]; then
     -v "${UPLOADS_VOLUME}:/source:ro" \
     -v "${BACKUP_DIR}:/backup" \
     alpine:3.21 \
-    sh -c 'tar -czf "/backup/$1" -C /source .' _ "$(basename "$TMP_UPLOADS_FILE")"
+    sh -c 'umask 077 && tar -czf "/backup/$1" -C /source . && chown "$2:$3" "/backup/$1" && chmod 600 "/backup/$1"' \
+    _ "$(basename "$TMP_UPLOADS_FILE")" "$(id -u)" "$(id -g)"
   mv "$TMP_UPLOADS_FILE" "$UPLOADS_FILE"
   chmod 600 "$UPLOADS_FILE"
   echo "==> Backup de uploads salvo em: ${UPLOADS_FILE}"

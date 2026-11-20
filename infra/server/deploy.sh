@@ -29,6 +29,11 @@ set +a
 POSTGRES_USER="${POSTGRES_USER:-virachave}"
 POSTGRES_DB="${POSTGRES_DB:-virachave}"
 
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "Erro: DATABASE_URL nao definido em ${SCRIPT_DIR}/.env." >&2
+  exit 1
+fi
+
 COMPOSE_ARGS=(-p virachave -f "${COMPOSE_FILE}")
 if [ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
   echo "==> CLOUDFLARE_TUNNEL_TOKEN detectado; ativando Named Tunnel..."
@@ -58,6 +63,7 @@ echo "==> Aplicando migrations do banco (Prisma migrate deploy)..."
 docker run --rm \
   --network virachave_default \
   --env-file "${SCRIPT_DIR}/.env" \
+  -e DATABASE_URL \
   virachave-migrator \
   npx prisma migrate deploy
 

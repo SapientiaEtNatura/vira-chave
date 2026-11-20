@@ -21,9 +21,19 @@ fi
 
 get_env_var() {
   local key="$1"
-  local line
+  local line val
   line="$(grep -E "^${key}=" "$ENV_FILE" | head -n 1 || true)"
-  printf '%s' "${line#*=}"
+  if [ -z "$line" ]; then
+    return 0
+  fi
+  val="${line#*=}"
+  val="${val%$'\r'}"
+  if [[ "$val" == \"*\" && "$val" == *\" && ${#val} -ge 2 ]]; then
+    val="${val:1:${#val}-2}"
+  elif [[ "$val" == \'*\' && "$val" == *\' && ${#val} -ge 2 ]]; then
+    val="${val:1:${#val}-2}"
+  fi
+  printf '%s' "$val"
 }
 
 upsert_env_var() {
