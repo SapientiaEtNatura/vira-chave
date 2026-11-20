@@ -20,12 +20,12 @@ import {
   ButtonLink,
   Card,
   EmptyState,
-  FileUploadField,
   FormField,
   Progress,
   Textarea,
 } from "@/components/ui";
 import type { BadgeVariant } from "@/components/ui";
+import { FileUploadField } from "@/components/ui/FileUploadField";
 
 export interface TrackCourseItemView {
   id: string;

@@ -1,5 +1,5 @@
 import { DiscoveryQuizClient } from "@/components/discovery/DiscoveryQuizClient";
-import { StageBanner } from "@/components/ui";
+import { StageBanner } from "@/components/ui/StageBanner";
 import {
   getCachedDiscoveryQuestions,
   getCachedMacroAreas,
@@ -7,9 +7,9 @@ import {
 import { prisma } from "@/lib/db";
 import {
   buildDiscoveryComparison,
-  getStudentProvenPractice,
   type ProvenPracticeSummary,
 } from "@/lib/discovery/readiness";
+import { getStudentProvenPractice } from "@/lib/discovery/readiness-server";
 import {
   isSafeAreaSlug,
   parseQuestionOptions,

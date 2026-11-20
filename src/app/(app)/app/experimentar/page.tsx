@@ -8,8 +8,8 @@ import {
   Card,
   EmptyState,
   MacroAreaFilterBar,
-  StageBanner,
 } from "@/components/ui";
+import { StageBanner } from "@/components/ui/StageBanner";
 import { getCachedMacroAreas } from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";

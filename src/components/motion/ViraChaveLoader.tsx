@@ -1,8 +1,5 @@
-"use client";
-
-import { useId, useRef } from "react";
+import { useId } from "react";
 import { cn } from "@/lib/cn";
-import { gsap, MOTION_EASE, useGSAP } from "@/lib/gsap";
 
 // Paths extraídos diretamente de public/svg/anim.svg (alinhados no viewBox da coluna 3: 1120 40 560 1320)
 const KEY_PATH =
@@ -34,183 +31,11 @@ export function ViraChaveLoader({
   label = "Carregando conteúdo...",
   className,
 }: ViraChaveLoaderProps) {
-  const scopeRef = useRef<HTMLDivElement>(null);
-  const keyGroupRef = useRef<SVGGElement>(null);
-  const keyClipRectRef = useRef<SVGRectElement>(null);
-  const capGroupRef = useRef<SVGGElement>(null);
-  const speedLinesRef = useRef<SVGGElement>(null);
-  const impactArcsRef = useRef<SVGGElement>(null);
   const clipId = useId();
-
-  useGSAP(
-    () => {
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const keyGroup = keyGroupRef.current;
-        const keyClipRect = keyClipRectRef.current;
-        const capGroup = capGroupRef.current;
-        const speedLines = speedLinesRef.current;
-        const impactArcs = impactArcsRef.current;
-
-        if (!keyGroup || !keyClipRect || !capGroup || !speedLines || !impactArcs) {
-          return;
-        }
-
-        const speedLineItems =
-          speedLines.querySelectorAll<SVGPathElement>("[data-speed-line]");
-
-        const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.14 });
-
-        // Estado inicial do ciclo (estágio 1: só a cabeça da chave prestes a surgir)
-        tl.set(keyGroup, {
-          opacity: 0,
-          scale: 0.86,
-          y: 0,
-          svgOrigin: "1370 555",
-        })
-          .set(keyClipRect, { attr: { height: 265 } })
-          .set(capGroup, {
-            opacity: 0,
-            y: -175,
-            rotation: -8,
-            svgOrigin: "1395 430",
-          })
-          .set(speedLines, { opacity: 1 })
-          .set(speedLineItems, { opacity: 0, y: -42 })
-          .set(impactArcs, {
-            opacity: 0,
-            scale: 0.72,
-            svgOrigin: "1510 625",
-          });
-
-        // 1. Cabeça/arco da chave surge
-        tl.to(
-          keyGroup,
-          {
-            opacity: 1,
-            scale: 1,
-            duration: 0.28,
-            ease: MOTION_EASE.emphasis,
-          },
-          0,
-        );
-
-        // 2. Haste e dentes da chave descem revelando a chave completa
-        tl.to(
-          keyClipRect,
-          {
-            attr: { height: 930 },
-            duration: 0.4,
-            ease: MOTION_EASE.enter,
-          },
-          0.18,
-        );
-
-        // 3. Capelo cai de cima acompanhado dos 3 risquinhos de velocidade
-        tl.to(
-          capGroup,
-          {
-            opacity: 1,
-            y: 8,
-            rotation: 2,
-            duration: 0.44,
-            ease: "power2.in",
-          },
-          0.48,
-        )
-          .to(
-            speedLineItems,
-            {
-              opacity: 0.85,
-              y: 18,
-              duration: 0.22,
-              stagger: 0.04,
-              ease: "power1.out",
-            },
-            0.52,
-          )
-          .to(
-            speedLineItems,
-            {
-              opacity: 0,
-              y: 44,
-              duration: 0.2,
-              stagger: 0.03,
-              ease: "power1.in",
-            },
-            0.74,
-          );
-
-        // 4. Impacto: capelo assenta com rebote, chave dá leve recuo e arco lateral pisca
-        tl.to(
-          capGroup,
-          {
-            y: 0,
-            rotation: 0,
-            duration: 0.36,
-            ease: "back.out(2.2)",
-          },
-          0.92,
-        )
-          .to(
-            keyGroup,
-            {
-              y: 12,
-              duration: 0.1,
-              ease: "power2.out",
-            },
-            0.91,
-          )
-          .to(
-            keyGroup,
-            {
-              y: 0,
-              duration: 0.3,
-              ease: MOTION_EASE.emphasis,
-            },
-            1.01,
-          )
-          .to(
-            impactArcs,
-            {
-              opacity: 0.9,
-              scale: 1.06,
-              duration: 0.14,
-              ease: "power2.out",
-            },
-            0.92,
-          )
-          .to(
-            impactArcs,
-            {
-              opacity: 0,
-              scale: 1.14,
-              duration: 0.28,
-              ease: "power2.in",
-            },
-            1.1,
-          );
-
-        // 5. Pausa curta na logo estabilizada e saída suave para reiniciar o loop
-        tl.to(
-          [keyGroup, capGroup],
-          {
-            opacity: 0,
-            duration: 0.28,
-            ease: "power2.inOut",
-          },
-          1.78,
-        );
-      });
-    },
-    { scope: scopeRef },
-  );
-
   const width = Math.round((size * 560) / 1320);
 
   return (
     <div
-      ref={scopeRef}
       role="status"
       aria-live="polite"
       className={cn(
@@ -229,22 +54,17 @@ export function ViraChaveLoader({
       >
         <defs>
           <clipPath id={clipId}>
-            <rect
-              ref={keyClipRectRef}
-              x="1200"
-              y="420"
-              width="380"
-              height="930"
-            />
+            <rect x="1200" y="420" width="380" height="930" />
           </clipPath>
         </defs>
 
         {/* 3 risquinhos de velocidade acima da queda do capelo */}
-        <g ref={speedLinesRef} className="opacity-0">
+        <g>
           {SPEED_LINE_PATHS.map((d, index) => (
             <path
               key={index}
               data-speed-line
+              className="vc-loader-speed-line"
               fill="var(--brand-primary)"
               d={d}
             />
@@ -252,23 +72,25 @@ export function ViraChaveLoader({
         </g>
 
         {/* Chave completa com recorte progressivo de cima para baixo */}
-        <g ref={keyGroupRef}>
-          <path
-            fill="var(--brand-primary)"
-            clipPath={`url(#${clipId})`}
-            d={KEY_PATH}
-          />
+        <g className="vc-loader-key">
+          <g className="vc-loader-key-reveal">
+            <path
+              fill="var(--brand-primary)"
+              clipPath={`url(#${clipId})`}
+              d={KEY_PATH}
+            />
+          </g>
         </g>
 
         {/* Capelo âmbar alinhado da coluna 5 (-1072px) para o topo da chave */}
-        <g ref={capGroupRef}>
+        <g className="vc-loader-cap">
           <g transform="translate(-1072 0)">
             <path fill="var(--brand-accent)" d={CAP_PATH} />
           </g>
         </g>
 
         {/* Arcos de impacto alinhados da coluna 4 (-535px) na lateral direita */}
-        <g ref={impactArcsRef} className="opacity-0">
+        <g className="vc-loader-impact-arcs">
           <g transform="translate(-535 0)">
             {IMPACT_ARC_PATHS.map((d, index) => (
               <path key={index} fill="var(--brand-primary)" d={d} />

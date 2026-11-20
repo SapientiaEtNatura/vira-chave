@@ -7,13 +7,13 @@ import {
   Badge,
   Button,
   Card,
-  Drawer,
   EmptyState,
   FormField,
   Input,
   Select,
   Textarea,
 } from "@/components/ui";
+import { Drawer } from "@/components/ui/Drawer";
 import type {
   AdminMacroArea,
   AdminTrack,

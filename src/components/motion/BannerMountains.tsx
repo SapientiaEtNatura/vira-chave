@@ -1,8 +1,5 @@
-"use client";
-
-import { useEffect, useId, useRef } from "react";
+import { useId } from "react";
 import type { StageKey } from "@/components/ui/StagePill";
-import { gsap, useGSAP } from "@/lib/gsap";
 
 const STAGE_WAVE_COLORS: Record<
   StageKey,
@@ -26,12 +23,6 @@ const STAGE_WAVE_COLORS: Record<
   },
 };
 
-const WAVE_ANIMATIONS = [
-  { selector: "[data-wave-back]", xPercent: -4, duration: 12 },
-  { selector: "[data-wave-mid]", xPercent: 4.5, duration: 9 },
-  { selector: "[data-wave-cutout]", xPercent: -3.5, duration: 11 },
-] as const;
-
 const WAVE_BASE_CLASS = "absolute -left-[12%] w-[124%]";
 
 interface BannerMountainsProps {
@@ -40,75 +31,13 @@ interface BannerMountainsProps {
 
 export function BannerMountains({ stage }: BannerMountainsProps) {
   const uid = useId().replace(/:/g, "");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const colors = STAGE_WAVE_COLORS[stage];
 
   const mainGradId = `wave-main-${uid}`;
   const accentGradId = `wave-accent-${uid}`;
 
-  useGSAP(
-    () => {
-      const container = containerRef.current;
-      if (!container) return;
-
-      const mm = gsap.matchMedia();
-      mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const tl = gsap.timeline();
-
-        for (const { selector, xPercent, duration } of WAVE_ANIMATIONS) {
-          const wave = container.querySelector<SVGSVGElement>(selector);
-          if (wave) {
-            tl.to(
-              wave,
-              {
-                xPercent,
-                duration,
-                repeat: -1,
-                yoyo: true,
-                ease: "sine.inOut",
-              },
-              0,
-            );
-          }
-        }
-
-        timelineRef.current = tl;
-
-        return () => {
-          timelineRef.current = null;
-        };
-      });
-    },
-    { scope: containerRef },
-  );
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || typeof IntersectionObserver === "undefined") return;
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        const tl = timelineRef.current;
-        if (!tl) return;
-        if (entry?.isIntersecting) {
-          tl.play();
-        } else {
-          tl.pause();
-        }
-      },
-      { threshold: 0.05 },
-    );
-
-    observer.observe(el);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
   return (
     <div
-      ref={containerRef}
       aria-hidden="true"
       className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-20 overflow-hidden sm:h-24"
     >
@@ -116,7 +45,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-back
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className={`${WAVE_BASE_CLASS} bottom-0 h-full`}
+        className={`${WAVE_BASE_CLASS} vc-wave-back bottom-0 h-full`}
       >
         <defs>
           <linearGradient id={accentGradId} x1="0" y1="0" x2="0" y2="1">
@@ -134,7 +63,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-mid
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className={`${WAVE_BASE_CLASS} bottom-0 h-full`}
+        className={`${WAVE_BASE_CLASS} vc-wave-mid bottom-0 h-full`}
       >
         <defs>
           <linearGradient id={mainGradId} x1="0" y1="0" x2="0" y2="1">
@@ -152,7 +81,7 @@ export function BannerMountains({ stage }: BannerMountainsProps) {
         data-wave-cutout
         viewBox="0 0 1440 120"
         preserveAspectRatio="none"
-        className={`${WAVE_BASE_CLASS} -bottom-[2px] h-[calc(100%+2px)]`}
+        className={`${WAVE_BASE_CLASS} vc-wave-cutout -bottom-[2px] h-[calc(100%+2px)]`}
       >
         <path
           d="M0,84 C190,116 360,58 590,82 C810,104 970,52 1170,76 C1300,92 1385,78 1440,68 L1440,120 L0,120 Z"

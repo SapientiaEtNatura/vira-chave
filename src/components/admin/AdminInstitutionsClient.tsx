@@ -17,12 +17,12 @@ import {
   Alert,
   Button,
   Card,
-  ConfirmDialog,
   EmptyState,
   FormField,
   Input,
   Select,
 } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useSlidingIndicator } from "@/lib/use-sliding-indicator";
 
 export interface AdminInstitutionItem {

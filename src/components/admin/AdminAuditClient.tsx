@@ -13,13 +13,13 @@ import {
   Badge,
   Button,
   Card,
-  Drawer,
   EmptyState,
   FormField,
   Input,
   Select,
   type BadgeVariant,
 } from "@/components/ui";
+import { Drawer } from "@/components/ui/Drawer";
 
 export interface AdminAuditLogItem {
   id: string;

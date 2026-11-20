@@ -24,10 +24,9 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import { BrandLogo } from "@/components/ui";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
-  Avatar,
-  AvatarFallback,
-  BrandLogo,
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -36,7 +35,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui";
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/cn";
 import { useSlidingIndicator } from "@/lib/use-sliding-indicator";
 import {

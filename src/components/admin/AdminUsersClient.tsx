@@ -14,13 +14,13 @@ import {
   Badge,
   Button,
   Card,
-  ConfirmDialog,
   EmptyState,
   FormField,
   Input,
   Select,
   type BadgeVariant,
 } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export type UserRoleValue = "ESTUDANTE" | "EDUCADOR" | "ADMIN";
 export type UserStatusValue = "ACTIVE" | "SUSPENDED";

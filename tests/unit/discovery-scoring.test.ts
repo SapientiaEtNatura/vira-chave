@@ -6,10 +6,10 @@ import {
 import {
   buildDiscoveryComparison,
   calculateProvenPractice,
-  getStudentProvenPractice,
   resolveAreaReadinessStatus,
   resolvePublicReadinessStatus,
 } from "@/lib/discovery/readiness";
+import { getStudentProvenPractice } from "@/lib/discovery/readiness-server";
 import {
   computeStudentStage,
   resolveStageFromMilestones,

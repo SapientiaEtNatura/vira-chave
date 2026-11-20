@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { BookOpen, Compass, Layers, Rocket, Sparkles } from "lucide-react";
-import { Alert, ConfirmDialog } from "@/components/ui";
+import { Alert } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useSlidingIndicator } from "@/lib/use-sliding-indicator";
 import { ChallengesTab } from "./content/ChallengesTab";
 import { CoursesTab } from "./content/CoursesTab";
