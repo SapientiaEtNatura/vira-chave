@@ -213,7 +213,6 @@ export function ViraChaveLoader({
       ref={scopeRef}
       role="status"
       aria-live="polite"
-      aria-label={label}
       className={cn(
         "inline-flex flex-col items-center justify-center select-none",
         className,
@@ -246,7 +245,7 @@ export function ViraChaveLoader({
             <path
               key={index}
               data-speed-line
-              fill="#13606D"
+              fill="var(--brand-primary)"
               d={d}
             />
           ))}
@@ -254,13 +253,17 @@ export function ViraChaveLoader({
 
         {/* Chave completa com recorte progressivo de cima para baixo */}
         <g ref={keyGroupRef}>
-          <path fill="#13606D" clipPath={`url(#${clipId})`} d={KEY_PATH} />
+          <path
+            fill="var(--brand-primary)"
+            clipPath={`url(#${clipId})`}
+            d={KEY_PATH}
+          />
         </g>
 
-        {/* Capelo laranja alinhado da coluna 5 (-1072px) para o topo da chave */}
+        {/* Capelo âmbar alinhado da coluna 5 (-1072px) para o topo da chave */}
         <g ref={capGroupRef}>
           <g transform="translate(-1072 0)">
-            <path fill="#DD7300" d={CAP_PATH} />
+            <path fill="var(--brand-accent)" d={CAP_PATH} />
           </g>
         </g>
 
@@ -268,7 +271,7 @@ export function ViraChaveLoader({
         <g ref={impactArcsRef} className="opacity-0">
           <g transform="translate(-535 0)">
             {IMPACT_ARC_PATHS.map((d, index) => (
-              <path key={index} fill="#13606D" d={d} />
+              <path key={index} fill="var(--brand-primary)" d={d} />
             ))}
           </g>
         </g>

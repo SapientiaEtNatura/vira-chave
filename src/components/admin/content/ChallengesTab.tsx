@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Pencil, Plus, Rocket, Search, Trash2 } from "lucide-react";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -24,6 +25,7 @@ interface ChallengesTabProps {
   challenges: AdminChallenge[];
   macroAreas: AdminMacroArea[];
   busy: boolean;
+  serverError?: string | null;
   sendContentRequest: SendContentRequestFn;
   onChallengeCreated: (item: AdminChallenge) => void;
   onChallengeUpdated: (item: AdminChallenge) => void;
@@ -42,6 +44,7 @@ export function ChallengesTab({
   challenges,
   macroAreas,
   busy,
+  serverError,
   sendContentRequest,
   onChallengeCreated,
   onChallengeUpdated,
@@ -330,7 +333,8 @@ export function ChallengesTab({
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="space-y-4">
-          <FormField id="challenge-macro-area" label="MacroÁrea" required>
+          {serverError ? <Alert variant="danger">{serverError}</Alert> : null}
+          <FormField id="challenge-macro-area" label="Macroárea" required>
             <Select
               required
               value={macroAreaId}

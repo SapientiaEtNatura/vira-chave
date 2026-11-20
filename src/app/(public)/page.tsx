@@ -17,7 +17,7 @@ import {
   StaggerGroup,
 } from "@/components/motion";
 import { SharedPortfolioView } from "@/components/portfolio/SharedPortfolioView";
-import { ButtonLink, type StageKey } from "@/components/ui";
+import { Badge, type BadgeVariant, ButtonLink, type StageKey } from "@/components/ui";
 import {
   DEMO_PORTFOLIO,
   DEMO_PORTFOLIO_TOKEN,
@@ -25,6 +25,7 @@ import {
 
 const stages: Array<{
   key: StageKey;
+  badgeVariant: BadgeVariant;
   number: string;
   title: string;
   description: string;
@@ -39,21 +40,23 @@ const stages: Array<{
 }> = [
   {
     key: "DESCOBRIR",
+    badgeVariant: "discover",
     number: "1",
     title: "Descobrir",
     description:
-      "Responda ao questionário inicial e mapeie quais áreas despertam sua curiosidade.",
+      "Responda a cenários práticos e mapeie quais áreas despertam sua curiosidade.",
     outcome: "Entrega: mapa de afinidades",
     Icon: Compass,
     nodeClasses:
-      "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-discover-ink)_24%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
     iconClasses:
-      "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-discover-ink)_24%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
     hoverClasses: "hover:bg-[var(--stage-discover-bg)]/45",
     previewDone: true,
   },
   {
     key: "APRENDER",
+    badgeVariant: "learn",
     number: "2",
     title: "Aprender",
     description:
@@ -61,14 +64,15 @@ const stages: Array<{
     outcome: "Entrega: trilhas concluídas",
     Icon: BookOpen,
     nodeClasses:
-      "border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-learn-ink)_24%,var(--stage-learn-border))] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
     iconClasses:
-      "border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-learn-ink)_24%,var(--stage-learn-border))] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
     hoverClasses: "hover:bg-[var(--stage-learn-bg)]/45",
     previewDone: true,
   },
   {
     key: "EXPERIMENTAR",
+    badgeVariant: "experiment",
     number: "3",
     title: "Experimentar",
     description:
@@ -76,14 +80,15 @@ const stages: Array<{
     outcome: "Entrega: projetos práticos",
     Icon: FlaskConical,
     nodeClasses:
-      "border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-experiment-ink)_26%,var(--stage-experiment-border))] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
     iconClasses:
-      "border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-experiment-ink)_26%,var(--stage-experiment-border))] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
     hoverClasses: "hover:bg-[var(--stage-experiment-bg)]/45",
     previewBadge: "Em andamento",
   },
   {
     key: "CONSTRUIR",
+    badgeVariant: "build",
     number: "4",
     title: "Construir",
     description:
@@ -91,9 +96,9 @@ const stages: Array<{
     outcome: "Entrega: portfólio próprio",
     Icon: Hammer,
     nodeClasses:
-      "border-[var(--stage-build-border)] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-build-ink)_26%,var(--stage-build-border))] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
     iconClasses:
-      "border-[var(--stage-build-border)] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-build-ink)_26%,var(--stage-build-border))] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
     hoverClasses: "hover:bg-[var(--stage-build-bg)]/45",
     previewLocked: true,
   },
@@ -111,7 +116,6 @@ const heroStages: HeroJourneyStage[] = stages.map(
     key,
     title,
     iconClasses,
-    stepOffset: "",
     previewBadge,
     previewDone,
     previewLocked,
@@ -130,7 +134,7 @@ export default function LandingPage() {
               </h1>
 
               <p className="mt-5 max-w-[56ch] text-base leading-relaxed text-[var(--ink-secondary)] sm:text-lg">
-                Descubra suas áreas de afinidade, estude em trilhas curtas
+                Mapeie suas áreas de afinidade, estude em trilhas curtas
                 gratuitas, resolva desafios reais e monte um portfólio com o que
                 você já sabe fazer.
               </p>
@@ -140,22 +144,20 @@ export default function LandingPage() {
                   href="/cadastro"
                   variant="primary"
                   size="lg"
-                  rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+                  rightIcon={
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  }
                 >
-                  Começar gratuitamente
+                  Criar conta gratuita
                 </ButtonLink>
-                <ButtonLink
-                  href="#como-funciona"
-                  variant="outline"
-                  size="lg"
-                >
+                <ButtonLink href="#como-funciona" variant="outline" size="lg">
                   Ver o percurso
                 </ButtonLink>
               </div>
 
               <p className="mt-5 text-xs font-medium text-[var(--ink-muted)]">
-                Gratuito para estudantes do Ensino Médio e escolas públicas. Sem
-                anúncios.
+                Gratuito para estudantes do Ensino Médio e escolas parceiras
+                (acesso com código da turma ou instituição). Sem anúncios.
               </p>
             </div>
 
@@ -168,13 +170,13 @@ export default function LandingPage() {
 
       <section
         id="como-funciona"
-        aria-labelledby="jornada-heading"
-        className="bg-[var(--bg-surface)] py-16 sm:py-20"
+        aria-labelledby="percurso-heading"
+        className="scroll-mt-24 bg-[var(--bg-surface)] py-16 sm:py-20"
       >
         <div className="mx-auto max-w-6xl px-4">
           <div className="max-w-2xl space-y-2.5">
             <SplitTextReveal
-              id="jornada-heading"
+              id="percurso-heading"
               text="Um percurso em quatro fases, no seu ritmo"
               className="font-display text-3xl font-bold text-[var(--ink-primary)] sm:text-4xl"
             />
@@ -198,13 +200,13 @@ export default function LandingPage() {
                       <div>
                         <div className="flex items-center gap-3">
                           <span
-                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border ${stage.nodeClasses}`}
+                            className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${stage.nodeClasses}`}
                           >
                             <Icon className="h-5 w-5" aria-hidden="true" />
                           </span>
-                          <span className="tabular-nums shrink-0 text-xs font-semibold text-[var(--ink-muted)]">
+                          <Badge variant={stage.badgeVariant} mono>
                             Passo {stage.number}
-                          </span>
+                          </Badge>
                           {!isLast ? (
                             <span
                               aria-hidden="true"
@@ -236,7 +238,7 @@ export default function LandingPage() {
       <section
         id="na-pratica"
         aria-labelledby="na-pratica-heading"
-        className="border-t border-[var(--border-subtle)] bg-[var(--bg-canvas)] py-16 sm:py-20"
+        className="scroll-mt-24 border-t border-[var(--border-subtle)] bg-[var(--bg-canvas)] py-16 sm:py-20"
       >
         <div className="mx-auto max-w-6xl px-4">
           <div className="max-w-2xl space-y-2.5">
@@ -247,11 +249,11 @@ export default function LandingPage() {
             />
             <p className="max-w-[56ch] text-sm leading-relaxed text-[var(--ink-muted)] sm:text-base">
               Em vez de ficar só na teoria, você visualiza suas afinidades e
-              transforma desafios em evidências reais no seu portfólio.
+              reúne suas entregas em um portfólio pronto para compartilhar.
             </p>
           </div>
 
-          <StaggerGroup className="mt-10 grid gap-10 lg:grid-cols-12 lg:items-start">
+          <StaggerGroup className="mt-10 grid gap-8 lg:grid-cols-12 lg:items-start">
             <div
               data-motion-item
               className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 lg:col-span-6"
@@ -261,23 +263,26 @@ export default function LandingPage() {
                   Mapa de afinidades
                 </h3>
                 <p className="mt-1 text-sm leading-relaxed text-[var(--ink-secondary)]">
-                  Suas respostas no Descobrir geram um painel visual das áreas que
-                  mais combinam com você.
+                  Suas respostas no Descobrir geram um painel visual das áreas
+                  que mais combinam com você.
                 </p>
               </div>
 
               <AffinityPreviewCard />
             </div>
 
-            <div data-motion-item className="space-y-4 lg:col-span-6">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
+            <div
+              data-motion-item
+              className="space-y-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 lg:col-span-6"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
                   <h3 className="font-display text-xl font-bold text-[var(--ink-primary)]">
-                    Portfólio público do estudante
+                    Portfólio compartilhável do estudante
                   </h3>
                   <p className="mt-1 text-sm leading-relaxed text-[var(--ink-secondary)]">
-                    Cada desafio concluído ou projeto pessoal vira um registro
-                    organizado para compartilhar quando quiser.
+                    Cada desafio concluído ou projeto autoral vira um registro
+                    organizado sob seu controle.
                   </p>
                 </div>
 
@@ -285,9 +290,11 @@ export default function LandingPage() {
                   href={`/p/${DEMO_PORTFOLIO_TOKEN}`}
                   variant="outline"
                   size="sm"
-                  rightIcon={<ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />}
+                  rightIcon={
+                    <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                  }
                 >
-                  Abrir portfólio real
+                  Ver exemplo completo
                 </ButtonLink>
               </div>
 
@@ -305,7 +312,7 @@ export default function LandingPage() {
       <section
         id="para-quem"
         aria-labelledby="para-quem-heading"
-        className="border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] py-16 sm:py-20"
+        className="scroll-mt-24 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] py-16 sm:py-20"
       >
         <div className="mx-auto max-w-6xl px-4">
           <div className="max-w-2xl space-y-2.5">
@@ -317,34 +324,50 @@ export default function LandingPage() {
           </div>
 
           <StaggerGroup className="mt-10 grid gap-8 md:grid-cols-12">
-            <div data-motion-item className="flex flex-col justify-between gap-6 py-2 md:col-span-6">
+            <div
+              data-motion-item
+              className="flex flex-col justify-between gap-6 py-2 md:col-span-6"
+            >
               <div>
                 <h3 className="font-display text-2xl font-bold text-[var(--ink-primary)]">
                   Estudantes
                 </h3>
                 <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[var(--ink-secondary)]">
                   <li className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]" aria-hidden="true" />
-                    <span>Explore áreas profissionais sem pressão de acertar de primeira.</span>
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Explore áreas profissionais sem pressão de acertar de
+                      primeira.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]" aria-hidden="true" />
-                    <span>Faça trilhas curtas gratuitas e desafios práticos no seu tempo.</span>
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Faça trilhas curtas gratuitas e desafios práticos no seu
+                      tempo.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]" aria-hidden="true" />
-                    <span>Escolha quais projetos ficam visíveis no seu link de portfólio.</span>
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--stage-build-ink)]"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Escolha quais projetos ficam visíveis no seu link de
+                      portfólio.
+                    </span>
                   </li>
                 </ul>
               </div>
 
               <div>
-                <ButtonLink
-                  href="/cadastro"
-                  variant="primary"
-                  size="md"
-                  rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
-                >
+                <ButtonLink href="/cadastro" variant="primary" size="md">
                   Criar conta de estudante
                 </ButtonLink>
               </div>
@@ -360,26 +383,43 @@ export default function LandingPage() {
                 </h3>
                 <ul className="mt-4 space-y-3 text-sm leading-relaxed text-[var(--ink-secondary)]">
                   <li className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-hidden="true" />
-                    <span>Organize turmas com código de convite direto para seus alunos.</span>
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Organize turmas com código de convite direto para seus
+                      alunos.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-hidden="true" />
-                    <span>Acompanhe interesses e progresso da turma em visão agregada.</span>
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Acompanhe interesses e progresso da turma em visão
+                      agregada.
+                    </span>
                   </li>
                   <li className="flex items-start gap-2.5">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]" aria-hidden="true" />
-                    <span>Respeite a privacidade individual: respostas pessoais não são expostas.</span>
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand-primary)]"
+                      aria-hidden="true"
+                    />
+                    <span>
+                      Respeite a privacidade individual: respostas pessoais não
+                      são expostas.
+                    </span>
                   </li>
                 </ul>
               </div>
 
               <div>
                 <ButtonLink
-                  href="/cadastro"
+                  href="/cadastro?role=EDUCADOR"
                   variant="outline"
                   size="md"
-                  rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
                 >
                   Criar conta de educador
                 </ButtonLink>
@@ -411,7 +451,6 @@ export default function LandingPage() {
             className="inline-flex min-h-11 shrink-0 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] hover:underline"
           >
             <span>Ler política de privacidade</span>
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
       </section>
@@ -419,12 +458,12 @@ export default function LandingPage() {
       <section className="bg-[var(--brand-primary-deep)] px-4 py-16 text-center text-white sm:py-20">
         <div className="mx-auto max-w-2xl space-y-5">
           <SplitTextReveal
-            text="Pronto para começar seu percurso?"
+            text="Comece pelo seu mapa de afinidades"
             className="font-display text-3xl font-bold tracking-tight text-white sm:text-4xl"
           />
           <p className="text-base text-[var(--brand-primary-ink-on-dark)]">
-            Crie sua conta gratuita e comece pelo mapa de afinidades em poucos
-            minutos.
+            Use o código da sua turma ou instituição para criar sua conta
+            gratuita e dar o primeiro passo.
           </p>
           <div className="pt-2">
             <ButtonLink

@@ -13,14 +13,15 @@ export interface PreviewBannerProps {
 }
 
 export function PreviewBanner({ mode, className }: PreviewBannerProps) {
-  const modeLabel = mode === "ESTUDANTE" ? "Preview: Estudante" : "Preview: Educador";
+  const modeLabel =
+    mode === "ESTUDANTE" ? "Visão: Estudante" : "Visão: Educador";
 
   return (
     <div
       role="region"
-      aria-label="Barra de modo preview administrativo"
+      aria-label="Barra de visualização administrativa"
       className={cn(
-        "flex min-h-9 w-full flex-wrap items-center justify-between gap-2 bg-[var(--brand-primary)] px-4 py-1.5 text-xs text-white",
+        "flex min-h-11 w-full flex-wrap items-center justify-between gap-2 bg-[var(--brand-primary)] px-4 py-1.5 text-xs text-white",
         className,
       )}
     >
@@ -33,17 +34,20 @@ export function PreviewBanner({ mode, className }: PreviewBannerProps) {
           <span>{modeLabel}</span>
         </Badge>
         <span className="hidden text-white/90 sm:inline">
-          Visualizando a experiência como administrador
+          Visualizando a plataforma como administrador
         </span>
       </div>
 
-      <div className="flex items-center gap-2">
-        <nav aria-label="Alternar modo preview" className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <nav
+          aria-label="Alternar perfil de visualização"
+          className="flex items-center gap-1"
+        >
           <Link
             href="/app"
             aria-current={mode === "ESTUDANTE" ? "page" : undefined}
             className={cn(
-              "inline-flex min-h-7 items-center rounded-md px-2.5 py-1 font-medium transition-colors duration-150",
+              "inline-flex min-h-11 items-center rounded-md px-3 py-1 font-medium transition-colors duration-150 sm:min-h-8 sm:px-2.5",
               mode === "ESTUDANTE"
                 ? "bg-white/20 text-white"
                 : "text-white/85 hover:bg-white/10 hover:text-white",
@@ -55,7 +59,7 @@ export function PreviewBanner({ mode, className }: PreviewBannerProps) {
             href="/educador"
             aria-current={mode === "EDUCADOR" ? "page" : undefined}
             className={cn(
-              "inline-flex min-h-7 items-center rounded-md px-2.5 py-1 font-medium transition-colors duration-150",
+              "inline-flex min-h-11 items-center rounded-md px-3 py-1 font-medium transition-colors duration-150 sm:min-h-8 sm:px-2.5",
               mode === "EDUCADOR"
                 ? "bg-white/20 text-white"
                 : "text-white/85 hover:bg-white/10 hover:text-white",
@@ -67,7 +71,7 @@ export function PreviewBanner({ mode, className }: PreviewBannerProps) {
 
         <Link
           href="/admin"
-          className="inline-flex min-h-7 items-center gap-1.5 rounded-md bg-white px-2.5 py-1 font-semibold text-[var(--brand-primary)] transition-colors duration-150 hover:bg-[var(--brand-primary-soft)]"
+          className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-white px-3 py-1 font-semibold text-[var(--brand-primary)] transition-colors duration-150 hover:bg-[var(--brand-primary-soft)] sm:min-h-8 sm:px-2.5"
         >
           <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
           <span>Voltar ao Admin</span>

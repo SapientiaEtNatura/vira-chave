@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Alert, Button, Card, FormField, Input } from "@/components/ui";
 
@@ -12,6 +13,7 @@ export function AccountControls({
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswords, setShowPasswords] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
@@ -117,20 +119,39 @@ export function AccountControls({
 
         <form onSubmit={handlePasswordSubmit} className="mt-4 max-w-md space-y-4">
           <FormField id="currentPassword" label="Senha atual" required>
-            <Input
-              name="currentPassword"
-              type="password"
-              required
-              autoComplete="current-password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-            />
+            {(controlProps) => (
+              <div className="relative">
+                <Input
+                  {...controlProps}
+                  name="currentPassword"
+                  type={showPasswords ? "text" : "password"}
+                  required
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPasswords((prev) => !prev)}
+                  aria-label={showPasswords ? "Ocultar senhas" : "Mostrar senhas"}
+                  aria-pressed={showPasswords}
+                  className="absolute top-0 right-0 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-r-lg text-[var(--ink-muted)] transition-colors hover:text-[var(--ink-primary)]"
+                >
+                  {showPasswords ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+            )}
           </FormField>
 
           <FormField id="newPassword" label="Nova senha" required>
             <Input
               name="newPassword"
-              type="password"
+              type={showPasswords ? "text" : "password"}
               required
               minLength={8}
               autoComplete="new-password"
@@ -142,7 +163,7 @@ export function AccountControls({
           <FormField id="confirmPassword" label="Confirmar nova senha" required>
             <Input
               name="confirmPassword"
-              type="password"
+              type={showPasswords ? "text" : "password"}
               required
               minLength={8}
               autoComplete="new-password"

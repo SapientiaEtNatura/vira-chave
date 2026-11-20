@@ -32,8 +32,7 @@ const WAVE_ANIMATIONS = [
   { selector: "[data-wave-cutout]", xPercent: -3.5, duration: 11 },
 ] as const;
 
-const WAVE_BASE_CLASS =
-  "absolute -left-[12%] w-[124%] will-change-transform";
+const WAVE_BASE_CLASS = "absolute -left-[12%] w-[124%]";
 
 interface BannerMountainsProps {
   stage: StageKey;

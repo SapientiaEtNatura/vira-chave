@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ViraChaveLoader } from "@/components/motion/ViraChaveLoader";
-import { gsap, MOTION_EASE } from "@/lib/gsap";
 
 export const SHOW_DELAY_MS = 120;
-export const MIN_VISIBLE_MS = 450;
 export const SAFETY_TIMEOUT_MS = 8000;
 
 export interface NavigationTriggerCheck {
@@ -73,11 +70,8 @@ export function shouldTriggerNavigationOverlay({
     return false;
   }
 
-  // Ignora links que apontam para a mesma rota + query (ex.: só troca de #hash ou clique na aba atual)
-  if (
-    destination.pathname === current.pathname &&
-    destination.search === current.search
-  ) {
+  // Ignora links na mesma rota (incluindo filtros via ?query e saltos de #hash)
+  if (destination.pathname === current.pathname) {
     return false;
   }
 
@@ -90,10 +84,7 @@ export function NavigationTransitionOverlay() {
   const routeKey = `${pathname ?? ""}?${searchParams?.toString() ?? ""}`;
 
   const [visible, setVisible] = useState(false);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const shownAtRef = useRef<number | null>(null);
   const showTimerRef = useRef<number | null>(null);
-  const hideTimerRef = useRef<number | null>(null);
   const safetyTimerRef = useRef<number | null>(null);
   const prevRouteKeyRef = useRef(routeKey);
 
@@ -102,40 +93,12 @@ export function NavigationTransitionOverlay() {
       window.clearTimeout(showTimerRef.current);
       showTimerRef.current = null;
     }
-    if (hideTimerRef.current !== null) {
-      window.clearTimeout(hideTimerRef.current);
-      hideTimerRef.current = null;
-    }
     if (safetyTimerRef.current !== null) {
       window.clearTimeout(safetyTimerRef.current);
       safetyTimerRef.current = null;
     }
   }
 
-  // Anima entrada suave do blur quando visível
-  useEffect(() => {
-    if (!visible) return;
-    const el = overlayRef.current;
-    if (!el) return;
-
-    const prefersReduced = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    if (prefersReduced) {
-      gsap.set(el, { opacity: 1 });
-      return;
-    }
-
-    gsap.killTweensOf(el);
-    gsap.fromTo(
-      el,
-      { opacity: 0 },
-      { opacity: 1, duration: 0.22, ease: MOTION_EASE.enter },
-    );
-  }, [visible]);
-
-  // Escuta cliques em links internos no documento
   useEffect(() => {
     function handleDocumentClick(event: MouseEvent) {
       const targetNode = event.target;
@@ -163,12 +126,10 @@ export function NavigationTransitionOverlay() {
 
       showTimerRef.current = window.setTimeout(() => {
         showTimerRef.current = null;
-        shownAtRef.current = Date.now();
         setVisible(true);
 
         safetyTimerRef.current = window.setTimeout(() => {
           safetyTimerRef.current = null;
-          shownAtRef.current = null;
           setVisible(false);
         }, SAFETY_TIMEOUT_MS);
       }, SHOW_DELAY_MS);
@@ -181,59 +142,23 @@ export function NavigationTransitionOverlay() {
     };
   }, []);
 
-  // Encerra o overlay suavemente quando a nova rota termina de montar
   useEffect(() => {
     if (prevRouteKeyRef.current === routeKey) return;
     prevRouteKeyRef.current = routeKey;
-
-    if (showTimerRef.current !== null) {
-      window.clearTimeout(showTimerRef.current);
-      showTimerRef.current = null;
-    }
-    if (safetyTimerRef.current !== null) {
-      window.clearTimeout(safetyTimerRef.current);
-      safetyTimerRef.current = null;
-    }
-
-    if (shownAtRef.current === null) return;
-
-    const elapsed = Date.now() - shownAtRef.current;
-    const remaining = Math.max(0, MIN_VISIBLE_MS - elapsed);
-
-    hideTimerRef.current = window.setTimeout(() => {
-      hideTimerRef.current = null;
-      const el = overlayRef.current;
-      const prefersReduced = window.matchMedia(
-        "(prefers-reduced-motion: reduce)",
-      ).matches;
-
-      if (!el || prefersReduced) {
-        shownAtRef.current = null;
-        setVisible(false);
-        return;
-      }
-
-      gsap.to(el, {
-        opacity: 0,
-        duration: 0.24,
-        ease: MOTION_EASE.enter,
-        onComplete: () => {
-          shownAtRef.current = null;
-          setVisible(false);
-        },
-      });
-    }, remaining);
+    clearTimers();
+    setVisible(false);
   }, [routeKey]);
 
   if (!visible) return null;
 
   return (
     <div
-      ref={overlayRef}
-      aria-busy="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-canvas)]/65 backdrop-blur-md"
+      role="status"
+      aria-live="polite"
+      className="pointer-events-none fixed inset-x-0 top-0 z-50 h-1 overflow-hidden bg-[var(--brand-primary-soft)]/80"
     >
-      <ViraChaveLoader size={92} label="Carregando próxima tela..." />
+      <div className="animate-nav-progress h-full w-1/2 rounded-full bg-[var(--brand-primary)]" />
+      <span className="sr-only">Carregando próxima página...</span>
     </div>
   );
 }

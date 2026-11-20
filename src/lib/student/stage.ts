@@ -11,18 +11,20 @@ export interface StudentMilestoneCounts {
   portfolioCount: number;
   challengeSubmissionCount: number;
   activeCourseCount: number;
+  hasDiscovery?: boolean;
+  hasActiveShareLink?: boolean;
 }
 
 export function resolveStageFromMilestones(
   counts: StudentMilestoneCounts,
 ): StudentStage {
-  if (counts.portfolioCount > 0) {
+  if (counts.portfolioCount > 0 || counts.hasActiveShareLink) {
     return "CONSTRUIR";
   }
   if (counts.challengeSubmissionCount > 0) {
     return "EXPERIMENTAR";
   }
-  if (counts.activeCourseCount > 0) {
+  if (counts.activeCourseCount > 0 || counts.hasDiscovery) {
     return "APRENDER";
   }
   return "DESCOBRIR";

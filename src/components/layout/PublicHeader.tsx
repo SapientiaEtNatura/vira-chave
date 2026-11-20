@@ -1,7 +1,7 @@
 "use client";
 
 import type { MouseEvent } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
@@ -12,7 +12,7 @@ const SECTION_IDS = ["como-funciona", "na-pratica", "para-quem"] as const;
 
 const PUBLIC_LINKS = [
   { href: "/#como-funciona", label: "Como funciona", sectionId: "como-funciona" },
-  { href: "/#na-pratica", label: "Na prática", sectionId: "na-pratica" },
+  { href: "/#na-pratica", label: "Exemplos reais", sectionId: "na-pratica" },
   { href: "/#para-quem", label: "Para quem", sectionId: "para-quem" },
   { href: "/privacidade", label: "Privacidade", sectionId: null },
 ] as const;
@@ -25,6 +25,8 @@ export function PublicHeader({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -42,6 +44,34 @@ export function PublicHeader({
       window.removeEventListener("scroll", updateScroll);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        headerRef.current &&
+        event.target instanceof Node &&
+        !headerRef.current.contains(event.target)
+      ) {
+        setMobileOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [mobileOpen]);
 
   useEffect(() => {
     if (pathname !== "/") {
@@ -121,19 +151,8 @@ export function PublicHeader({
     ).matches;
     const behavior: ScrollBehavior = prefersReduced ? "auto" : "smooth";
 
-    const hash = `#${item.sectionId}`;
-    const rect = section.getBoundingClientRect();
-    const isAtSection =
-      window.location.hash === hash ||
-      (rect.top <= 140 && rect.bottom > 140);
-
-    if (isAtSection && item.sectionId === "como-funciona") {
-      window.history.replaceState(null, "", "/");
-      window.scrollTo({ top: 0, behavior });
-    } else {
-      window.history.replaceState(null, "", `/${hash}`);
-      section.scrollIntoView({ behavior, block: "start" });
-    }
+    window.history.replaceState(null, "", `/#${item.sectionId}`);
+    section.scrollIntoView({ behavior, block: "start" });
   }
 
   function isItemActive(item: (typeof PUBLIC_LINKS)[number]): boolean {
@@ -144,7 +163,10 @@ export function PublicHeader({
   }
 
   return (
-    <header className="sticky top-0 z-30 w-full">
+    <header
+      ref={headerRef}
+      className={cn("sticky top-0 z-30 w-full", scrolled && "px-3 sm:px-4")}
+    >
       <div
         className={cn(
           "mx-auto transition-[max-width,transform,border-radius,box-shadow,border-color,background-color,padding] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
@@ -208,6 +230,7 @@ export function PublicHeader({
           </div>
 
           <button
+            ref={menuButtonRef}
             type="button"
             aria-expanded={mobileOpen}
             aria-controls="public-mobile-menu"

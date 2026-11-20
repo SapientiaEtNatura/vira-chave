@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { BannerMountains } from "@/components/motion/BannerMountains";
 import { cn } from "@/lib/cn";
 import { StagePill, type StageKey } from "./StagePill";
@@ -51,10 +51,12 @@ export function StageBanner({
   bottomSlot,
   className,
 }: StageBannerProps) {
+  const headingId = useId();
   const styles = STAGE_BANNER_STYLES[stage];
 
   return (
     <section
+      aria-labelledby={headingId}
       className={cn(
         "relative overflow-hidden rounded-t-2xl px-6 pt-6 pb-14 sm:px-7 sm:pt-7 sm:pb-16",
         styles.bg,
@@ -72,8 +74,11 @@ export function StageBanner({
 
       <div className="relative z-10 flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2.5">
-          <StagePill stage={stage} label={stageLabel} showIcon />
-          <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--ink-primary)] sm:text-3xl">
+          <StagePill stage={stage} label={stageLabel} showIcon size="md" />
+          <h1
+            id={headingId}
+            className="font-display text-2xl font-bold tracking-tight text-[var(--ink-primary)] sm:text-3xl"
+          >
             {title}
           </h1>
           {subtitle ? (

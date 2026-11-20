@@ -88,7 +88,7 @@ export function AdminShell({
           <nav
             ref={desktopNav.containerRef}
             aria-label="Navegação administrativa"
-            className="relative hidden md:flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-1"
+            className="relative hidden items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-1 md:flex"
           >
             <span
               aria-hidden="true"
@@ -122,26 +122,32 @@ export function AdminShell({
           </nav>
 
           <div className="flex items-center gap-2">
-            <div className="hidden xl:flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2 py-1 text-xs">
-              <span className="px-1 text-[11px] font-medium text-[var(--ink-muted)]">
-                Preview:
+            <div className="hidden items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] px-2 py-1 text-xs md:flex">
+              <span className="hidden px-1 text-[11px] font-medium text-[var(--ink-muted)] xl:inline">
+                Visão:
               </span>
               <Link
                 href="/app"
-                className="rounded-full px-2 py-0.5 font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--brand-primary)]"
+                title="Visualizar como Estudante"
+                className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 py-0.5 font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--brand-primary)]"
               >
-                Estudante
+                <GraduationCap className="h-3.5 w-3.5 lg:hidden" aria-hidden="true" />
+                <span className="hidden lg:inline">Estudante</span>
+                <span className="sr-only lg:hidden">Visão Estudante</span>
               </Link>
               <Link
                 href="/educador"
-                className="rounded-full px-2 py-0.5 font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--brand-primary)]"
+                title="Visualizar como Educador"
+                className="inline-flex min-h-8 items-center gap-1 rounded-full px-2.5 py-0.5 font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface)] hover:text-[var(--brand-primary)]"
               >
-                Educador
+                <UserCheck className="h-3.5 w-3.5 lg:hidden" aria-hidden="true" />
+                <span className="hidden lg:inline">Educador</span>
+                <span className="sr-only lg:hidden">Visão Educador</span>
               </Link>
             </div>
 
             <div
-              className="hidden md:flex items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] py-1 pl-1 pr-3"
+              className="hidden items-center gap-2 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] py-1 pr-3 pl-1 xl:flex"
               title={displayName}
             >
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--brand-primary-soft)] text-[11px] font-semibold text-[var(--brand-primary)]">
@@ -155,7 +161,7 @@ export function AdminShell({
             <form action={signOutAction} className="hidden md:block">
               <button
                 type="submit"
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)] cursor-pointer"
+                className="inline-flex min-h-10 cursor-pointer items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-3 py-1.5 text-xs font-medium text-[var(--ink-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]"
               >
                 <LogOut className="h-3.5 w-3.5" aria-hidden="true" />
                 <span>Sair</span>
@@ -169,12 +175,14 @@ export function AdminShell({
               extraLinks={[
                 {
                   href: "/app",
-                  label: "Preview: Estudante",
-                  icon: <GraduationCap className="h-4 w-4" aria-hidden="true" />,
+                  label: "Visão: Estudante",
+                  icon: (
+                    <GraduationCap className="h-4 w-4" aria-hidden="true" />
+                  ),
                 },
                 {
                   href: "/educador",
-                  label: "Preview: Educador",
+                  label: "Visão: Educador",
                   icon: <UserCheck className="h-4 w-4" aria-hidden="true" />,
                 },
               ]}
@@ -190,57 +198,9 @@ export function AdminShell({
         activeHref={activeHref}
       />
 
-      <div className="mx-auto flex w-full max-w-7xl gap-6 px-4 pt-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 md:pb-8">
-        <aside
-          aria-label="Atalhos laterais do admin"
-          className="hidden lg:flex w-14 shrink-0 flex-col items-center justify-between rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] py-3 sticky top-20 h-[calc(100vh-7rem)]"
-        >
-          <div className="flex flex-col items-center gap-2">
-            {ADMIN_NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = isNavItemActive(pathname, item);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  title={item.label}
-                  aria-label={item.label}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full transition-colors duration-150",
-                    active
-                      ? "bg-[var(--brand-primary)] text-white shadow-xs"
-                      : "text-[var(--ink-muted)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]",
-                  )}
-                >
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                </Link>
-              );
-            })}
-          </div>
-
-          <div className="flex flex-col items-center gap-2 border-t border-[var(--border-subtle)] pt-3">
-            <Link
-              href="/app"
-              title="Preview Estudante"
-              aria-label="Preview Estudante"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors duration-150 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary)]"
-            >
-              <GraduationCap className="h-4 w-4" aria-hidden="true" />
-            </Link>
-            <Link
-              href="/educador"
-              title="Preview Educador"
-              aria-label="Preview Educador"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--ink-muted)] transition-colors duration-150 hover:bg-[var(--brand-primary-soft)] hover:text-[var(--brand-primary)]"
-            >
-              <UserCheck className="h-4 w-4" aria-hidden="true" />
-            </Link>
-          </div>
-        </aside>
-
-        <main className="min-w-0 flex-1">{children}</main>
-      </div>
+      <main className="mx-auto w-full max-w-7xl px-4 pt-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-8 md:pb-8">
+        {children}
+      </main>
     </div>
   );
 }

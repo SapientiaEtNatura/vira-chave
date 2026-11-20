@@ -114,53 +114,81 @@ export function ClassroomStudentsTable({
           />
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[var(--border-subtle)] text-left text-sm">
-            <thead className="bg-[var(--bg-surface-subtle)] text-xs font-semibold text-[var(--ink-secondary)]">
-              <tr>
-                <th scope="col" className="px-5 py-3">
-                  Estudante
-                </th>
-                <th scope="col" className="px-5 py-3">
-                  Etapa atual
-                </th>
-                <th scope="col" className="px-5 py-3">
-                  Principais macroáreas
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[var(--border-subtle)] bg-[var(--bg-surface)]">
-              {filteredStudents.map((student) => (
-                <tr
-                  key={student.studentId}
-                  className="transition-colors hover:bg-[var(--bg-canvas)]"
-                >
-                  <td className="whitespace-nowrap px-5 py-3.5 font-medium text-[var(--ink-primary)]">
+        <>
+          <div className="divide-y divide-[var(--border-subtle)] md:hidden">
+            {filteredStudents.map((student) => (
+              <div key={student.studentId} className="space-y-2.5 px-5 py-4">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold text-[var(--ink-primary)]">
                     {student.name}
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5">
-                    <StagePill stage={student.currentStage} />
-                  </td>
-                  <td className="px-5 py-3.5">
-                    {student.topMacroAreas.length === 0 ? (
-                      <span className="text-xs text-[var(--ink-muted)]">
-                        Descobrir ainda não concluído
-                      </span>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
-                        {student.topMacroAreas.map((area) => (
-                          <Badge key={area} variant="neutral">
-                            {area}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </td>
+                  </p>
+                  <StagePill stage={student.currentStage} />
+                </div>
+                {student.topMacroAreas.length === 0 ? (
+                  <p className="text-xs text-[var(--ink-muted)]">
+                    Descobrir ainda não concluído
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {student.topMacroAreas.map((area) => (
+                      <Badge key={area} variant="neutral">
+                        {area}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-full divide-y divide-[var(--border-subtle)] text-left text-sm">
+              <thead className="bg-[var(--bg-surface-subtle)] text-xs font-semibold text-[var(--ink-secondary)]">
+                <tr>
+                  <th scope="col" className="px-5 py-3">
+                    Estudante
+                  </th>
+                  <th scope="col" className="px-5 py-3">
+                    Etapa atual
+                  </th>
+                  <th scope="col" className="px-5 py-3">
+                    Principais macroáreas
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-[var(--border-subtle)] bg-[var(--bg-surface)]">
+                {filteredStudents.map((student) => (
+                  <tr
+                    key={student.studentId}
+                    className="transition-colors hover:bg-[var(--bg-canvas)]"
+                  >
+                    <td className="whitespace-nowrap px-5 py-3.5 font-medium text-[var(--ink-primary)]">
+                      {student.name}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3.5">
+                      <StagePill stage={student.currentStage} />
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {student.topMacroAreas.length === 0 ? (
+                        <span className="text-xs text-[var(--ink-muted)]">
+                          Descobrir ainda não concluído
+                        </span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {student.topMacroAreas.map((area) => (
+                            <Badge key={area} variant="neutral">
+                              {area}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

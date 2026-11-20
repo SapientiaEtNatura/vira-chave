@@ -44,7 +44,7 @@ export default async function EducatorLayout({
         signOutAction={handleSignOut}
       />
 
-      <main className="min-w-0 flex-1 pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      <main className="min-w-0 flex-1">
         <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-8 sm:py-8">
           {children}
         </div>

@@ -2,11 +2,9 @@
 
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { SplitText } from "gsap/SplitText";
 
 if (typeof window !== "undefined") {
-  gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
+  gsap.registerPlugin(useGSAP);
 }
 
 export const MOTION_EASE = {
@@ -22,4 +20,4 @@ export const MOTION_DURATION = {
 
 export const MOTION_STAGGER = 0.07;
 
-export { gsap, ScrollTrigger, SplitText, useGSAP };
+export { gsap, useGSAP };

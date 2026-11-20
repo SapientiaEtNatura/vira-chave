@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -39,13 +40,25 @@ export function EducatorClassroomsClient({
   initialClassrooms,
   institutionName,
 }: EducatorClassroomsClientProps) {
+  const router = useRouter();
   const [classrooms, setClassrooms] =
     useState<EducatorClassroomItem[]>(initialClassrooms);
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedAnnouncement, setCopiedAnnouncement] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const copyTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+    };
+  }, []);
 
   async function handleCreate(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -56,6 +69,7 @@ export function EducatorClassroomsClient({
     }
 
     setError(null);
+    setSuccess(null);
     setCreating(true);
     try {
       const response = await fetch("/api/educator/classrooms", {
@@ -76,6 +90,10 @@ export function EducatorClassroomsClient({
 
       setClassrooms((prev) => [payload.classroom!, ...prev]);
       setNewName("");
+      setSuccess(
+        `Turma "${payload.classroom.name}" criada com código ${payload.classroom.inviteCode}.`,
+      );
+      router.refresh();
     } catch {
       setError("Erro de conexão ao criar turma.");
     } finally {
@@ -85,6 +103,7 @@ export function EducatorClassroomsClient({
 
   async function handleToggleActive(classroom: EducatorClassroomItem) {
     setError(null);
+    setSuccess(null);
     setTogglingId(classroom.id);
     try {
       const response = await fetch(`/api/educator/classrooms/${classroom.id}`, {
@@ -108,6 +127,12 @@ export function EducatorClassroomsClient({
           item.id === classroom.id ? payload.classroom! : item,
         ),
       );
+      setSuccess(
+        payload.classroom.active
+          ? `Código da turma "${payload.classroom.name}" reativado.`
+          : `Código da turma "${payload.classroom.name}" desativado para novos ingressos.`,
+      );
+      router.refresh();
     } catch {
       setError("Erro de conexão ao atualizar turma.");
     } finally {
@@ -119,8 +144,15 @@ export function EducatorClassroomsClient({
     try {
       await navigator.clipboard.writeText(classroom.inviteCode);
       setCopiedId(classroom.id);
-      setTimeout(() => {
+      setCopiedAnnouncement(
+        `Código ${classroom.inviteCode} da turma ${classroom.name} copiado.`,
+      );
+      if (copyTimerRef.current !== null) {
+        window.clearTimeout(copyTimerRef.current);
+      }
+      copyTimerRef.current = window.setTimeout(() => {
         setCopiedId((current) => (current === classroom.id ? null : current));
+        copyTimerRef.current = null;
       }, 2000);
     } catch {
       setError("Não foi possível copiar o código automaticamente.");
@@ -129,6 +161,10 @@ export function EducatorClassroomsClient({
 
   return (
     <div className="space-y-6">
+      <div role="status" aria-live="polite" className="sr-only">
+        {copiedAnnouncement}
+      </div>
+
       <Card as="section" padding="md">
         <div className="space-y-1">
           <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
@@ -137,7 +173,7 @@ export function EducatorClassroomsClient({
           <p className="text-sm text-[var(--ink-secondary)]">
             {institutionName
               ? `Instituição vinculada: ${institutionName}`
-              : "Crie turmas e compartilhe o código de convite com seus estudantes."}
+              : "Vincule sua conta a uma instituição ativa para criar turmas."}
           </p>
         </div>
 
@@ -153,6 +189,7 @@ export function EducatorClassroomsClient({
             <Input
               type="text"
               value={newName}
+              disabled={!institutionName || creating}
               onChange={(event) => setNewName(event.target.value)}
               placeholder="Ex.: 3º Ano B — Projeto de Vida"
               maxLength={120}
@@ -163,6 +200,7 @@ export function EducatorClassroomsClient({
             type="submit"
             variant="primary"
             loading={creating}
+            disabled={!institutionName}
             leftIcon={<Plus className="h-4 w-4" />}
             className="min-h-11 shrink-0"
           >
@@ -173,6 +211,12 @@ export function EducatorClassroomsClient({
         {error ? (
           <Alert variant="danger" className="mt-4">
             {error}
+          </Alert>
+        ) : null}
+
+        {success ? (
+          <Alert variant="success" className="mt-4">
+            {success}
           </Alert>
         ) : null}
       </Card>
@@ -188,7 +232,7 @@ export function EducatorClassroomsClient({
           <EmptyState
             icon={<Users className="h-6 w-6" />}
             title="Nenhuma turma criada ainda"
-            description="Crie sua primeira turma acima para gerar um código de convite e acompanhar a jornada dos estudantes."
+            description="Crie sua primeira turma acima para gerar um código de convite e acompanhar o percurso dos estudantes."
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
@@ -210,7 +254,10 @@ export function EducatorClassroomsClient({
                         {classroom.institutionName}
                       </p>
                     </div>
-                    <Badge variant={classroom.active ? "success" : "neutral"}>
+                    <Badge
+                      dot
+                      variant={classroom.active ? "success" : "neutral"}
+                    >
                       {classroom.active ? "Ativa" : "Inativa"}
                     </Badge>
                   </div>
@@ -247,7 +294,7 @@ export function EducatorClassroomsClient({
                       className="h-4 w-4 text-[var(--ink-muted)]"
                       aria-hidden="true"
                     />
-                    <span>
+                    <span className="tabular-nums">
                       {classroom.studentCount}{" "}
                       {classroom.studentCount === 1
                         ? "estudante vinculado"
@@ -266,7 +313,7 @@ export function EducatorClassroomsClient({
                     onClick={() => handleToggleActive(classroom)}
                     leftIcon={<Power className="h-3.5 w-3.5" />}
                   >
-                    {classroom.active ? "Desativar código" : "Ativar código"}
+                    {classroom.active ? "Desativar código" : "Reativar código"}
                   </Button>
 
                   <ButtonLink

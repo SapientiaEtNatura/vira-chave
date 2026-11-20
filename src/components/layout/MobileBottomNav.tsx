@@ -36,7 +36,7 @@ export function MobileBottomNav({
     >
       <div
         ref={containerRef}
-        className="relative mx-auto grid max-w-lg grid-flow-col auto-cols-fr items-center px-3 py-1.5"
+        className="relative mx-auto grid max-w-lg grid-flow-col auto-cols-fr items-center px-1.5 py-1.5 sm:px-3"
       >
         <svg
           aria-hidden="true"

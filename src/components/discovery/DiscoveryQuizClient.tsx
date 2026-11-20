@@ -1,12 +1,19 @@
 "use client";
 
-import { type ReactNode, useState, useSyncExternalStore } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
   BookOpen,
   CheckCircle2,
+  Compass,
+  FlaskConical,
   Rocket,
   RotateCcw,
   Sparkles,
@@ -17,6 +24,7 @@ import { ScenarioFlashcardDeck } from "@/components/discovery/ScenarioFlashcardD
 import {
   Alert,
   Badge,
+  type BadgeVariant,
   Button,
   ButtonLink,
   Card,
@@ -130,6 +138,38 @@ function formatDatePtBr(isoString: string): string {
   }).format(new Date(isoString));
 }
 
+export type DiscoverySoftPillTone = BadgeVariant;
+
+export interface DiscoverySoftPillProps {
+  tone?: DiscoverySoftPillTone;
+  icon?: ReactNode;
+  mono?: boolean;
+  size?: "sm" | "md";
+  className?: string;
+  children: ReactNode;
+}
+
+export function DiscoverySoftPill({
+  tone = "neutral",
+  icon,
+  mono = false,
+  size = "sm",
+  className,
+  children,
+}: DiscoverySoftPillProps) {
+  return (
+    <Badge
+      variant={tone}
+      icon={icon}
+      mono={mono}
+      size={size}
+      className={className}
+    >
+      {children}
+    </Badge>
+  );
+}
+
 export function DiscoveryQuizClient({
   header,
   questions,
@@ -157,6 +197,56 @@ export function DiscoveryQuizClient({
   >({});
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showAllTracks, setShowAllTracks] = useState(false);
+  const [showAllChallenges, setShowAllChallenges] = useState(false);
+
+  const DRAFT_STORAGE_KEY = "virachave:discovery-draft:v1";
+
+  useEffect(() => {
+    if (!isRetaking) return;
+    try {
+      const raw = window.sessionStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        answers?: Record<string, string>;
+        selfPractice?: Record<string, SelfPracticeLevel>;
+        step?: 1 | 2;
+        activeScenarioIndex?: number;
+      };
+      if (parsed.answers && Object.keys(parsed.answers).length > 0) {
+        setAnswers(parsed.answers);
+      }
+      if (parsed.selfPractice && Object.keys(parsed.selfPractice).length > 0) {
+        setSelfPractice(parsed.selfPractice);
+      }
+      if (parsed.step === 1 || parsed.step === 2) {
+        setStep(parsed.step);
+      }
+      if (typeof parsed.activeScenarioIndex === "number") {
+        setActiveScenarioIndex(parsed.activeScenarioIndex);
+      }
+    } catch {
+      // Ignora falhas de leitura do rascunho local
+    }
+  }, [isRetaking]);
+
+  useEffect(() => {
+    if (!isRetaking) return;
+    if (
+      Object.keys(answers).length === 0 &&
+      Object.keys(selfPractice).length === 0
+    ) {
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(
+        DRAFT_STORAGE_KEY,
+        JSON.stringify({ answers, selfPractice, step, activeScenarioIndex }),
+      );
+    } catch {
+      // Ignora falhas de persistência local
+    }
+  }, [isRetaking, answers, selfPractice, step, activeScenarioIndex]);
 
   const answeredCount = questions.filter(
     (q) => answers[q.id] !== undefined,
@@ -203,7 +293,7 @@ export function DiscoveryQuizClient({
     }
 
     if (!allPracticeAnswered) {
-      setError("Informe seu ponto de partida para todas as macroáreas.");
+      setError("Informe seu ponto de partida para todas as áreas.");
       return;
     }
 
@@ -250,9 +340,14 @@ export function DiscoveryQuizClient({
       setIsRetaking(false);
       setStep(1);
       setActiveScenarioIndex(0);
+      try {
+        window.sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {
+        // Ignore storage cleanup error
+      }
       router.refresh();
     } catch {
-      setError("Erro de conexão ao enviar o questionário. Tente novamente.");
+      setError("Erro de conexão ao salvar seu mapeamento. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -265,6 +360,11 @@ export function DiscoveryQuizClient({
     setActiveScenarioIndex(0);
     setError(null);
     setIsRetaking(true);
+    try {
+      window.sessionStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch {
+      // Ignore storage cleanup error
+    }
   }
 
   function handleSelectAnswer(questionId: string, optionId: string) {
@@ -282,24 +382,27 @@ export function DiscoveryQuizClient({
     );
 
     return (
-      <div className="space-y-6">
+      <div className="relative min-w-0 space-y-6">
         {header ? <div className="hidden lg:block">{header}</div> : null}
         <h1 className="sr-only lg:hidden">Descubra suas afinidades</h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+        <form onSubmit={handleSubmit} className="min-w-0 space-y-4 lg:space-y-6">
           {showMobileDeck ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--stage-discover-ink)]">
-                  Passo 1 de 2 · {answeredCount} de {questions.length} respondidos
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <DiscoverySoftPill
+                  tone="discover"
+                  icon={<Compass className="h-3.5 w-3.5" />}
+                >
+                  Passo 1 de 2 · {answeredCount}/{questions.length} respondidos
+                </DiscoverySoftPill>
 
                 {result ? (
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-7 px-2 text-xs"
+                    className="min-h-11 px-3 text-xs"
                     onClick={() => {
                       setIsRetaking(false);
                       setStep(1);
@@ -310,9 +413,9 @@ export function DiscoveryQuizClient({
                     Voltar ao resultado
                   </Button>
                 ) : (
-                  <span className="font-mono text-xs font-semibold text-[var(--ink-muted)] tabular-nums">
+                  <DiscoverySoftPill tone="neutral" mono>
                     {scenarioPercent}%
-                  </span>
+                  </DiscoverySoftPill>
                 )}
               </div>
 
@@ -326,17 +429,21 @@ export function DiscoveryQuizClient({
           ) : (
             <Card className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[var(--stage-discover-ink)]">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <DiscoverySoftPill
+                    tone="discover"
+                    size="md"
+                    icon={<Compass className="h-3.5 w-3.5" />}
+                  >
                     {step === 1
                       ? "Passo 1 de 2 · Cenários situacionais"
                       : "Passo 2 de 2 · Ponto de partida"}
-                  </p>
-                  <p className="text-sm font-semibold text-[var(--ink-primary)]">
+                  </DiscoverySoftPill>
+                  <DiscoverySoftPill tone="neutral" mono>
                     {step === 1
                       ? `${answeredCount} de ${questions.length} cenários respondidos`
                       : `${practiceCount} de ${macroAreas.length} áreas preenchidas`}
-                  </p>
+                  </DiscoverySoftPill>
                 </div>
 
                 {result ? (
@@ -403,9 +510,9 @@ export function DiscoveryQuizClient({
                       const selectedOptionId = answers[question.id];
                       return (
                         <Card key={question.id} as="div" className="p-6 sm:p-7">
-                          <fieldset>
+                          <fieldset className="min-w-0">
                             <legend className="font-display text-base font-semibold leading-snug text-[var(--ink-primary)]">
-                              <span className="mr-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--stage-discover-bg)] font-mono text-xs font-bold text-[var(--stage-discover-ink)]">
+                              <span className="mr-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--stage-discover-ink)_24%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] font-mono text-xs font-bold text-[var(--stage-discover-ink)]">
                                 {index + 1}
                               </span>
                               {question.prompt}
@@ -418,9 +525,9 @@ export function DiscoveryQuizClient({
                                 return (
                                   <label
                                     key={option.id}
-                                    className={`flex min-h-11 cursor-pointer items-center rounded-xl border px-4 py-3 text-left text-sm transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
+                                    className={`relative flex min-h-11 cursor-pointer items-center rounded-xl border-[1.5px] px-4 py-3 text-left text-sm transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
                                       isSelected
-                                        ? "border-[var(--stage-discover-ink)] bg-[var(--stage-discover-bg)] font-semibold text-[var(--stage-discover-ink)] ring-1 ring-[var(--stage-discover-ink)]"
+                                        ? "border-[color-mix(in_srgb,var(--stage-discover-ink)_42%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] font-semibold text-[var(--stage-discover-ink)]"
                                         : "border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)]"
                                     }`}
                                   >
@@ -481,7 +588,7 @@ export function DiscoveryQuizClient({
                   const selectedLevel = selfPractice[area.slug];
                   return (
                     <Card key={area.id} as="div" className="p-6 sm:p-7">
-                      <fieldset>
+                      <fieldset className="min-w-0">
                         <legend className="font-display text-base font-semibold text-[var(--ink-primary)]">
                           {area.name}
                         </legend>
@@ -495,9 +602,9 @@ export function DiscoveryQuizClient({
                             return (
                               <label
                                 key={option.value}
-                                className={`flex min-h-11 cursor-pointer items-center justify-center rounded-xl border px-3 py-2.5 text-center text-sm transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
+                                className={`relative flex min-h-11 cursor-pointer items-center justify-center rounded-xl border-[1.5px] px-3 py-2.5 text-center text-sm transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
                                   isSelected
-                                    ? "border-[var(--stage-discover-ink)] bg-[var(--stage-discover-bg)] font-semibold text-[var(--stage-discover-ink)] ring-1 ring-[var(--stage-discover-ink)]"
+                                    ? "border-[color-mix(in_srgb,var(--stage-discover-ink)_42%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] font-semibold text-[var(--stage-discover-ink)]"
                                     : "border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/60 text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)]"
                                 }`}
                               >
@@ -581,284 +688,437 @@ export function DiscoveryQuizClient({
   const formattedDate = formatDatePtBr(result.completedAt);
 
   return (
-    <div className="space-y-6">
+    <div className="relative min-w-0 space-y-6">
       {header}
-      <div className="space-y-8">
-        <Card as="section">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="success">
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>Concluído em {formattedDate}</span>
-              </Badge>
-              {comparison ? (
-                <Badge variant="brand">
-                  <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-                  <span>
-                    Comparado a {formatDatePtBr(comparison.previousCompletedAt)}
-                  </span>
-                </Badge>
-              ) : null}
-            </div>
-            <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
-              Seu Mapa de Afinidades
-            </h2>
-          </div>
-
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleStartRetake}
-            leftIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
-          >
-            Refazer
-          </Button>
-        </div>
-
-        <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-          <div className="lg:col-span-6">
-            <AffinityChart data={chartData} />
-          </div>
-
-          <div className="space-y-3 lg:col-span-6">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--ink-muted)]">
-              Suas 3 principais áreas
-            </h3>
-            {topAreaDetails.map((area, index) => {
-              const affinityScore = result.scores[area.slug] ?? 0;
-              const provenScore = provenPractice.byArea[area.slug]?.score ?? 0;
-              const selfPracticeLevel = result.selfPractice?.[area.slug] ?? null;
-              const readiness = resolveAreaReadinessStatus({
-                provenScore,
-                selfPracticeLevel,
-              });
-              const areaDelta = comparison?.byArea[area.slug];
-              const areaChallenge = challenges.find(
-                (challenge) => challenge.macroAreaSlug === area.slug,
-              );
-              const areaTrack = tracks.find(
-                (track) => track.macroAreaSlug === area.slug,
-              );
-
-              const ctaHref =
-                readiness === "PRONTO_PARA_EXPERIMENTAR"
-                  ? areaChallenge
-                    ? `/app/experimentar/${areaChallenge.id}`
-                    : `/app/experimentar?area=${area.slug}`
-                  : areaTrack
-                    ? `/app/aprender/${areaTrack.id}`
-                    : `/app/aprender?area=${area.slug}`;
-
-              const ctaLabel =
-                readiness === "PRONTO_PARA_EXPERIMENTAR"
-                  ? "Experimentar desafio"
-                  : "Começar trilha";
-
-              return (
-                <div
-                  key={area.slug}
-                  className="space-y-3 rounded-xl border border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)]/35 p-4"
+      <div className="min-w-0 space-y-8">
+        <Card as="section" className="min-w-0">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="space-y-2.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <DiscoverySoftPill
+                  tone="success"
+                  size="md"
+                  icon={<CheckCircle2 className="h-3.5 w-3.5" />}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <p className="text-sm font-bold text-[var(--ink-primary)]">
-                        {index + 1}. {area.name}
-                      </p>
+                  Concluído em {formattedDate}
+                </DiscoverySoftPill>
+                {comparison ? (
+                  <DiscoverySoftPill
+                    tone="brand"
+                    size="md"
+                    icon={<TrendingUp className="h-3.5 w-3.5" />}
+                  >
+                    Comparado a {formatDatePtBr(comparison.previousCompletedAt)}
+                  </DiscoverySoftPill>
+                ) : null}
+              </div>
+              <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
+                Seu Mapa de Afinidades
+              </h2>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleStartRetake}
+              leftIcon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
+            >
+              Refazer mapeamento
+            </Button>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
+            <div className="min-w-0 lg:col-span-6">
+              <AffinityChart data={chartData} />
+            </div>
+
+            <div className="min-w-0 space-y-3.5 lg:col-span-6">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                  Suas 3 principais áreas
+                </h3>
+                <DiscoverySoftPill tone="discover" mono>
+                  Top 3
+                </DiscoverySoftPill>
+              </div>
+              {topAreaDetails.map((area, index) => {
+                const affinityScore = result.scores[area.slug] ?? 0;
+                const provenScore = provenPractice.byArea[area.slug]?.score ?? 0;
+                const selfPracticeLevel =
+                  result.selfPractice?.[area.slug] ?? null;
+                const readiness = resolveAreaReadinessStatus({
+                  provenScore,
+                  selfPracticeLevel,
+                });
+                const areaDelta = comparison?.byArea[area.slug];
+                const areaChallenge = challenges.find(
+                  (challenge) => challenge.macroAreaSlug === area.slug,
+                );
+                const areaTrack = tracks.find(
+                  (track) => track.macroAreaSlug === area.slug,
+                );
+
+                const ctaHref =
+                  readiness === "PRONTO_PARA_EXPERIMENTAR"
+                    ? areaChallenge
+                      ? `/app/experimentar/${areaChallenge.id}`
+                      : `/app/experimentar?area=${area.slug}`
+                    : areaTrack
+                      ? `/app/aprender/${areaTrack.id}`
+                      : `/app/aprender?area=${area.slug}`;
+
+                const ctaLabel =
+                  readiness === "PRONTO_PARA_EXPERIMENTAR"
+                    ? "Experimentar desafio"
+                    : "Começar trilha";
+
+                return (
+                  <div
+                    key={area.slug}
+                    className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/45 p-4 transition-colors hover:border-[var(--border-strong)]"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2.5">
+                      <div className="min-w-0 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <DiscoverySoftPill tone="discover" mono>
+                            #{index + 1}
+                          </DiscoverySoftPill>
+                          <p className="font-display text-sm font-bold text-[var(--ink-primary)]">
+                            {area.name}
+                          </p>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {readiness === "PRONTO_PARA_EXPERIMENTAR" ? (
+                            <DiscoverySoftPill
+                              tone="experiment"
+                              icon={<FlaskConical className="h-3.5 w-3.5" />}
+                            >
+                              Pronto para experimentar
+                            </DiscoverySoftPill>
+                          ) : (
+                            <DiscoverySoftPill
+                              tone="learn"
+                              icon={<BookOpen className="h-3.5 w-3.5" />}
+                            >
+                              Potencial para trilha
+                            </DiscoverySoftPill>
+                          )}
+
+                          {areaDelta?.isNewInTop3 ? (
+                            <DiscoverySoftPill
+                              tone="brand"
+                              icon={<Sparkles className="h-3.5 w-3.5" />}
+                            >
+                              Novo no Top 3
+                            </DiscoverySoftPill>
+                          ) : null}
+
+                          {areaDelta && areaDelta.delta !== null ? (
+                            <DiscoverySoftPill
+                              tone={
+                                areaDelta.delta > 0 ? "success" : "neutral"
+                              }
+                              mono
+                            >
+                              {areaDelta.delta > 0
+                                ? `+${areaDelta.delta}`
+                                : areaDelta.delta}{" "}
+                              pts
+                            </DiscoverySoftPill>
+                          ) : null}
+                        </div>
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span
-                          className={
-                            readiness === "PRONTO_PARA_EXPERIMENTAR"
-                              ? "inline-flex items-center rounded-full border border-[var(--stage-experiment-border)] bg-[var(--stage-experiment-bg)] px-2.5 py-0.5 text-xs font-medium text-[var(--stage-experiment-ink)]"
-                              : "inline-flex items-center rounded-full border border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] px-2.5 py-0.5 text-xs font-medium text-[var(--stage-learn-ink)]"
-                          }
-                        >
-                          {readiness === "PRONTO_PARA_EXPERIMENTAR"
-                            ? "Pronto para experimentar"
-                            : "Potencial para trilha"}
-                        </span>
-
-                        {areaDelta?.isNewInTop3 ? (
-                          <Badge variant="brand">Novo no Top 3</Badge>
-                        ) : null}
-
-                        {areaDelta && areaDelta.delta !== null ? (
-                          <span
-                            className={`font-mono text-xs font-semibold tabular-nums ${
-                              areaDelta.delta > 0
-                                ? "text-[var(--status-success-ink)]"
-                                : areaDelta.delta < 0
-                                  ? "text-[var(--status-danger-ink)]"
-                                  : "text-[var(--ink-muted)]"
-                            }`}
-                          >
-                            {areaDelta.delta > 0
-                              ? `+${areaDelta.delta}`
-                              : areaDelta.delta}{" "}
-                            pts
-                          </span>
-                        ) : null}
+                        <DiscoverySoftPill tone="neutral" mono>
+                          Prática: {provenScore}%
+                        </DiscoverySoftPill>
+                        <DiscoverySoftPill tone="discover" mono>
+                          {affinityScore}%
+                        </DiscoverySoftPill>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="rounded-full bg-[var(--bg-surface)] px-2.5 py-0.5 font-mono text-xs font-semibold text-[var(--ink-secondary)] tabular-nums">
-                        Prática: {provenScore}%
-                      </span>
-                      <span className="rounded-full bg-[var(--stage-discover-ink)] px-2.5 py-0.5 font-mono text-xs font-bold text-white tabular-nums">
-                        {affinityScore}%
-                      </span>
+                    {area.entryRoles.length > 0 ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {area.entryRoles.map((role) => (
+                          <DiscoverySoftPill key={role} tone="neutral">
+                            {role}
+                          </DiscoverySoftPill>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    <div>
+                      <ButtonLink
+                        href={ctaHref}
+                        variant="secondary"
+                        size="sm"
+                        rightIcon={
+                          <ArrowRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
+                        }
+                      >
+                        {ctaLabel}
+                      </ButtonLink>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+          </div>
+        </Card>
 
-                  {area.entryRoles.length > 0 ? (
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      {area.entryRoles.map((role) => (
-                        <Badge key={role} variant="neutral">
-                          {role}
-                        </Badge>
-                      ))}
+        {(() => {
+          const primaryArea = topAreaDetails[0];
+          if (!primaryArea) return null;
+          const primaryProven =
+            provenPractice.byArea[primaryArea.slug]?.score ?? 0;
+          const primarySelf = result.selfPractice?.[primaryArea.slug] ?? null;
+          const primaryReadiness = resolveAreaReadinessStatus({
+            provenScore: primaryProven,
+            selfPracticeLevel: primarySelf,
+          });
+          const primaryTrack = recommendedTracks.find(
+            (track) => track.macroAreaSlug === primaryArea.slug,
+          );
+          const primaryChallenge = recommendedChallenges.find(
+            (challenge) => challenge.macroAreaSlug === primaryArea.slug,
+          );
+          const startHref =
+            primaryReadiness === "PRONTO_PARA_EXPERIMENTAR" && primaryChallenge
+              ? `/app/experimentar/${primaryChallenge.id}`
+              : primaryTrack
+                ? `/app/aprender/${primaryTrack.id}`
+                : `/app/aprender?area=${primaryArea.slug}`;
+          const startAction =
+            primaryReadiness === "PRONTO_PARA_EXPERIMENTAR" && primaryChallenge
+              ? `Experimentar: ${primaryChallenge.title}`
+              : primaryTrack
+                ? `Começar trilha: ${primaryTrack.title}`
+                : `Explorar ${primaryArea.name}`;
+
+          return (
+            <Card
+              as="section"
+              variant="highlight"
+              aria-labelledby="primary-next-step-heading"
+              className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <DiscoverySoftPill
+                    tone="brand"
+                    size="md"
+                    icon={<Sparkles className="h-3.5 w-3.5" />}
+                  >
+                    Comece por aqui · Área #1 ({primaryArea.name})
+                  </DiscoverySoftPill>
+                </div>
+                <h2
+                  id="primary-next-step-heading"
+                  className="font-display text-lg font-bold text-[var(--ink-primary)]"
+                >
+                  {startAction}
+                </h2>
+                <p className="text-sm text-[var(--ink-secondary)]">
+                  Em vez de tentar tudo de uma vez, dê este primeiro passo e
+                  volte ao mapa quando concluir.
+                </p>
+              </div>
+              <ButtonLink
+                href={startHref}
+                variant="primary"
+                size="md"
+                rightIcon={
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                }
+                className="shrink-0"
+              >
+                Iniciar agora
+              </ButtonLink>
+            </Card>
+          );
+        })()}
+
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
+              Trilhas recomendadas para você
+            </h2>
+            <ButtonLink
+              href="/app/aprender"
+              variant="ghost"
+              size="sm"
+              rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+            >
+              Ver todas
+            </ButtonLink>
+          </div>
+
+          {recommendedTracks.length === 0 ? (
+            <EmptyState
+              icon={<BookOpen className="h-5 w-5" />}
+              title="Nenhuma trilha publicada para suas áreas de destaque no momento."
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {(showAllTracks
+                  ? recommendedTracks
+                  : recommendedTracks.slice(0, 3)
+                ).map((track) => (
+                  <Card
+                    key={track.id}
+                    as="article"
+                    variant="interactive"
+                    padding="sm"
+                    className="flex flex-col justify-between gap-4 p-5"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <DiscoverySoftPill
+                          tone="learn"
+                          icon={<BookOpen className="h-3.5 w-3.5" />}
+                        >
+                          {track.macroAreaName}
+                        </DiscoverySoftPill>
+                        <DiscoverySoftPill tone="neutral" mono>
+                          {track.courseCount}{" "}
+                          {track.courseCount === 1 ? "curso" : "cursos"}
+                        </DiscoverySoftPill>
+                      </div>
+                      <h3 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                        {track.title}
+                      </h3>
                     </div>
-                  ) : null}
 
-                  <div>
-                    <ButtonLink
-                      href={ctaHref}
-                      variant="secondary"
-                      size="sm"
-                      rightIcon={
-                        <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                      }
-                    >
-                      {ctaLabel}
-                    </ButtonLink>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </Card>
-
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
-            Trilhas recomendadas para você
-          </h2>
-          <ButtonLink
-            href="/app/aprender"
-            variant="ghost"
-            size="sm"
-            rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
-          >
-            Ver todas
-          </ButtonLink>
-        </div>
-
-        {recommendedTracks.length === 0 ? (
-          <EmptyState
-            icon={<BookOpen className="h-5 w-5" />}
-            title="Nenhuma trilha publicada para suas áreas de destaque no momento."
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {recommendedTracks.map((track) => (
-              <Card
-                key={track.id}
-                as="article"
-                variant="interactive"
-                padding="sm"
-                className="flex flex-col justify-between gap-4 p-5"
-              >
-                <div className="space-y-2.5">
-                  <div className="flex items-center justify-between gap-2">
-                    <Badge variant="neutral">{track.macroAreaName}</Badge>
-                    <span className="font-mono text-xs font-medium text-[var(--ink-muted)]">
-                      {track.courseCount}{" "}
-                      {track.courseCount === 1 ? "curso" : "cursos"}
-                    </span>
-                  </div>
-                  <h3 className="font-display text-base font-bold text-[var(--ink-primary)]">
-                    {track.title}
-                  </h3>
-                </div>
-
-                <div>
-                  <ButtonLink
-                    href={`/app/aprender/${track.id}`}
-                    variant="secondary"
+                    <div>
+                      <ButtonLink
+                        href={`/app/aprender/${track.id}`}
+                        variant="secondary"
+                        size="sm"
+                        rightIcon={
+                          <ArrowRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
+                        }
+                      >
+                        Abrir trilha
+                      </ButtonLink>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+              {recommendedTracks.length > 3 ? (
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
                     size="sm"
-                    rightIcon={
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                    }
+                    onClick={() => setShowAllTracks((prev) => !prev)}
                   >
-                    Abrir trilha
-                  </ButtonLink>
+                    {showAllTracks
+                      ? "Mostrar menos trilhas"
+                      : `Ver mais ${recommendedTracks.length - 3} trilhas recomendadas`}
+                  </Button>
                 </div>
-              </Card>
-            ))}
+              ) : null}
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
+              Desafios recomendados para você
+            </h2>
+            <ButtonLink
+              href="/app/experimentar"
+              variant="ghost"
+              size="sm"
+              rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
+            >
+              Ver todos
+            </ButtonLink>
           </div>
-        )}
-      </section>
 
-      <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
-            Desafios recomendados para você
-          </h2>
-          <ButtonLink
-            href="/app/experimentar"
-            variant="ghost"
-            size="sm"
-            rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
-          >
-            Ver todos
-          </ButtonLink>
-        </div>
+          {recommendedChallenges.length === 0 ? (
+            <EmptyState
+              icon={<Rocket className="h-5 w-5" />}
+              title="Nenhum desafio publicado para suas áreas de destaque no momento."
+            />
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {(showAllChallenges
+                  ? recommendedChallenges
+                  : recommendedChallenges.slice(0, 3)
+                ).map((challenge) => (
+                  <Card
+                    key={challenge.id}
+                    as="article"
+                    variant="interactive"
+                    padding="sm"
+                    className="flex flex-col justify-between gap-4 p-5"
+                  >
+                    <div className="space-y-3">
+                      <div>
+                        <DiscoverySoftPill
+                          tone="experiment"
+                          icon={<FlaskConical className="h-3.5 w-3.5" />}
+                        >
+                          {challenge.macroAreaName}
+                        </DiscoverySoftPill>
+                      </div>
+                      <h3 className="font-display text-base font-bold text-[var(--ink-primary)]">
+                        {challenge.title}
+                      </h3>
+                      <p className="line-clamp-2 text-sm text-[var(--ink-muted)]">
+                        {challenge.description}
+                      </p>
+                    </div>
 
-        {recommendedChallenges.length === 0 ? (
-          <EmptyState
-            icon={<Rocket className="h-5 w-5" />}
-            title="Nenhum desafio publicado para suas áreas de destaque no momento."
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {recommendedChallenges.map((challenge) => (
-              <Card
-                key={challenge.id}
-                as="article"
-                variant="interactive"
-                padding="sm"
-                className="flex flex-col justify-between gap-4 p-5"
-              >
-                <div className="space-y-2.5">
-                  <Badge variant="neutral">{challenge.macroAreaName}</Badge>
-                  <h3 className="font-display text-base font-bold text-[var(--ink-primary)]">
-                    {challenge.title}
-                  </h3>
-                  <p className="line-clamp-2 text-sm text-[var(--ink-muted)]">
-                    {challenge.description}
-                  </p>
-                </div>
-
-                <div>
-                  <ButtonLink
-                    href={`/app/experimentar/${challenge.id}`}
-                    variant="secondary"
+                    <div>
+                      <ButtonLink
+                        href={`/app/experimentar/${challenge.id}`}
+                        variant="secondary"
+                        size="sm"
+                        rightIcon={
+                          <ArrowRight
+                            className="h-3.5 w-3.5"
+                            aria-hidden="true"
+                          />
+                        }
+                      >
+                        Abrir desafio
+                      </ButtonLink>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+              {recommendedChallenges.length > 3 ? (
+                <div className="flex justify-center">
+                  <Button
+                    type="button"
+                    variant="outline"
                     size="sm"
-                    rightIcon={
-                      <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-                    }
+                    onClick={() => setShowAllChallenges((prev) => !prev)}
                   >
-                    Abrir desafio
-                  </ButtonLink>
+                    {showAllChallenges
+                      ? "Mostrar menos desafios"
+                      : `Ver mais ${recommendedChallenges.length - 3} desafios recomendados`}
+                  </Button>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </section>
+              ) : null}
+            </div>
+          )}
+        </section>
       </div>
     </div>
   );

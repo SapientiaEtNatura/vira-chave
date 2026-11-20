@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
 import { ClassroomCharts } from "@/components/educator/ClassroomCharts";
 import { ClassroomStudentsTable } from "@/components/educator/ClassroomStudentsTable";
+import { CopyInviteCodeButton } from "@/components/educator/CopyInviteCodeButton";
 import { Alert, Badge, Card, PageHeader } from "@/components/ui";
 import { getClassroomEducationalView } from "@/lib/educator/classroom-analytics";
 import { requireRole, EDUCATOR_PORTAL_ROLES } from "@/lib/rbac";
@@ -36,15 +37,20 @@ export default async function EducatorClassroomDetailPage({
           subtitle={`${view.classroom.institutionName} · Código ${view.classroom.inviteCode}`}
           action={
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={view.classroom.active ? "success" : "neutral"}>
+              <CopyInviteCodeButton code={view.classroom.inviteCode} />
+              <Badge
+                dot
+                variant={view.classroom.active ? "success" : "neutral"}
+              >
                 {view.classroom.active ? "Turma ativa" : "Código inativo"}
               </Badge>
-              <Badge variant="neutral">
-                <Users className="h-3.5 w-3.5" aria-hidden="true" />
-                <span>
-                  {view.totalStudents}{" "}
-                  {view.totalStudents === 1 ? "estudante" : "estudantes"}
-                </span>
+              <Badge
+                variant="neutral"
+                icon={<Users className="h-3.5 w-3.5" />}
+                mono
+              >
+                {view.totalStudents}{" "}
+                {view.totalStudents === 1 ? "estudante" : "estudantes"}
               </Badge>
             </div>
           }

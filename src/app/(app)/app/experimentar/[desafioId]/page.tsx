@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ExternalLink,
   FileText,
+  FlaskConical,
 } from "lucide-react";
 import { ChallengeSubmitClient } from "@/components/experimentar/ChallengeSubmitClient";
 import { Badge, ButtonLink, Card, PageHeader } from "@/components/ui";
@@ -69,10 +70,18 @@ export default async function DesafioDetalhePage({
       <Card>
         <div className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Badge variant="neutral">{challenge.macroArea.name}</Badge>
+            <Badge
+              variant="experiment"
+              icon={<FlaskConical className="h-3.5 w-3.5" />}
+            >
+              {challenge.macroArea.name}
+            </Badge>
             {challenge.projects.length > 0 && (
-              <Badge variant="success">
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              <Badge
+                variant="success"
+                size="md"
+                icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+              >
                 {challenge.projects.length}{" "}
                 {challenge.projects.length === 1
                   ? "entrega registrada"
@@ -99,9 +108,14 @@ export default async function DesafioDetalhePage({
 
       {challenge.projects.length > 0 && (
         <Card as="section" className="space-y-4">
-          <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
-            Suas entregas neste desafio
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-display text-lg font-semibold text-[var(--ink-primary)]">
+              Suas entregas neste desafio
+            </h2>
+            <ButtonLink href="/app/portfolio" variant="outline" size="sm">
+              Gerenciar no portfólio
+            </ButtonLink>
+          </div>
           <div className="space-y-3">
             {challenge.projects.map((project) => (
               <article
@@ -114,8 +128,8 @@ export default async function DesafioDetalhePage({
                   </h3>
                   <Badge variant={project.isIncludedInShare ? "brand" : "neutral"}>
                     {project.isIncludedInShare
-                      ? "Incluído no compartilhamento"
-                      : "Somente privado"}
+                      ? "No link compartilhado"
+                      : "Apenas privado"}
                   </Badge>
                 </div>
                 <p className="mt-2 whitespace-pre-line text-sm text-[var(--ink-secondary)]">

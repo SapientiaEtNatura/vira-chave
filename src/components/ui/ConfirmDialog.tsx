@@ -6,7 +6,7 @@ import { cn } from "@/lib/cn";
 import { Button } from "./AppButton";
 
 const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'a[href]:not([hidden]), button:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), input:not([disabled]):not([hidden]):not([type="hidden"]), select:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -54,12 +54,30 @@ export function ConfirmDialog({
     if (!open || !mounted) return;
 
     const previouslyFocused = document.activeElement as HTMLElement | null;
-    cancelButtonRef.current?.focus();
+    if (cancelButtonRef.current && !cancelButtonRef.current.disabled) {
+      cancelButtonRef.current.focus();
+    } else {
+      dialogRef.current?.focus();
+    }
 
     return () => {
-      if (previouslyFocused && typeof previouslyFocused.focus === "function") {
+      if (
+        previouslyFocused &&
+        document.contains(previouslyFocused) &&
+        typeof previouslyFocused.focus === "function"
+      ) {
         previouslyFocused.focus();
       }
+    };
+  }, [open, mounted]);
+
+  React.useEffect(() => {
+    if (!open || !mounted) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
     };
   }, [open, mounted]);
 
@@ -116,12 +134,12 @@ export function ConfirmDialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4"
       role="presentation"
     >
       <div
         aria-hidden="true"
-        className="fixed inset-0 bg-[#101828]/50 backdrop-blur-[1px]"
+        className="fixed inset-0 bg-[var(--backdrop-scrim)] backdrop-blur-[1px]"
         onClick={() => {
           if (closeOnBackdropClick && !loading) {
             onCancelRef.current();
@@ -131,12 +149,12 @@ export function ConfirmDialog({
       <div
         ref={dialogRef}
         tabIndex={-1}
-        role="dialog"
+        role={variant === "danger" ? "alertdialog" : "dialog"}
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          "relative z-10 w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-lg",
+          "relative z-10 w-full max-w-md rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-lg focus:outline-none",
         )}
       >
         <div className="space-y-2">

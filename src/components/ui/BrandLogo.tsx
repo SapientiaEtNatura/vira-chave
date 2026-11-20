@@ -44,10 +44,16 @@ export function BrandLogo({
             strokeWidth="2"
             strokeLinecap="round"
           />
-          <circle cx="13" cy="10.5" r="2.25" stroke="#F59E0B" strokeWidth="2" />
+          <circle
+            cx="13"
+            cy="10.5"
+            r="2.25"
+            stroke="var(--brand-accent)"
+            strokeWidth="2"
+          />
           <path
             d="M13 12.75V17.5M13 15.5H15.5"
-            stroke="#F59E0B"
+            stroke="var(--brand-accent)"
             strokeWidth="2"
             strokeLinecap="round"
           />
@@ -79,8 +85,8 @@ export function BrandLogo({
     return (
       <Link
         href={href}
-        aria-label="Vira Chave — Início"
-        title={!showText ? "Vira Chave" : undefined}
+        aria-label="VIRA CHAVE — Início"
+        title={!showText ? "VIRA CHAVE" : undefined}
         className={cn(
           isDock
             ? "flex h-11 shrink-0 items-center rounded-full transition-colors duration-150 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"

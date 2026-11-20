@@ -30,7 +30,13 @@ export default async function EducatorDashboardPage() {
           select: { name: true },
         },
         _count: {
-          select: { enrollments: true },
+          select: {
+            enrollments: {
+              where: {
+                student: { status: "ACTIVE" },
+              },
+            },
+          },
         },
       },
     }),
@@ -61,19 +67,15 @@ export default async function EducatorDashboardPage() {
         />
 
         <Alert variant="info" title="Privacidade protegida (LGPD)">
-          <div className="flex items-start gap-2">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <p>
-              Anotações privadas de estudo, rascunhos e respostas individuais do
-              questionário permanecem protegidos e não são exibidos neste painel.
-            </p>
-          </div>
+          Anotações privadas de estudo, rascunhos e respostas individuais do
+          mapeamento de afinidades permanecem protegidos e não são exibidos
+          neste painel.
         </Alert>
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card padding="md" className="flex items-center gap-3.5">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--stage-learn-border)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-[1.5px] border-[color-mix(in_srgb,var(--stage-learn-ink)_24%,var(--stage-learn-border))] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]">
             <BookOpen className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
@@ -87,7 +89,7 @@ export default async function EducatorDashboardPage() {
         </Card>
 
         <Card padding="md" className="flex items-center gap-3.5">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--stage-build-border)] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-[1.5px] border-[color-mix(in_srgb,var(--stage-build-ink)_26%,var(--stage-build-border))] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>
@@ -101,7 +103,7 @@ export default async function EducatorDashboardPage() {
         </Card>
 
         <Card padding="md" className="flex items-center gap-3.5">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border-[1.5px] border-[color-mix(in_srgb,var(--stage-discover-ink)_24%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]">
             <Users className="h-5 w-5" aria-hidden="true" />
           </span>
           <div>

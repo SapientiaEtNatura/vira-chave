@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Rocket } from "lucide-react";
+import { ArrowRight, CheckCircle2, FlaskConical, Rocket, Sparkles } from "lucide-react";
 import { FilterGridReveal } from "@/components/motion/FilterGridReveal";
 import {
   Badge,
@@ -45,6 +45,7 @@ export default async function ExperimentarPage({
   ]);
 
   const recommendedSlugs = latestDiscovery?.topAreas ?? [];
+  const recommendedSet = new Set(recommendedSlugs);
   const isRecommendedFilter = activeArea === "recomendadas";
 
   const challenges = await prisma.challenge.findMany({
@@ -60,6 +61,7 @@ export default async function ExperimentarPage({
     select: {
       id: true,
       title: true,
+      description: true,
       macroArea: {
         select: {
           slug: true,
@@ -79,12 +81,12 @@ export default async function ExperimentarPage({
         stage="EXPERIMENTAR"
         stageLabel="Etapa 3 · Experimentar"
         title="Desafios Práticos"
-        subtitle="Resolva desafios reais por macroárea e transforme entregas em projetos no seu portfólio."
+        subtitle="Resolva desafios reais por área e salve suas entregas diretamente no seu portfólio."
       />
 
       <MacroAreaFilterBar
         basePath="/app/experimentar"
-        ariaLabel="Filtrar desafios por macroárea"
+        ariaLabel="Filtrar desafios por área"
         activeArea={activeArea}
         recommendedSlugs={recommendedSlugs}
         items={macroAreas.map((m) => ({
@@ -97,8 +99,13 @@ export default async function ExperimentarPage({
 
       {challenges.length === 0 ? (
         <EmptyState
+          as="h2"
           icon={<Rocket className="h-5 w-5" />}
-          title="Nenhum desafio publicado encontrado para esta macroárea."
+          title={
+            activeArea
+              ? "Nenhum desafio encontrado para esta área."
+              : "Nenhum desafio publicado ainda."
+          }
           action={
             activeArea ? (
               <ButtonLink href="/app/experimentar" variant="outline" size="sm">
@@ -109,12 +116,14 @@ export default async function ExperimentarPage({
         />
       ) : (
         <FilterGridReveal
-          filterKey={activeArea ?? "all"}
+          filterKey={activeArea || "all"}
           className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {challenges.map((challenge) => {
             const submissionCount = challenge.projects.length;
             const isSubmitted = submissionCount > 0;
+            const isRecommended =
+              !activeArea && recommendedSet.has(challenge.macroArea.slug);
 
             return (
               <div key={challenge.id} data-filter-card className="flex">
@@ -124,35 +133,60 @@ export default async function ExperimentarPage({
                   padding="sm"
                   className="flex w-full flex-col justify-between gap-4 p-5"
                 >
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Badge variant="neutral">{challenge.macroArea.name}</Badge>
+                  <div className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant="experiment"
+                          icon={<FlaskConical className="h-3.5 w-3.5" />}
+                        >
+                          {challenge.macroArea.name}
+                        </Badge>
+                        {isRecommended ? (
+                          <Badge
+                            variant="brand"
+                            icon={<Sparkles className="h-3.5 w-3.5" />}
+                          >
+                            Para você
+                          </Badge>
+                        ) : null}
+                      </div>
 
-                    {isSubmitted ? (
-                      <Badge variant="success">
-                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                        Enviado ({submissionCount})
-                      </Badge>
-                    ) : (
-                      <Badge variant="brand">Disponível</Badge>
-                    )}
+                      {isSubmitted ? (
+                        <Badge
+                          variant="success"
+                          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                        >
+                          Enviado ({submissionCount})
+                        </Badge>
+                      ) : (
+                        <Badge variant="neutral">Disponível</Badge>
+                      )}
+                    </div>
+
+                    <h2 className="font-display text-lg font-bold leading-snug text-[var(--ink-primary)]">
+                      {challenge.title}
+                    </h2>
+
+                    {challenge.description ? (
+                      <p className="line-clamp-2 text-sm leading-relaxed text-[var(--ink-muted)]">
+                        {challenge.description}
+                      </p>
+                    ) : null}
                   </div>
 
-                  <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
-                    {challenge.title}
-                  </h2>
-                </div>
-
-                <div className="flex justify-end">
-                  <Link
-                    href={`/app/experimentar/${challenge.id}`}
-                    className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-hover)]"
-                  >
-                    <span>Abrir desafio</span>
-                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                  </Link>
-                </div>
-              </Card>
+                  <div className="flex justify-end">
+                    <Link
+                      href={`/app/experimentar/${challenge.id}`}
+                      className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-hover)]"
+                    >
+                      <span>
+                        {isSubmitted ? "Ver entregas" : "Abrir desafio"}
+                      </span>
+                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </Link>
+                  </div>
+                </Card>
               </div>
             );
           })}

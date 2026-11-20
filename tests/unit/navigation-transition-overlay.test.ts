@@ -23,24 +23,33 @@ function makeCheck(
 }
 
 describe("shouldTriggerNavigationOverlay", () => {
-  it("returns true for standard internal route and query navigations", () => {
+  it("returns true for standard internal route navigations", () => {
     expect(shouldTriggerNavigationOverlay(makeCheck())).toBe(true);
     expect(
       shouldTriggerNavigationOverlay(
         makeCheck({
           href: "/app/aprender?area=tecnologia-dados",
-          currentUrl: "http://localhost:3000/app/aprender",
+          currentUrl: "http://localhost:3000/app",
         }),
       ),
     ).toBe(true);
   });
 
-  it("ignores same-route links and hash-only jumps", () => {
+  it("ignores same-route links, in-page filter queries, and hash-only jumps", () => {
     expect(
       shouldTriggerNavigationOverlay(
         makeCheck({
           href: "/app",
           currentUrl: "http://localhost:3000/app",
+        }),
+      ),
+    ).toBe(false);
+
+    expect(
+      shouldTriggerNavigationOverlay(
+        makeCheck({
+          href: "/app/aprender?area=tecnologia-dados",
+          currentUrl: "http://localhost:3000/app/aprender",
         }),
       ),
     ).toBe(false);

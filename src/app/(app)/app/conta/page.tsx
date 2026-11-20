@@ -1,5 +1,7 @@
+import { notFound } from "next/navigation";
 import { ConsentType, Role } from "@prisma/client";
-import { Card, PageHeader } from "@/components/ui";
+import { CheckCircle2 } from "lucide-react";
+import { Badge, Card, PageHeader } from "@/components/ui";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 import { AccountControls } from "./AccountControls";
@@ -55,7 +57,7 @@ export default async function StudentAccountPage() {
   });
 
   if (!student) {
-    return null;
+    notFound();
   }
 
   const primaryEnrollment = student.enrollments[0] ?? null;
@@ -85,7 +87,7 @@ export default async function StudentAccountPage() {
             <dt className="text-xs font-medium uppercase tracking-wider text-[var(--ink-muted)]">
               E-mail
             </dt>
-            <dd className="mt-1 text-sm font-semibold text-[var(--ink-primary)]">
+            <dd className="mt-1 break-all text-sm font-semibold text-[var(--ink-primary)]">
               {student.email}
             </dd>
           </div>
@@ -128,17 +130,21 @@ export default async function StudentAccountPage() {
                 key={consent.id}
                 className="flex flex-col gap-1 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div>
+                <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold text-[var(--ink-primary)]">
                     {CONSENT_LABELS[consent.type]}
                   </p>
-                  <p className="text-xs text-[var(--ink-muted)]">
+                  <Badge variant="neutral" mono>
                     Versão {consent.version}
-                  </p>
+                  </Badge>
                 </div>
-                <span className="font-mono text-xs font-medium text-[var(--ink-secondary)]">
+                <Badge
+                  variant="success"
+                  mono
+                  icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                >
                   {formatDate(consent.acceptedAt)}
-                </span>
+                </Badge>
               </li>
             ))}
           </ul>

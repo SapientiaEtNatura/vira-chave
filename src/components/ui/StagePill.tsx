@@ -14,25 +14,25 @@ const STAGE_CONFIG: Record<
   DESCOBRIR: {
     defaultLabel: "Descobrir",
     classes:
-      "bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)] border-[var(--stage-discover-border)]",
+      "bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)] border-[color-mix(in_srgb,var(--stage-discover-ink)_24%,var(--stage-discover-border))]",
     Icon: Compass,
   },
   APRENDER: {
     defaultLabel: "Aprender",
     classes:
-      "bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)] border-[var(--stage-learn-border)]",
+      "bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)] border-[color-mix(in_srgb,var(--stage-learn-ink)_24%,var(--stage-learn-border))]",
     Icon: BookOpen,
   },
   EXPERIMENTAR: {
     defaultLabel: "Experimentar",
     classes:
-      "bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)] border-[var(--stage-experiment-border)]",
+      "bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)] border-[color-mix(in_srgb,var(--stage-experiment-ink)_26%,var(--stage-experiment-border))]",
     Icon: FlaskConical,
   },
   CONSTRUIR: {
     defaultLabel: "Construir",
     classes:
-      "bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)] border-[var(--stage-build-border)]",
+      "bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)] border-[color-mix(in_srgb,var(--stage-build-ink)_26%,var(--stage-build-border))]",
     Icon: Hammer,
   },
 };
@@ -41,6 +41,7 @@ export interface StagePillProps {
   stage: StageKey;
   label?: string;
   showIcon?: boolean;
+  size?: "sm" | "md";
   className?: string;
 }
 
@@ -48,6 +49,7 @@ export function StagePill({
   stage,
   label,
   showIcon = true,
+  size = "sm",
   className,
 }: StagePillProps) {
   const { defaultLabel, classes, Icon } = STAGE_CONFIG[stage];
@@ -55,12 +57,17 @@ export function StagePill({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium leading-5",
+        "inline-flex items-center rounded-full border-[1.5px] font-semibold leading-none tracking-tight select-none",
+        size === "md"
+          ? "gap-1.5 px-3 py-1.5 text-xs"
+          : "gap-1.5 px-2.5 py-1 text-xs",
         classes,
         className,
       )}
     >
-      {showIcon ? <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" /> : null}
+      {showIcon ? (
+        <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      ) : null}
       <span>{label ?? defaultLabel}</span>
     </span>
   );

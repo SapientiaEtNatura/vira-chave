@@ -288,7 +288,7 @@ export function AdminContentClient({
   }[] = [
     {
       id: "macroAreas",
-      label: "MacroÁreas",
+      label: "Macroáreas",
       count: macroAreas.length,
       icon: Layers,
     },
@@ -318,62 +318,132 @@ export function AdminContentClient({
     },
   ];
 
+  function selectTabByIndex(nextIndex: number) {
+    const normalized = (nextIndex + tabs.length) % tabs.length;
+    const currentIndex = tabs.findIndex((t) => t.id === activeTab);
+    const nextTab = tabs[normalized];
+    if (!nextTab) return;
+    setTabDirection(normalized >= currentIndex ? "right" : "left");
+    clearMessages();
+    setActiveTab(nextTab.id);
+    const el = document.getElementById(`tab-${nextTab.id}`);
+    el?.focus();
+  }
+
+  function getDeleteDescription(target: PendingDelete | null): string | undefined {
+    if (!target) return undefined;
+    if (target.kind === "macroArea") {
+      const linkedTracks = tracks.filter((t) => t.macroAreaId === target.id);
+      const linkedTrackIds = new Set(linkedTracks.map((t) => t.id));
+      const linkedCoursesCount = courseItems.filter((c) =>
+        linkedTrackIds.has(c.trackId),
+      ).length;
+      const linkedChallengesCount = challenges.filter(
+        (c) => c.macroAreaId === target.id,
+      ).length;
+      const impactParts = [
+        linkedTracks.length > 0
+          ? `${linkedTracks.length} ${linkedTracks.length === 1 ? "trilha" : "trilhas"}`
+          : null,
+        linkedCoursesCount > 0
+          ? `${linkedCoursesCount} ${linkedCoursesCount === 1 ? "curso" : "cursos"}`
+          : null,
+        linkedChallengesCount > 0
+          ? `${linkedChallengesCount} ${linkedChallengesCount === 1 ? "desafio" : "desafios"}`
+          : null,
+      ].filter(Boolean);
+      return impactParts.length > 0
+        ? `Tem certeza que deseja excluir "${target.label}"? Isso também removerá ${impactParts.join(", ")}.`
+        : `Tem certeza que deseja excluir a macroárea "${target.label}"?`;
+    }
+    if (target.kind === "track") {
+      const linkedCoursesCount = courseItems.filter(
+        (c) => c.trackId === target.id,
+      ).length;
+      return linkedCoursesCount > 0
+        ? `Tem certeza que deseja excluir a trilha "${target.label}"? Isso também removerá ${linkedCoursesCount} ${linkedCoursesCount === 1 ? "curso vinculado" : "cursos vinculados"}.`
+        : `Tem certeza que deseja excluir a trilha "${target.label}"?`;
+    }
+    return `Tem certeza que deseja excluir "${target.label}"? Esta ação não pode ser desfeita.`;
+  }
+
   return (
     <div className="space-y-6">
-      <div
-        ref={tabListRef}
-        role="tablist"
-        aria-label="Seções de curadoria de conteúdo"
-        className="relative inline-flex max-w-full flex-wrap items-center gap-1 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-1 sm:rounded-full"
-      >
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 left-0 z-0 rounded-full bg-[var(--brand-primary)] shadow-xs transition-[transform,width,height,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
-          style={{
-            width: indicator.width,
-            height: indicator.height,
-            transform: `translate3d(${indicator.x}px, ${indicator.y}px, 0)`,
-            opacity: indicator.ready ? 1 : 0,
+      <div className="overflow-x-auto pb-1">
+        <div
+          ref={tabListRef}
+          role="tablist"
+          aria-label="Seções de curadoria de conteúdo"
+          onKeyDown={(event) => {
+            const currentIndex = tabs.findIndex((t) => t.id === activeTab);
+            if (event.key === "ArrowRight") {
+              event.preventDefault();
+              selectTabByIndex(currentIndex + 1);
+            } else if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              selectTabByIndex(currentIndex - 1);
+            } else if (event.key === "Home") {
+              event.preventDefault();
+              selectTabByIndex(0);
+            } else if (event.key === "End") {
+              event.preventDefault();
+              selectTabByIndex(tabs.length - 1);
+            }
           }}
-        />
-        {tabs.map((tab, tabIndex) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              ref={setTabRef(tab.id)}
-              id={`tab-${tab.id}`}
-              role="tab"
-              type="button"
-              aria-selected={isActive}
-              aria-controls={`panel-${tab.id}`}
-              onClick={() => {
-                const currentIndex = tabs.findIndex((t) => t.id === activeTab);
-                setTabDirection(tabIndex >= currentIndex ? "right" : "left");
-                clearMessages();
-                setActiveTab(tab.id);
-              }}
-              className={`relative z-10 inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors duration-200 ${
-                isActive
-                  ? "text-white"
-                  : "text-[var(--ink-secondary)] hover:bg-[var(--bg-surface)]/70 hover:text-[var(--ink-primary)]"
-              }`}
-            >
-              <Icon className="h-4 w-4" aria-hidden="true" />
-              <span>{tab.label}</span>
-              <span
-                className={`rounded-full px-2 py-0.5 text-xs tabular-nums transition-colors duration-200 ${
+          className="relative inline-flex min-w-max flex-nowrap items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-canvas)] p-1"
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 left-0 z-0 rounded-full bg-[var(--brand-primary)] shadow-xs transition-[transform,width,height,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
+            style={{
+              width: indicator.width,
+              height: indicator.height,
+              transform: `translate3d(${indicator.x}px, ${indicator.y}px, 0)`,
+              opacity: indicator.ready ? 1 : 0,
+            }}
+          />
+          {tabs.map((tab, tabIndex) => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                ref={setTabRef(tab.id)}
+                id={`tab-${tab.id}`}
+                role="tab"
+                type="button"
+                tabIndex={isActive ? 0 : -1}
+                aria-selected={isActive}
+                aria-controls={`panel-${tab.id}`}
+                onClick={() => {
+                  const currentIndex = tabs.findIndex(
+                    (t) => t.id === activeTab,
+                  );
+                  setTabDirection(tabIndex >= currentIndex ? "right" : "left");
+                  clearMessages();
+                  setActiveTab(tab.id);
+                }}
+                className={`relative z-10 inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold whitespace-nowrap transition-colors duration-200 ${
                   isActive
-                    ? "bg-white/20 text-white"
-                    : "bg-[var(--bg-surface-subtle)] text-[var(--ink-muted)]"
+                    ? "text-white"
+                    : "text-[var(--ink-secondary)] hover:bg-[var(--bg-surface)]/70 hover:text-[var(--ink-primary)]"
                 }`}
               >
-                {tab.count}
-              </span>
-            </button>
-          );
-        })}
+                <Icon className="h-4 w-4" aria-hidden="true" />
+                <span>{tab.label}</span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs tabular-nums transition-colors duration-200 ${
+                    isActive
+                      ? "bg-white/20 text-white"
+                      : "bg-[var(--bg-surface-subtle)] text-[var(--ink-muted)]"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {error ? <Alert variant="danger">{error}</Alert> : null}
@@ -389,6 +459,7 @@ export function AdminContentClient({
           <MacroAreasTab
             macroAreas={macroAreas}
             busy={busy}
+            serverError={error}
             sendContentRequest={sendContentRequest}
             onMacroAreaCreated={handleMacroAreaCreated}
             onMacroAreaUpdated={handleMacroAreaUpdated}
@@ -402,6 +473,7 @@ export function AdminContentClient({
             questions={questions}
             macroAreas={macroAreas}
             busy={busy}
+            serverError={error}
             sendContentRequest={sendContentRequest}
             onQuestionSaved={handleQuestionSaved}
             onRequestDelete={setPendingDelete}
@@ -415,6 +487,7 @@ export function AdminContentClient({
             tracks={tracks}
             macroAreas={macroAreas}
             busy={busy}
+            serverError={error}
             sendContentRequest={sendContentRequest}
             onTrackCreated={handleTrackCreated}
             onTrackUpdated={handleTrackUpdated}
@@ -428,6 +501,7 @@ export function AdminContentClient({
             courseItems={courseItems}
             tracks={tracks}
             busy={busy}
+            serverError={error}
             checkingLinks={checkingLinks}
             checkingCourseId={checkingCourseId}
             sendContentRequest={sendContentRequest}
@@ -444,6 +518,7 @@ export function AdminContentClient({
             challenges={challenges}
             macroAreas={macroAreas}
             busy={busy}
+            serverError={error}
             sendContentRequest={sendContentRequest}
             onChallengeCreated={handleChallengeCreated}
             onChallengeUpdated={handleChallengeUpdated}
@@ -456,11 +531,7 @@ export function AdminContentClient({
       <ConfirmDialog
         open={pendingDelete !== null}
         title="Confirmar exclusão"
-        description={
-          pendingDelete
-            ? `Tem certeza que deseja excluir "${pendingDelete.label}"? Registros vinculados também podem ser removidos.`
-            : undefined
-        }
+        description={getDeleteDescription(pendingDelete)}
         confirmLabel="Excluir"
         cancelLabel="Cancelar"
         variant="danger"

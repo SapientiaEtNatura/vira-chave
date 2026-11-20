@@ -106,6 +106,7 @@ export function AdminUsersClient({
   const [editingUser, setEditingUser] = useState<AdminUserItem | null>(null);
   const [editRole, setEditRole] = useState<UserRoleValue>("ESTUDANTE");
   const [editInstitutionId, setEditInstitutionId] = useState<string>("");
+  const [editError, setEditError] = useState<string | null>(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
   // Suspender / Ativar
@@ -176,6 +177,7 @@ export function AdminUsersClient({
 
   function openEditModal(user: AdminUserItem) {
     setError(null);
+    setEditError(null);
     setFeedback(null);
     setEditingUser(user);
     setEditRole(user.role);
@@ -185,6 +187,7 @@ export function AdminUsersClient({
   async function handleConfirmEdit() {
     if (!editingUser) return;
     setError(null);
+    setEditError(null);
     setFeedback(null);
     setSavingEdit(true);
 
@@ -205,8 +208,7 @@ export function AdminUsersClient({
       };
 
       if (!response.ok || !payload.user) {
-        setError(payload.error ?? "Não foi possível atualizar o usuário.");
-        setEditingUser(null);
+        setEditError(payload.error ?? "Não foi possível atualizar o usuário.");
         return;
       }
 
@@ -216,8 +218,7 @@ export function AdminUsersClient({
       setFeedback(`Cadastro de ${payload.user.name} atualizado com sucesso.`);
       setEditingUser(null);
     } catch {
-      setError("Erro de conexão ao atualizar usuário.");
-      setEditingUser(null);
+      setEditError("Erro de conexão ao atualizar usuário. Tente novamente.");
     } finally {
       setSavingEdit(false);
     }
@@ -301,14 +302,14 @@ export function AdminUsersClient({
           </span>
           <span className="inline-flex items-center gap-1.5 text-[var(--ink-secondary)] tabular-nums">
             <span
-              className="h-2 w-2 rounded-full bg-emerald-500"
+              className="h-2 w-2 rounded-full bg-[var(--status-success-solid)]"
               aria-hidden="true"
             />
             {activeInPage} {activeInPage === 1 ? "ativo" : "ativos"} nesta página
           </span>
           <span className="inline-flex items-center gap-1.5 text-[var(--ink-secondary)] tabular-nums">
             <span
-              className="h-2 w-2 rounded-full bg-rose-500"
+              className="h-2 w-2 rounded-full bg-[var(--status-danger-solid)]"
               aria-hidden="true"
             />
             {suspendedInPage}{" "}
@@ -327,20 +328,22 @@ export function AdminUsersClient({
             label="Buscar usuário"
             className="md:col-span-2"
           >
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]"
-                aria-hidden="true"
-              />
-              <Input
-                id="users-search"
-                type="search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Nome ou e-mail..."
-                className="pl-9"
-              />
-            </div>
+            {(controlProps) => (
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]"
+                  aria-hidden="true"
+                />
+                <Input
+                  {...controlProps}
+                  type="search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Nome ou e-mail..."
+                  className="pl-9"
+                />
+              </div>
+            )}
           </FormField>
 
           <FormField id="users-role-filter" label="Papel">
@@ -377,6 +380,22 @@ export function AdminUsersClient({
           icon={<Users className="h-6 w-6" />}
           title="Nenhum usuário encontrado"
           description="Ajuste os termos da busca ou limpe os filtros aplicados para visualizar outras contas."
+          action={
+            searchInput.trim() || roleFilter || statusFilter ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchInput("");
+                  setRoleFilter("");
+                  setStatusFilter("");
+                }}
+              >
+                Limpar filtros
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <>
@@ -458,7 +477,9 @@ export function AdminUsersClient({
                           >
                             <span
                               className={`h-2 w-2 rounded-full ${
-                                isActive ? "bg-emerald-500" : "bg-rose-500"
+                                isActive
+                                  ? "bg-[var(--status-success-solid)]"
+                                  : "bg-[var(--status-danger-solid)]"
                               }`}
                               aria-hidden="true"
                             />
@@ -484,7 +505,7 @@ export function AdminUsersClient({
                               onClick={() => setPendingStatusUser(user)}
                               leftIcon={<Power className="h-3.5 w-3.5" />}
                             >
-                              {isActive ? "Suspender" : "Ativar"}
+                              {isActive ? "Suspender" : "Reativar"}
                             </Button>
                           </div>
                         </td>
@@ -535,7 +556,9 @@ export function AdminUsersClient({
                     >
                       <span
                         className={`h-2 w-2 rounded-full ${
-                          isActive ? "bg-emerald-500" : "bg-rose-500"
+                          isActive
+                            ? "bg-[var(--status-success-solid)]"
+                            : "bg-[var(--status-danger-solid)]"
                         }`}
                         aria-hidden="true"
                       />
@@ -629,10 +652,14 @@ export function AdminUsersClient({
         loading={savingEdit}
         onConfirm={() => void handleConfirmEdit()}
         onCancel={() => {
-          if (!savingEdit) setEditingUser(null);
+          if (!savingEdit) {
+            setEditError(null);
+            setEditingUser(null);
+          }
         }}
       >
         <div className="space-y-4">
+          {editError ? <Alert variant="danger">{editError}</Alert> : null}
           <FormField
             id="edit-user-role"
             label="Papel na plataforma"
@@ -692,7 +719,9 @@ export function AdminUsersClient({
             : `Deseja reativar a conta de "${pendingStatusUser?.name ?? ""}"?`
         }
         confirmLabel={
-          pendingStatusUser?.status === "ACTIVE" ? "Suspender" : "Ativar conta"
+          pendingStatusUser?.status === "ACTIVE"
+            ? "Suspender"
+            : "Reativar conta"
         }
         variant={pendingStatusUser?.status === "ACTIVE" ? "danger" : "default"}
         loading={togglingStatus}

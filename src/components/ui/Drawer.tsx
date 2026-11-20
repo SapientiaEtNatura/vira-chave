@@ -7,7 +7,7 @@ import { cn } from "@/lib/cn";
 import { ConfirmDialog } from "./ConfirmDialog";
 
 const FOCUSABLE_SELECTOR =
-  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  'a[href]:not([hidden]), button:not([disabled]):not([hidden]), textarea:not([disabled]):not([hidden]), input:not([disabled]):not([hidden]):not([type="hidden"]), select:not([disabled]):not([hidden]), [tabindex]:not([tabindex="-1"]):not([hidden])';
 
 export interface DrawerProps {
   open: boolean;
@@ -154,7 +154,7 @@ export function Drawer({
         >
           <div
             aria-hidden="true"
-            className="animate-drawer-backdrop fixed inset-0 bg-[#101828]/50 backdrop-blur-[1px]"
+            className="animate-drawer-backdrop fixed inset-0 bg-[var(--backdrop-scrim)] backdrop-blur-[1px]"
             onClick={() => {
               if (closeOnBackdropClick) {
                 handleRequestClose();
@@ -201,7 +201,9 @@ export function Drawer({
               </button>
             </header>
 
-            <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-6 py-5">
+              {children}
+            </div>
 
             {footer ? (
               <footer className="shrink-0 border-t border-[var(--border-subtle)] bg-[var(--bg-surface)] px-6 py-4">

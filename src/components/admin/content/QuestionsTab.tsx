@@ -27,6 +27,7 @@ interface QuestionsTabProps {
   questions: AdminDiscoveryQuestion[];
   macroAreas: AdminMacroArea[];
   busy: boolean;
+  serverError?: string | null;
   sendContentRequest: SendContentRequestFn;
   onQuestionSaved: (item: AdminDiscoveryQuestion, isEdit: boolean) => void;
   onRequestDelete: (pending: PendingDelete) => void;
@@ -119,6 +120,7 @@ export function QuestionsTab({
   questions,
   macroAreas,
   busy,
+  serverError,
   sendContentRequest,
   onQuestionSaved,
   onRequestDelete,
@@ -554,7 +556,9 @@ export function QuestionsTab({
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="space-y-4">
-          {formError ? <Alert variant="danger">{formError}</Alert> : null}
+          {formError || serverError ? (
+            <Alert variant="danger">{formError ?? serverError}</Alert>
+          ) : null}
 
           <FormField id="question-order" label="Ordem" required>
             <Input

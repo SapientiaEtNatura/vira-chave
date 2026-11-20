@@ -49,6 +49,24 @@ describe("Student journey stage computation", () => {
       }),
     ).toBe("CONSTRUIR");
 
+    expect(
+      resolveStageFromMilestones({
+        portfolioCount: 0,
+        challengeSubmissionCount: 0,
+        activeCourseCount: 0,
+        hasDiscovery: true,
+      }),
+    ).toBe("APRENDER");
+
+    expect(
+      resolveStageFromMilestones({
+        portfolioCount: 0,
+        challengeSubmissionCount: 1,
+        activeCourseCount: 1,
+        hasActiveShareLink: true,
+      }),
+    ).toBe("CONSTRUIR");
+
     const mockPrisma = {
       portfolioProject: {
         count: vi

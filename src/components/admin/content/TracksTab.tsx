@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -24,6 +25,7 @@ interface TracksTabProps {
   tracks: AdminTrack[];
   macroAreas: AdminMacroArea[];
   busy: boolean;
+  serverError?: string | null;
   sendContentRequest: SendContentRequestFn;
   onTrackCreated: (item: AdminTrack) => void;
   onTrackUpdated: (item: AdminTrack) => void;
@@ -42,6 +44,7 @@ export function TracksTab({
   tracks,
   macroAreas,
   busy,
+  serverError,
   sendContentRequest,
   onTrackCreated,
   onTrackUpdated,
@@ -329,7 +332,8 @@ export function TracksTab({
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="space-y-4">
-          <FormField id="track-macro-area" label="MacroÁrea" required>
+          {serverError ? <Alert variant="danger">{serverError}</Alert> : null}
+          <FormField id="track-macro-area" label="Macroárea" required>
             <Select
               required
               value={macroAreaId}

@@ -3,8 +3,9 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { AuthSplitLayout } from "@/components/layout/AuthSplitLayout";
-import { Alert, Button, FormField, Input } from "@/components/ui";
+import { Alert, Button, ButtonLink, FormField, Input } from "@/components/ui";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -12,7 +13,9 @@ function ResetPasswordForm() {
 
   const [email, setEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [resetDone, setResetDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -68,11 +71,17 @@ function ResetPasswordForm() {
       };
 
       if (!response.ok) {
-        setError(data.error ?? "Token inválido ou expirado.");
+        setError(
+          data.error && !/token/i.test(data.error)
+            ? data.error
+            : "Este link de recuperação é inválido ou expirou. Solicite um novo link abaixo.",
+        );
       } else {
         setMessage(
           data.message ?? "Senha redefinida com sucesso. Você já pode entrar.",
         );
+        setNewPassword("");
+        setResetDone(true);
       }
     } catch {
       setError("Erro de conexão. Tente novamente.");
@@ -89,7 +98,7 @@ function ResetPasswordForm() {
         </h1>
         <p className="text-sm text-[var(--ink-muted)]">
           {token
-            ? "Escolha uma nova senha com pelo menos 8 caracteres, letras maiúsculas, minúsculas e número."
+            ? "Crie uma nova senha forte para voltar a acessar sua conta."
             : "Informe seu e-mail cadastrado para receber o link de recuperação."}
         </p>
       </div>
@@ -113,7 +122,11 @@ function ResetPasswordForm() {
         </Alert>
       ) : null}
 
-      {token ? (
+      {resetDone ? (
+        <ButtonLink href="/login" variant="primary" size="md" className="w-full">
+          Ir para o login
+        </ButtonLink>
+      ) : token ? (
         <form onSubmit={handleConfirmReset} className="space-y-4">
           <FormField
             id="newPassword"
@@ -121,16 +134,34 @@ function ResetPasswordForm() {
             required
             hint="Mínimo de 8 caracteres, com letras maiúsculas, minúsculas e número."
           >
-            <Input
-              id="newPassword"
-              name="newPassword"
-              type="password"
-              autoComplete="new-password"
-              required
-              minLength={8}
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-            />
+            {(controlProps) => (
+              <div className="relative">
+                <Input
+                  {...controlProps}
+                  name="newPassword"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  minLength={8}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="pr-12"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+                  aria-pressed={showPassword}
+                  className="absolute top-0 right-0 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-r-lg text-[var(--ink-muted)] transition-colors hover:text-[var(--ink-primary)]"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" aria-hidden="true" />
+                  ) : (
+                    <Eye className="h-4 w-4" aria-hidden="true" />
+                  )}
+                </button>
+              </div>
+            )}
           </FormField>
 
           <Button
@@ -170,7 +201,15 @@ function ResetPasswordForm() {
         </form>
       )}
 
-      <div className="mt-6 border-t border-[var(--border-subtle)] pt-4 text-center text-sm text-[var(--ink-secondary)]">
+      <div className="mt-6 flex flex-wrap justify-center gap-4 border-t border-[var(--border-subtle)] pt-4 text-center text-sm text-[var(--ink-secondary)]">
+        {token && !resetDone ? (
+          <Link
+            href="/recuperar-senha"
+            className="inline-flex min-h-11 items-center font-medium text-[var(--ink-muted)] underline-offset-4 hover:text-[var(--ink-primary)] hover:underline"
+          >
+            Pedir novo link
+          </Link>
+        ) : null}
         <Link
           href="/login"
           className="inline-flex min-h-11 items-center font-semibold text-[var(--brand-primary)] underline-offset-4 hover:underline"
@@ -185,8 +224,8 @@ function ResetPasswordForm() {
 export default function RecuperarSenhaPage() {
   return (
     <AuthSplitLayout
-      headline="Recupere seu acesso com tranquilidade."
-      description="Enviaremos instruções seguras para você definir uma nova senha e continuar sua jornada."
+      headline="Recupere seu acesso com segurança."
+      description="Defina uma nova senha para voltar às suas trilhas, desafios e portfólio sem perder seu progresso."
     >
       <Suspense
         fallback={

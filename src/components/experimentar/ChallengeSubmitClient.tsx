@@ -72,7 +72,7 @@ export function ChallengeSubmitClient({
       };
 
       if (!response.ok) {
-        setError(data.error ?? "Não foi possível enviar sua submissão.");
+        setError(data.error ?? "Não foi possível enviar sua entrega.");
         return;
       }
 
@@ -87,7 +87,7 @@ export function ChallengeSubmitClient({
       setFileInputKey((prev) => prev + 1);
       router.refresh();
     } catch {
-      setError("Erro de conexão ao enviar sua submissão. Tente novamente.");
+      setError("Erro de conexão ao enviar sua entrega. Tente novamente.");
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +139,11 @@ export function ChallengeSubmitClient({
           id="challenge-reflection"
           label="Descrição da solução e aprendizado"
           required
-          hint={`Mínimo de 10 caracteres (${reflection.trim().length}/10).`}
+          hint={
+            reflection.trim().length < 10
+              ? `Faltam ${10 - reflection.trim().length} caracteres para atingir o mínimo.`
+              : `${reflection.trim().length} caracteres registrados.`
+          }
         >
           <Textarea
             required

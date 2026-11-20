@@ -17,9 +17,9 @@ export interface MacroAreaFilterBarProps {
 }
 
 const CHIP_BASE_CLASS =
-  "min-h-11 inline-flex shrink-0 items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors duration-150";
+  "min-h-11 inline-flex shrink-0 items-center gap-2 rounded-full border-[1.5px] px-4 py-2 text-sm font-semibold transition-colors duration-150";
 const CHIP_ACTIVE_CLASS =
-  "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white shadow-xs";
+  "border-[color-mix(in_srgb,var(--brand-primary)_28%,var(--brand-primary-border))] bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]";
 const CHIP_INACTIVE_CLASS =
   "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--ink-primary)]";
 
@@ -46,7 +46,7 @@ export function MacroAreaFilterBar({
         className={`${CHIP_BASE_CLASS} ${!activeArea ? CHIP_ACTIVE_CLASS : CHIP_INACTIVE_CLASS}`}
       >
         <span>Todas as áreas</span>
-        <span className="text-xs opacity-80 tabular-nums">({totalCount})</span>
+        <span className="font-mono text-xs tabular-nums">({totalCount})</span>
       </Link>
 
       {recommendedSlugs.length > 0 && recommendedCount > 0 ? (
@@ -58,7 +58,7 @@ export function MacroAreaFilterBar({
         >
           <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span>Para você</span>
-          <span className="text-xs opacity-80 tabular-nums">
+          <span className="font-mono text-xs tabular-nums">
             ({recommendedCount})
           </span>
         </Link>
@@ -75,7 +75,7 @@ export function MacroAreaFilterBar({
             className={`${CHIP_BASE_CLASS} ${isActive ? CHIP_ACTIVE_CLASS : CHIP_INACTIVE_CLASS}`}
           >
             <span>{item.name}</span>
-            <span className="text-xs opacity-80 tabular-nums">
+            <span className="font-mono text-xs tabular-nums">
               ({item.count})
             </span>
           </Link>

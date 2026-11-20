@@ -1,4 +1,5 @@
 export { Alert, type AlertProps, type AlertVariant } from "./Alert";
+export { Avatar, AvatarFallback, AvatarImage } from "./avatar";
 export { Badge, type BadgeProps, type BadgeVariant } from "./Badge";
 export { BrandLogo, type BrandLogoProps } from "./BrandLogo";
 export {
@@ -17,6 +18,23 @@ export {
 } from "./Card";
 export { ConfirmDialog, type ConfirmDialogProps } from "./ConfirmDialog";
 export { Drawer, type DrawerProps } from "./Drawer";
+export {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+} from "./dropdown-menu";
 export { EmptyState, type EmptyStateProps } from "./EmptyState";
 export {
   FileUploadField,

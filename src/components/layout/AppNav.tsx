@@ -24,7 +24,19 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
-import { BrandLogo } from "@/components/ui";
+import {
+  Avatar,
+  AvatarFallback,
+  BrandLogo,
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useSlidingIndicator } from "@/lib/use-sliding-indicator";
 import {
@@ -34,17 +46,6 @@ import {
 } from "./MobileAccountMenu";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { PreviewBanner, type PreviewMode } from "./PreviewBanner";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export type NavIconKey =
   | "home"
@@ -124,6 +125,27 @@ export function AppNav({
   const dockNavRef = useRef<HTMLElement | null>(null);
   const isExpanded = pinned || hovered;
   const [menuOpen, setMenuOpen] = useState(false);
+
+  useEffect(() => {
+    if (variant !== "dock") return;
+    try {
+      const saved = window.localStorage.getItem("virachave:dock-pinned");
+      if (saved === "true") {
+        setPinned(true);
+      }
+    } catch {
+      // Ignore storage failures in restricted contexts
+    }
+  }, [variant]);
+
+  function handlePinnedChange(next: boolean) {
+    setPinned(next);
+    try {
+      window.localStorage.setItem("virachave:dock-pinned", String(next));
+    } catch {
+      // Ignore storage failures
+    }
+  }
 
   useEffect(() => {
     if (variant !== "dock") return;
@@ -434,7 +456,6 @@ export function AppNav({
                   >
                     <span className="flex min-w-0 items-center gap-2.5">
                       <Avatar>
-                        <AvatarImage src="" />
                         <AvatarFallback>{initials}</AvatarFallback>
                       </Avatar>
                       {isExpanded ? (
@@ -461,15 +482,19 @@ export function AppNav({
                   <DropdownMenuGroup>
                     <DropdownMenuLabel>Opções</DropdownMenuLabel>
 
-                    <DropdownMenuItem asChild>
-                      <Link href="/app/conta">
-                        <UserRound />
-                        Minha conta
-                      </Link>
-                    </DropdownMenuItem>
+                    {homeHref === "/app" ? (
+                      <DropdownMenuItem asChild>
+                        <Link href="/app/conta">
+                          <UserRound />
+                          Minha conta
+                        </Link>
+                      </DropdownMenuItem>
+                    ) : null}
                     <DropdownMenuCheckboxItem
                       checked={pinned}
-                      onCheckedChange={setPinned}
+                      onCheckedChange={(checked) =>
+                        handlePinnedChange(Boolean(checked))
+                      }
                     >
                       {pinned ? (
                         <PinOff
@@ -488,10 +513,10 @@ export function AppNav({
                   <DropdownMenuSeparator />
 
                   {isAdmin && (
-                    <DropdownMenuItem asChild variant="destructive">
-                      <Link href="/admin" aria-label="Admin">
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" aria-label="Ir para o painel Admin">
                         <Shield />
-                        <span>Admin</span>
+                        <span>Painel Admin</span>
                       </Link>
                     </DropdownMenuItem>
                   )}
@@ -538,11 +563,13 @@ export function AppNav({
         />
       </header>
 
-      <MobileBottomNav
-        className="lg:hidden"
-        items={bottomNavItems}
-        activeHref={bottomActiveHref}
-      />
+      {bottomNavItems.length > 1 ? (
+        <MobileBottomNav
+          className="lg:hidden"
+          items={bottomNavItems}
+          activeHref={bottomActiveHref}
+        />
+      ) : null}
     </>
   );
 }

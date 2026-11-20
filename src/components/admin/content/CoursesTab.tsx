@@ -33,6 +33,7 @@ interface CoursesTabProps {
   courseItems: AdminCourseItem[];
   tracks: AdminTrack[];
   busy: boolean;
+  serverError?: string | null;
   checkingLinks: boolean;
   checkingCourseId: string | null;
   sendContentRequest: SendContentRequestFn;
@@ -55,6 +56,7 @@ export function CoursesTab({
   courseItems,
   tracks,
   busy,
+  serverError,
   checkingLinks,
   checkingCourseId,
   sendContentRequest,
@@ -362,7 +364,7 @@ export function CoursesTab({
               course.lastCheckOk === true ? (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--status-success-ink)]">
                   <span
-                    className="h-2 w-2 rounded-full bg-emerald-500"
+                    className="h-2 w-2 rounded-full bg-[var(--status-success-solid)]"
                     aria-hidden="true"
                   />
                   Online
@@ -370,7 +372,7 @@ export function CoursesTab({
               ) : course.lastCheckOk === false ? (
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--status-danger-ink)]">
                   <span
-                    className="h-2 w-2 rounded-full bg-rose-500"
+                    className="h-2 w-2 rounded-full bg-[var(--status-danger-solid)]"
                     aria-hidden="true"
                   />
                   {`Erro ${course.lastCheckStatus ?? "conexão"}`}
@@ -501,6 +503,7 @@ export function CoursesTab({
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+          {serverError ? <Alert variant="danger">{serverError}</Alert> : null}
           <FormField id="course-track" label="Trilha" required>
             <Select
               required

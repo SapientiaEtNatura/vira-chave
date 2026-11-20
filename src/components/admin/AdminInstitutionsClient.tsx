@@ -112,6 +112,10 @@ export function AdminInstitutionsClient({
   const [pendingClassroomAction, setPendingClassroomAction] =
     useState<PendingClassroomAction | null>(null);
   const [updatingClassroom, setUpdatingClassroom] = useState(false);
+  const [pendingInstitutionToggle, setPendingInstitutionToggle] =
+    useState<AdminInstitutionItem | null>(null);
+  const [pendingEducatorToggle, setPendingEducatorToggle] =
+    useState<AdminEducatorItem | null>(null);
   const classroomsFirstFilter = useRef(true);
 
   async function handleCreateInstitution(e: React.FormEvent<HTMLFormElement>) {
@@ -563,7 +567,7 @@ export function AdminInstitutionsClient({
                       <span
                         className={`h-2 w-2 rounded-full ${
                           institution.active
-                            ? "bg-emerald-500"
+                            ? "bg-[var(--status-success-solid)]"
                             : "bg-[var(--ink-muted)]"
                         }`}
                         aria-hidden="true"
@@ -593,9 +597,13 @@ export function AdminInstitutionsClient({
                     </Button>
                   </div>
 
-                  <p className="text-xs text-[var(--ink-muted)]">
-                    {institution.userCount} usuários vinculados ·{" "}
-                    {institution.classroomCount} turmas
+                  <p className="text-xs tabular-nums text-[var(--ink-muted)]">
+                    {institution.userCount}{" "}
+                    {institution.userCount === 1
+                      ? "usuário vinculado"
+                      : "usuários vinculados"}{" "}
+                    · {institution.classroomCount}{" "}
+                    {institution.classroomCount === 1 ? "turma" : "turmas"}
                   </p>
                 </div>
 
@@ -611,7 +619,7 @@ export function AdminInstitutionsClient({
                     size="sm"
                     disabled={togglingId === institution.id}
                     loading={togglingId === institution.id}
-                    onClick={() => handleToggleInstitution(institution)}
+                    onClick={() => setPendingInstitutionToggle(institution)}
                     leftIcon={<Power className="h-3.5 w-3.5" />}
                   >
                     {institution.active ? "Desativar" : "Reativar"}
@@ -664,7 +672,9 @@ export function AdminInstitutionsClient({
                         >
                           <span
                             className={`h-2 w-2 rounded-full ${
-                              isActive ? "bg-emerald-500" : "bg-rose-500"
+                              isActive
+                                ? "bg-[var(--status-success-solid)]"
+                                : "bg-[var(--status-danger-solid)]"
                             }`}
                             aria-hidden="true"
                           />
@@ -694,7 +704,7 @@ export function AdminInstitutionsClient({
                       size="sm"
                       disabled={togglingId === educator.id}
                       loading={togglingId === educator.id}
-                      onClick={() => handleToggleEducatorStatus(educator)}
+                      onClick={() => setPendingEducatorToggle(educator)}
                       leftIcon={<Power className="h-3.5 w-3.5" />}
                     >
                       {isActive ? "Suspender" : "Reativar"}
@@ -723,20 +733,22 @@ export function AdminInstitutionsClient({
                 label="Buscar turma ou código"
                 className="md:col-span-2"
               >
-                <div className="relative">
-                  <Search
-                    className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    id="classrooms-search"
-                    type="search"
-                    value={classroomSearch}
-                    onChange={(e) => setClassroomSearch(e.target.value)}
-                    placeholder="Nome da turma ou código (ex: TURMA-...)"
-                    className="pl-9"
-                  />
-                </div>
+                {(controlProps) => (
+                  <div className="relative">
+                    <Search
+                      className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      {...controlProps}
+                      type="search"
+                      value={classroomSearch}
+                      onChange={(e) => setClassroomSearch(e.target.value)}
+                      placeholder="Nome da turma ou código (ex: VC-...)"
+                      className="pl-9"
+                    />
+                  </div>
+                )}
               </FormField>
 
               <FormField id="classrooms-institution-filter" label="Escola">
@@ -774,6 +786,21 @@ export function AdminInstitutionsClient({
               icon={<Users className="h-6 w-6" />}
               title="Nenhuma turma encontrada"
               description="Não há turmas cadastradas para os filtros selecionados."
+              action={
+                classroomSearch.trim() || classroomInstitutionId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setClassroomSearch("");
+                      setClassroomInstitutionId("");
+                    }}
+                  >
+                    Limpar filtros
+                  </Button>
+                ) : undefined
+              }
             />
           ) : (
             <>
@@ -843,7 +870,7 @@ export function AdminInstitutionsClient({
                               <span
                                 className={`h-2 w-2 rounded-full ${
                                   classroom.active
-                                    ? "bg-emerald-500"
+                                    ? "bg-[var(--status-success-solid)]"
                                     : "bg-[var(--ink-muted)]"
                                 }`}
                                 aria-hidden="true"
@@ -916,7 +943,7 @@ export function AdminInstitutionsClient({
                         <span
                           className={`h-2 w-2 rounded-full ${
                             classroom.active
-                              ? "bg-emerald-500"
+                              ? "bg-[var(--status-success-solid)]"
                               : "bg-[var(--ink-muted)]"
                           }`}
                           aria-hidden="true"
@@ -932,8 +959,8 @@ export function AdminInstitutionsClient({
                       <span className="text-[var(--ink-secondary)] tabular-nums">
                         {classroom._count.enrollments}{" "}
                         {classroom._count.enrollments === 1
-                          ? "aluno"
-                          : "alunos"}
+                          ? "estudante"
+                          : "estudantes"}
                       </span>
                     </div>
 
@@ -1012,6 +1039,66 @@ export function AdminInstitutionsClient({
         onCancel={() => {
           if (!updatingClassroom) setPendingClassroomAction(null);
         }}
+      />
+
+      <ConfirmDialog
+        open={pendingInstitutionToggle !== null}
+        title={
+          pendingInstitutionToggle?.active
+            ? "Desativar instituição?"
+            : "Reativar instituição?"
+        }
+        description={
+          pendingInstitutionToggle?.active
+            ? `Novos educadores não poderão se cadastrar usando o código de "${pendingInstitutionToggle.name}". Contas já vinculadas continuam funcionando.`
+            : `Deseja reativar "${pendingInstitutionToggle?.name ?? ""}" para novos cadastros de educadores?`
+        }
+        confirmLabel={
+          pendingInstitutionToggle?.active ? "Desativar" : "Reativar"
+        }
+        variant={pendingInstitutionToggle?.active ? "danger" : "default"}
+        loading={
+          pendingInstitutionToggle !== null &&
+          togglingId === pendingInstitutionToggle.id
+        }
+        onConfirm={async () => {
+          if (!pendingInstitutionToggle) return;
+          const target = pendingInstitutionToggle;
+          setPendingInstitutionToggle(null);
+          await handleToggleInstitution(target);
+        }}
+        onCancel={() => setPendingInstitutionToggle(null)}
+      />
+
+      <ConfirmDialog
+        open={pendingEducatorToggle !== null}
+        title={
+          pendingEducatorToggle?.status === "ACTIVE"
+            ? "Suspender conta de educador?"
+            : "Reativar conta de educador?"
+        }
+        description={
+          pendingEducatorToggle?.status === "ACTIVE"
+            ? `Tem certeza que deseja suspender "${pendingEducatorToggle.name}"? A sessão atual será revogada e o acesso ficará bloqueado até reativação.`
+            : `Deseja reativar o acesso de "${pendingEducatorToggle?.name ?? ""}"?`
+        }
+        confirmLabel={
+          pendingEducatorToggle?.status === "ACTIVE" ? "Suspender" : "Reativar"
+        }
+        variant={
+          pendingEducatorToggle?.status === "ACTIVE" ? "danger" : "default"
+        }
+        loading={
+          pendingEducatorToggle !== null &&
+          togglingId === pendingEducatorToggle.id
+        }
+        onConfirm={async () => {
+          if (!pendingEducatorToggle) return;
+          const target = pendingEducatorToggle;
+          setPendingEducatorToggle(null);
+          await handleToggleEducatorStatus(target);
+        }}
+        onCancel={() => setPendingEducatorToggle(null)}
       />
     </div>
   );

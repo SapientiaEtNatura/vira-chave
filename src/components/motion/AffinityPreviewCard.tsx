@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -17,7 +17,6 @@ interface AreaConfig {
   barLabel: string;
   barColor: string;
   initialScore: number;
-  showInBars?: boolean;
 }
 
 const AREAS: AreaConfig[] = [
@@ -27,11 +26,10 @@ const AREAS: AreaConfig[] = [
     barLabel: "Comunicação & Conteúdo",
     barColor: "bg-[var(--brand-primary)]",
     initialScore: 74,
-    showInBars: true,
   },
   {
     slug: "design",
-    chartLabel: "Design Digital",
+    chartLabel: "Design",
     barLabel: "Design Digital",
     barColor: "bg-[var(--stage-discover-ink)]",
     initialScore: 68,
@@ -42,18 +40,17 @@ const AREAS: AreaConfig[] = [
     barLabel: "Negócios & Impacto",
     barColor: "bg-[var(--stage-learn-ink)]",
     initialScore: 62,
-    showInBars: true,
   },
   {
     slug: "saude",
-    chartLabel: "Saúde & Ciência",
+    chartLabel: "Saúde",
     barLabel: "Saúde & Ciência",
     barColor: "bg-[var(--stage-build-ink)]",
     initialScore: 71,
   },
   {
     slug: "sustentabilidade",
-    chartLabel: "Sustentabilidade",
+    chartLabel: "Meio Ambiente",
     barLabel: "Sustentabilidade",
     barColor: "bg-[var(--stage-build-ink)]",
     initialScore: 58,
@@ -64,14 +61,7 @@ const AREAS: AreaConfig[] = [
     barLabel: "Tecnologia & Dados",
     barColor: "bg-[var(--stage-discover-ink)]",
     initialScore: 86,
-    showInBars: true,
   },
-];
-
-const BAR_AREAS = [
-  AREAS[5], // Tecnologia & Dados
-  AREAS[0], // Comunicação & Conteúdo
-  AREAS[2], // Negócios & Impacto
 ];
 
 const INITIAL_SCORES: Record<string, number> = Object.fromEntries(
@@ -135,11 +125,15 @@ export function AffinityPreviewCard() {
   const barRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const numberRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const displayValuesRef = useRef<Record<string, number>>({ ...INITIAL_SCORES });
+  const tweensRef = useRef<gsap.core.Tween[]>([]);
 
   const [scores, setScores] = useState<Record<string, number>>(INITIAL_SCORES);
   const [activePreset, setActivePreset] = useState<string>("auto");
   const [isVisible, setIsVisible] = useState(false);
-  const [prefersReduced, setPrefersReduced] = useState(false);
+  const [prefersReduced, setPrefersReduced] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  });
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -168,6 +162,10 @@ export function AffinityPreviewCard() {
     return () => {
       mediaQuery.removeEventListener("change", onMediaChange);
       observer?.disconnect();
+      for (const tween of tweensRef.current) {
+        tween.kill();
+      }
+      tweensRef.current = [];
     };
   }, []);
 
@@ -180,20 +178,37 @@ export function AffinityPreviewCard() {
       setScores((prev) => {
         const next: Record<string, number> = {};
         for (const area of AREAS) {
-          next[area.slug] = nextRandomScore(prev[area.slug] ?? area.initialScore);
+          next[area.slug] = nextRandomScore(
+            prev[area.slug] ?? area.initialScore,
+          );
         }
         return next;
       });
-    }, 1900);
+    }, 2200);
 
     return () => {
       window.clearInterval(intervalId);
     };
   }, [isVisible, prefersReduced, activePreset]);
 
+  const topAreas = useMemo(() => {
+    return [...AREAS]
+      .sort(
+        (a, b) =>
+          (scores[b.slug] ?? b.initialScore) -
+          (scores[a.slug] ?? a.initialScore),
+      )
+      .slice(0, 3);
+  }, [scores]);
+
   useEffect(() => {
+    for (const tween of tweensRef.current) {
+      tween.kill();
+    }
+    tweensRef.current = [];
+
     if (prefersReduced) {
-      for (const area of BAR_AREAS) {
+      for (const area of topAreas) {
         const score = scores[area.slug] ?? area.initialScore;
         const barEl = barRefs.current[area.slug];
         const numEl = numberRefs.current[area.slug];
@@ -208,23 +223,29 @@ export function AffinityPreviewCard() {
       return;
     }
 
-    const ctx = gsap.context(() => {
-      for (const area of BAR_AREAS) {
-        const targetScore = scores[area.slug] ?? area.initialScore;
-        const barEl = barRefs.current[area.slug];
-        const numEl = numberRefs.current[area.slug];
+    const nextTweens: gsap.core.Tween[] = [];
 
-        if (barEl) {
+    for (const area of topAreas) {
+      const targetScore = scores[area.slug] ?? area.initialScore;
+      const barEl = barRefs.current[area.slug];
+      const numEl = numberRefs.current[area.slug];
+
+      if (barEl) {
+        nextTweens.push(
           gsap.to(barEl, {
             scaleX: targetScore / 100,
             duration: 0.65,
             ease: MOTION_EASE.enter,
             transformOrigin: "left center",
-          });
-        }
+          }),
+        );
+      }
 
-        if (numEl) {
-          const counter = { val: displayValuesRef.current[area.slug] ?? targetScore };
+      if (numEl) {
+        const counter = {
+          val: displayValuesRef.current[area.slug] ?? targetScore,
+        };
+        nextTweens.push(
           gsap.to(counter, {
             val: targetScore,
             duration: 0.65,
@@ -234,15 +255,13 @@ export function AffinityPreviewCard() {
               displayValuesRef.current[area.slug] = rounded;
               numEl.textContent = `${rounded}%`;
             },
-          });
-        }
+          }),
+        );
       }
-    }, rootRef);
+    }
 
-    return () => {
-      ctx.revert();
-    };
-  }, [scores, prefersReduced]);
+    tweensRef.current = nextTweens;
+  }, [scores, prefersReduced, topAreas]);
 
   const chartData = AREAS.map((area) => ({
     name: area.chartLabel,
@@ -259,7 +278,7 @@ export function AffinityPreviewCard() {
   return (
     <div ref={rootRef} className="space-y-4">
       <div
-        className="flex flex-wrap items-center gap-1.5"
+        className="flex flex-wrap items-center gap-2"
         role="group"
         aria-label="Simular perfis de afinidade"
       >
@@ -271,9 +290,9 @@ export function AffinityPreviewCard() {
               type="button"
               onClick={() => handleSelectPreset(preset)}
               aria-pressed={isActive}
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+              className={`min-h-11 rounded-full border-[1.5px] px-3.5 py-1.5 text-xs font-semibold transition-colors sm:min-h-9 sm:px-3 ${
                 isActive
-                  ? "border-[var(--stage-discover-border)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]"
+                  ? "border-[color-mix(in_srgb,var(--stage-discover-ink)_28%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]"
                   : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-muted)] hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)]"
               }`}
             >
@@ -286,10 +305,10 @@ export function AffinityPreviewCard() {
       <div
         className="h-60 w-full"
         role="img"
-        aria-label="Prévia animada do mapa de afinidades por macroárea"
+        aria-label="Prévia interativa do mapa de afinidades em 6 áreas"
       >
         <ResponsiveContainer width="100%" height="100%">
-          <RadarChart cx="50%" cy="50%" outerRadius="64%" data={chartData}>
+          <RadarChart cx="50%" cy="50%" outerRadius="66%" data={chartData}>
             <PolarGrid stroke="var(--chart-grid)" />
             <PolarAngleAxis
               dataKey="name"
@@ -305,7 +324,7 @@ export function AffinityPreviewCard() {
               dataKey="score"
               stroke="var(--chart-1)"
               fill="var(--chart-1)"
-              fillOpacity={0.3}
+              fillOpacity={0.28}
               isAnimationActive={!prefersReduced}
               animationDuration={650}
               animationEasing="ease-out"
@@ -314,34 +333,60 @@ export function AffinityPreviewCard() {
         </ResponsiveContainer>
       </div>
 
+      <div className="sr-only">
+        <table>
+          <caption>Pontuação simulada de afinidade por área</caption>
+          <thead>
+            <tr>
+              <th>Área</th>
+              <th>Afinidade</th>
+            </tr>
+          </thead>
+          <tbody>
+            {AREAS.map((area) => (
+              <tr key={area.slug}>
+                <td>{area.barLabel}</td>
+                <td>{scores[area.slug] ?? area.initialScore}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
       <div className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-4">
-        {BAR_AREAS.map((area) => (
-          <div key={area.slug} className="space-y-1.5">
-            <div className="flex items-center justify-between text-xs font-semibold text-[var(--ink-primary)]">
-              <span>{area.barLabel}</span>
-              <span
-                ref={(el) => {
-                  numberRefs.current[area.slug] = el;
-                }}
-                className="font-mono text-[var(--ink-muted)]"
-              >
-                {area.initialScore}%
-              </span>
+        <p className="text-xs font-semibold text-[var(--ink-muted)]">
+          Áreas em destaque neste perfil
+        </p>
+        {topAreas.map((area) => {
+          const currentScore = scores[area.slug] ?? area.initialScore;
+          return (
+            <div key={area.slug} className="space-y-1.5">
+              <div className="flex items-center justify-between text-xs font-semibold text-[var(--ink-primary)]">
+                <span>{area.barLabel}</span>
+                <span
+                  ref={(el) => {
+                    numberRefs.current[area.slug] = el;
+                  }}
+                  className="font-mono tabular-nums text-[var(--ink-muted)]"
+                >
+                  {currentScore}%
+                </span>
+              </div>
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-surface)]">
+                <div
+                  ref={(el) => {
+                    barRefs.current[area.slug] = el;
+                  }}
+                  style={{
+                    transform: `scaleX(${currentScore / 100})`,
+                    transformOrigin: "left center",
+                  }}
+                  className={`h-full w-full rounded-full ${area.barColor}`}
+                />
+              </div>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--bg-surface)]">
-              <div
-                ref={(el) => {
-                  barRefs.current[area.slug] = el;
-                }}
-                style={{
-                  transform: `scaleX(${area.initialScore / 100})`,
-                  transformOrigin: "left center",
-                }}
-                className={`h-full w-full rounded-full ${area.barColor}`}
-              />
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

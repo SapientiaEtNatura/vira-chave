@@ -1,7 +1,14 @@
 "use client";
 
 import { useRef } from "react";
-import { BookOpen, Check, Compass, FlaskConical, Hammer, Lock } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  Compass,
+  FlaskConical,
+  Hammer,
+  Lock,
+} from "lucide-react";
 import { Badge, Card, type StageKey } from "@/components/ui";
 import { gsap, MOTION_EASE, useGSAP } from "@/lib/gsap";
 
@@ -9,7 +16,6 @@ export interface HeroJourneyStage {
   key: StageKey;
   title: string;
   iconClasses: string;
-  stepOffset: string;
   previewBadge?: string;
   previewDone?: boolean;
   previewLocked?: boolean;
@@ -36,8 +42,12 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
 
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const steps = container.querySelectorAll<HTMLElement>("[data-journey-step]");
-        const lines = container.querySelectorAll<HTMLElement>("[data-journey-line]");
+        const steps = container.querySelectorAll<HTMLElement>(
+          "[data-journey-step]",
+        );
+        const lines = container.querySelectorAll<HTMLElement>(
+          "[data-journey-line]",
+        );
 
         const tl = gsap.timeline({
           defaults: { ease: MOTION_EASE.enter },
@@ -47,11 +57,11 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
           tl.from(
             step,
             {
-              y: 12,
-              opacity: 0,
-              duration: 0.42,
+              y: 8,
+              duration: 0.35,
+              clearProps: "transform",
             },
-            index === 0 ? 0.1 : ">-0.05",
+            index === 0 ? 0.05 : ">-0.12",
           );
 
           const line = lines[index];
@@ -61,9 +71,10 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
               {
                 scaleY: 0,
                 transformOrigin: "top center",
-                duration: 0.28,
+                duration: 0.22,
+                clearProps: "transform",
               },
-              ">-0.12",
+              ">-0.15",
             );
           }
         });
@@ -77,15 +88,15 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
       <Card
         variant="default"
         padding="lg"
-        aria-label="Prévia visual da jornada em 4 etapas"
-        className="border-[var(--border-strong)] shadow-sm lg:rotate-1"
+        aria-label="Exemplo ilustrativo do percurso em 4 etapas"
+        className="border-[var(--border-strong)]"
       >
         <div className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-4">
           <h2 className="font-display text-xl font-bold text-[var(--ink-primary)]">
-            Seu caminho ganha forma a cada passo.
+            Um roteiro em quatro etapas
           </h2>
           <Badge variant="success" className="shrink-0 whitespace-nowrap">
-            4 etapas
+            Exemplo do percurso
           </Badge>
         </div>
 
@@ -127,19 +138,19 @@ export function HeroJourneyCard({ stages }: HeroJourneyCardProps) {
                 {stage.previewDone ? (
                   <span
                     aria-label="Etapa concluída"
-                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]"
+                    className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-[1.5px] border-[color-mix(in_srgb,var(--stage-build-ink)_28%,var(--stage-build-border))] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]"
                   >
-                    <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                    <Check className="h-3.5 w-3.5 stroke-[2.5]" aria-hidden="true" />
                   </span>
                 ) : stage.previewBadge ? (
-                  <span className="rounded-full bg-[var(--stage-experiment-bg)] px-2.5 py-0.5 text-xs font-semibold text-[var(--stage-experiment-ink)]">
-                    {stage.previewBadge}
-                  </span>
+                  <Badge variant="experiment">{stage.previewBadge}</Badge>
                 ) : stage.previewLocked ? (
-                  <Lock
-                    className="h-4 w-4 shrink-0 text-[var(--ink-muted)]"
-                    aria-hidden="true"
-                  />
+                  <span
+                    aria-label="Próxima etapa"
+                    className="inline-flex items-center text-[var(--ink-muted)]"
+                  >
+                    <Lock className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  </span>
                 ) : null}
               </li>
             );

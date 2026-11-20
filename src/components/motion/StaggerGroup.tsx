@@ -2,11 +2,12 @@
 
 import type { ReactNode } from "react";
 import { useRef } from "react";
-import {
-  gsap,
-  MOTION_EASE,
-  useGSAP,
-} from "@/lib/gsap";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import { gsap, MOTION_EASE, useGSAP } from "@/lib/gsap";
+
+if (typeof window !== "undefined") {
+  gsap.registerPlugin(ScrollTrigger);
+}
 
 interface StaggerGroupProps {
   children: ReactNode;
@@ -23,18 +24,21 @@ export function StaggerGroup({ children, className }: StaggerGroupProps) {
 
       const mm = gsap.matchMedia();
       mm.add("(prefers-reduced-motion: no-preference)", () => {
-        const items = container.querySelectorAll<HTMLElement>("[data-motion-item]");
+        const items = container.querySelectorAll<HTMLElement>(
+          "[data-motion-item]",
+        );
         if (items.length === 0) return;
 
         gsap.from(items, {
-          y: 20,
+          y: 18,
           opacity: 0,
-          duration: 0.7,
+          duration: 0.65,
           ease: MOTION_EASE.enter,
-          stagger: 0.1,
+          stagger: 0.08,
+          clearProps: "transform,opacity",
           scrollTrigger: {
             trigger: container,
-            start: "top 62%",
+            start: "top 88%",
             once: true,
           },
         });

@@ -11,34 +11,7 @@ export default function PrivacidadePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:py-12">
       <div className="grid items-start gap-8 lg:grid-cols-12">
-        <aside className="lg:sticky lg:top-24 lg:col-span-4">
-          <Card variant="default" padding="md" className="space-y-4">
-            <div className="space-y-2">
-              <Badge variant="brand">LGPD · Versão 1.0</Badge>
-              <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
-                Privacidade sem letrinha miúda
-              </h2>
-              <p className="text-sm leading-relaxed text-[var(--ink-muted)]">
-                Explicamos de forma direta o que coletamos, quem pode ver e como
-                você controla seus dados na plataforma.
-              </p>
-            </div>
-
-            <nav aria-label="Seções da política" className="space-y-1 border-t border-[var(--border-subtle)] pt-3">
-              {PRIVACY_SECTIONS.map((section) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--brand-primary)]"
-                >
-                  {section.label}
-                </a>
-              ))}
-            </nav>
-          </Card>
-        </aside>
-
-        <div className="lg:col-span-8">
+        <div className="lg:order-2 lg:col-span-8">
           <Card
             as="article"
             variant="default"
@@ -65,9 +38,9 @@ export default function PrivacidadePage() {
                 </li>
                 <li>
                   <strong className="text-[var(--ink-primary)]">
-                    Jornada educacional:
+                    Percurso educacional:
                   </strong>{" "}
-                  respostas do quiz de descoberta, progresso nas trilhas de estudo e
+                  respostas do mapeamento de afinidades, progresso nas trilhas de estudo e
                   projetos do seu portfólio.
                 </li>
                 <li>
@@ -98,11 +71,11 @@ export default function PrivacidadePage() {
                   </li>
                   <li>
                     <strong>Educador da sua turma:</strong> vê apenas informações
-                    pedagógicas de progresso e projetos vinculados à turma para
-                    orientar seus estudos, sob compromisso formal de sigilo.
+                    pedagógicas agregadas de progresso e interesses da turma para
+                    orientar estudos, sob compromisso formal de sigilo.
                   </li>
                   <li>
-                    <strong>Link público do portfólio:</strong> só existe se você
+                    <strong>Link compartilhado do portfólio:</strong> só existe se você
                     decidir gerar um link compartilhável, podendo revogá-lo a
                     qualquer momento.
                   </li>
@@ -143,6 +116,33 @@ export default function PrivacidadePage() {
             </footer>
           </Card>
         </div>
+
+        <aside className="lg:sticky lg:top-24 lg:order-1 lg:col-span-4">
+          <Card variant="default" padding="md" className="space-y-4">
+            <div className="space-y-2">
+              <Badge variant="brand">LGPD · Versão 1.0</Badge>
+              <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
+                Privacidade sem letrinha miúda
+              </h2>
+              <p className="text-sm leading-relaxed text-[var(--ink-muted)]">
+                Explicamos de forma direta o que coletamos, quem pode ver e como
+                você controla seus dados na plataforma.
+              </p>
+            </div>
+
+            <nav aria-label="Seções da política" className="space-y-1 border-t border-[var(--border-subtle)] pt-3">
+              {PRIVACY_SECTIONS.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className="flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--ink-secondary)] transition-colors hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--brand-primary)]"
+                >
+                  {section.label}
+                </a>
+              ))}
+            </nav>
+          </Card>
+        </aside>
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ export function PageHeader({
       <div className="space-y-2">
         {stage ? (
           <div>
-            <StagePill stage={stage} label={stageLabel} />
+            <StagePill stage={stage} label={stageLabel} size="md" />
           </div>
         ) : null}
         <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--ink-primary)] sm:text-3xl">

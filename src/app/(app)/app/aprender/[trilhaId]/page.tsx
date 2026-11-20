@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import {
   TrackCoursesClient,
   type TrackCourseItemView,
@@ -78,7 +78,12 @@ export default async function TrilhaDetailPage({
       <Card>
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="brand">{track.macroArea.name}</Badge>
+            <Badge
+              variant="learn"
+              icon={<BookOpen className="h-3.5 w-3.5" />}
+            >
+              {track.macroArea.name}
+            </Badge>
           </div>
           <PageHeader
             stage="APRENDER"
@@ -89,7 +94,11 @@ export default async function TrilhaDetailPage({
         </div>
       </Card>
 
-      <TrackCoursesClient initialCourses={initialCourses} />
+      <TrackCoursesClient
+        initialCourses={initialCourses}
+        macroAreaSlug={track.macroArea.slug}
+        macroAreaName={track.macroArea.name}
+      />
     </div>
   );
 }

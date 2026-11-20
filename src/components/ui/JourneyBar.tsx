@@ -26,8 +26,10 @@ const DEFAULT_STEPS: Array<{
     number: 1,
     label: "Descobrir",
     href: "/app/descobrir",
-    completeCircle: "bg-[var(--stage-discover-ink)] text-white border-[var(--stage-discover-ink)]",
-    currentCircle: "border-2 border-[var(--stage-discover-ink)] bg-[var(--bg-surface)] text-[var(--stage-discover-ink)]",
+    completeCircle:
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-discover-ink)_32%,var(--stage-discover-border))] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)]",
+    currentCircle:
+      "border-2 border-[var(--stage-discover-ink)] bg-[var(--stage-discover-bg)] text-[var(--stage-discover-ink)] ring-3 ring-[color-mix(in_srgb,var(--stage-discover-ink)_14%,transparent)]",
     lineFill: "bg-[var(--stage-discover-ink)]",
   },
   {
@@ -35,8 +37,10 @@ const DEFAULT_STEPS: Array<{
     number: 2,
     label: "Aprender",
     href: "/app/aprender",
-    completeCircle: "bg-[var(--stage-learn-ink)] text-white border-[var(--stage-learn-ink)]",
-    currentCircle: "border-2 border-[var(--stage-learn-ink)] bg-[var(--bg-surface)] text-[var(--stage-learn-ink)]",
+    completeCircle:
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-learn-ink)_32%,var(--stage-learn-border))] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)]",
+    currentCircle:
+      "border-2 border-[var(--stage-learn-ink)] bg-[var(--stage-learn-bg)] text-[var(--stage-learn-ink)] ring-3 ring-[color-mix(in_srgb,var(--stage-learn-ink)_14%,transparent)]",
     lineFill: "bg-[var(--stage-learn-ink)]",
   },
   {
@@ -44,8 +48,10 @@ const DEFAULT_STEPS: Array<{
     number: 3,
     label: "Experimentar",
     href: "/app/experimentar",
-    completeCircle: "bg-[var(--stage-experiment-ink)] text-white border-[var(--stage-experiment-ink)]",
-    currentCircle: "border-2 border-[var(--stage-experiment-ink)] bg-[var(--bg-surface)] text-[var(--stage-experiment-ink)]",
+    completeCircle:
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-experiment-ink)_34%,var(--stage-experiment-border))] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)]",
+    currentCircle:
+      "border-2 border-[var(--stage-experiment-ink)] bg-[var(--stage-experiment-bg)] text-[var(--stage-experiment-ink)] ring-3 ring-[color-mix(in_srgb,var(--stage-experiment-ink)_14%,transparent)]",
     lineFill: "bg-[var(--stage-experiment-ink)]",
   },
   {
@@ -53,8 +59,10 @@ const DEFAULT_STEPS: Array<{
     number: 4,
     label: "Construir",
     href: "/app/portfolio",
-    completeCircle: "bg-[var(--stage-build-ink)] text-white border-[var(--stage-build-ink)]",
-    currentCircle: "border-2 border-[var(--stage-build-ink)] bg-[var(--bg-surface)] text-[var(--stage-build-ink)]",
+    completeCircle:
+      "border-[1.5px] border-[color-mix(in_srgb,var(--stage-build-ink)_34%,var(--stage-build-border))] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)]",
+    currentCircle:
+      "border-2 border-[var(--stage-build-ink)] bg-[var(--stage-build-bg)] text-[var(--stage-build-ink)] ring-3 ring-[color-mix(in_srgb,var(--stage-build-ink)_14%,transparent)]",
     lineFill: "bg-[var(--stage-build-ink)]",
   },
 ];
@@ -122,16 +130,19 @@ export function JourneyBar({
               >
                 <span
                   className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold transition-transform group-hover:scale-105",
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono text-xs font-bold transition-transform group-hover:scale-105",
                     isComplete
                       ? step.completeCircle
                       : isCurrent
                         ? step.currentCircle
-                        : "border-[var(--border-strong)] bg-[var(--bg-surface)] text-[var(--ink-muted)]",
+                        : "border-[1.5px] border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-[var(--ink-muted)]",
                   )}
                 >
                   {isComplete ? (
-                    <Check className="h-4 w-4" aria-hidden="true" />
+                    <>
+                      <Check className="h-4 w-4 stroke-[2.5]" aria-hidden="true" />
+                      <span className="sr-only">Concluída</span>
+                    </>
                   ) : (
                     step.number
                   )}

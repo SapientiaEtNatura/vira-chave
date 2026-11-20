@@ -111,6 +111,8 @@ export function ScenarioFlashcardDeck({
   const optionsRef = useRef<HTMLFieldSetElement>(null);
   const activeTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const transitionDirRef = useRef<"initial" | "next" | "prev">("initial");
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const hasInteractedRef = useRef(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   const { front, mid, back, index } = getVisibleDeckSlice(
@@ -125,6 +127,13 @@ export function ScenarioFlashcardDeck({
       activeTimelineRef.current?.kill();
     };
   }, []);
+
+  // Restaura o foco para o novo cenário após avançar/voltar (evita perda para document.body)
+  const frontId = front?.id;
+  useEffect(() => {
+    if (!hasInteractedRef.current || !frontId) return;
+    frontCardRef.current?.focus({ preventScroll: true });
+  }, [frontId]);
 
   useGSAP(
     () => {
@@ -237,6 +246,7 @@ export function ScenarioFlashcardDeck({
 
   function handleAdvance() {
     if (!canAdvance || isAnimating) return;
+    hasInteractedRef.current = true;
 
     if (shouldReduceMotion()) {
       if (isLastCard) {
@@ -328,6 +338,7 @@ export function ScenarioFlashcardDeck({
 
   function handleBack() {
     if (!canGoBack || isAnimating) return;
+    hasInteractedRef.current = true;
 
     if (shouldReduceMotion()) {
       transitionDirRef.current = "prev";
@@ -364,10 +375,56 @@ export function ScenarioFlashcardDeck({
     activeTimelineRef.current = tl;
   }
 
+  function handleDeckKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.target instanceof HTMLInputElement) return;
+    if (event.key === "ArrowRight" && canAdvance && !isAnimating) {
+      event.preventDefault();
+      handleAdvance();
+    } else if (event.key === "ArrowLeft" && canGoBack && !isAnimating) {
+      event.preventDefault();
+      handleBack();
+    }
+  }
+
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    swipeStartRef.current = { x: event.clientX, y: event.clientY };
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || isAnimating) return;
+
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.4) return;
+
+    if (dx < 0 && canAdvance) {
+      handleAdvance();
+    } else if (dx > 0 && canGoBack) {
+      handleBack();
+    }
+  }
+
   return (
-    <div ref={deckScopeRef} className="space-y-4 overflow-x-clip">
+    <div
+      ref={deckScopeRef}
+      onKeyDown={handleDeckKeyDown}
+      className="relative mx-auto w-full min-w-0 max-w-lg space-y-4 overflow-x-clip"
+    >
+      <div role="status" aria-live="polite" className="sr-only">
+        Cenário {index + 1} de {total}: {front.prompt}
+      </div>
+
       {/* Pilha de flashcards: até 2 camadas coloridas espiando atrás do cenário ativo */}
-      <div className="relative mx-auto w-full pt-5">
+      <div
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={() => {
+          swipeStartRef.current = null;
+        }}
+        className="relative mx-auto w-full touch-pan-y pt-5"
+      >
         {back ? (
           <div
             key={`back-${back.id}`}
@@ -391,7 +448,8 @@ export function ScenarioFlashcardDeck({
         <div
           key={front.id}
           ref={frontCardRef}
-          className="relative z-30 flex min-h-[124px] flex-col justify-between gap-3 rounded-2xl bg-[var(--brand-primary-deep)] p-5 text-white shadow-lg"
+          tabIndex={-1}
+          className="relative z-30 flex min-h-[124px] flex-col justify-between gap-3 rounded-2xl bg-[var(--brand-primary-deep)] p-5 text-white shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-accent)]"
         >
           <div className="flex items-center justify-between gap-2">
             <span className="inline-flex items-center rounded-full bg-white/12 px-2.5 py-0.5 font-mono text-[11px] font-semibold tracking-wide text-[var(--brand-primary-ink-on-dark)] tabular-nums">
@@ -414,7 +472,11 @@ export function ScenarioFlashcardDeck({
       </div>
 
       {/* Opções de resposta abaixo do baralho com entrada suave de baixo para cima */}
-      <fieldset key={front.id} ref={optionsRef} className="space-y-2">
+      <fieldset
+        key={front.id}
+        ref={optionsRef}
+        className="relative min-w-0 space-y-2"
+      >
         <legend className="sr-only">{front.prompt}</legend>
 
         {front.options.map((option) => {
@@ -423,7 +485,7 @@ export function ScenarioFlashcardDeck({
             <label
               key={option.id}
               data-option-item
-              className={`flex min-h-11 cursor-pointer items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-[13px] leading-snug transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
+              className={`relative flex min-h-11 cursor-pointer items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-left text-[13px] leading-snug transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[var(--brand-primary)] ${
                 isSelected
                   ? "border-[var(--stage-discover-ink)] bg-[var(--stage-discover-bg)] font-semibold text-[var(--stage-discover-ink)] ring-1 ring-[var(--stage-discover-ink)]"
                   : "border-[var(--border-subtle)] bg-[var(--bg-surface)] text-[var(--ink-secondary)] hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-subtle)]/60"
@@ -475,7 +537,7 @@ export function ScenarioFlashcardDeck({
           onClick={handleAdvance}
           rightIcon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
         >
-          {isLastCard ? "Ponto de partida" : "Avançar"}
+          {isLastCard ? "Definir ponto de partida" : "Avançar"}
         </Button>
       </div>
     </div>

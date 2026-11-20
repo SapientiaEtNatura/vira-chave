@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, BookOpen, CheckCircle2 } from "lucide-react";
+import { ArrowRight, BookOpen, CheckCircle2, Sparkles } from "lucide-react";
 import { FilterGridReveal } from "@/components/motion/FilterGridReveal";
 import {
   Badge,
@@ -46,6 +46,7 @@ export default async function AprenderPage({
   ]);
 
   const recommendedSlugs = latestDiscovery?.topAreas ?? [];
+  const recommendedSet = new Set(recommendedSlugs);
   const isRecommendedFilter = activeArea === "recomendadas";
 
   const tracks = await prisma.track.findMany({
@@ -61,6 +62,7 @@ export default async function AprenderPage({
     select: {
       id: true,
       title: true,
+      description: true,
       macroArea: {
         select: {
           slug: true,
@@ -85,12 +87,12 @@ export default async function AprenderPage({
         stage="APRENDER"
         stageLabel="Etapa 2 · Aprender"
         title="Trilhas de Aprendizagem"
-        subtitle="Cursos gratuitos curados por macroárea para você desenvolver novas habilidades."
+        subtitle="Cursos curtos e gratuitos organizados por área para você desenvolver novas habilidades no seu ritmo."
       />
 
       <MacroAreaFilterBar
         basePath="/app/aprender"
-        ariaLabel="Filtrar trilhas por macroárea"
+        ariaLabel="Filtrar trilhas por área"
         activeArea={activeArea}
         recommendedSlugs={recommendedSlugs}
         items={macroAreas.map((m) => ({
@@ -103,8 +105,13 @@ export default async function AprenderPage({
 
       {tracks.length === 0 ? (
         <EmptyState
+          as="h2"
           icon={<BookOpen className="h-5 w-5" />}
-          title="Nenhuma trilha publicada encontrada para este filtro."
+          title={
+            activeArea
+              ? "Nenhuma trilha encontrada para esta área."
+              : "Nenhuma trilha publicada ainda."
+          }
           action={
             activeArea ? (
               <ButtonLink href="/app/aprender" variant="outline" size="sm">
@@ -115,7 +122,7 @@ export default async function AprenderPage({
         />
       ) : (
         <FilterGridReveal
-          filterKey={activeArea ?? "all"}
+          filterKey={activeArea || "all"}
           className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
         >
           {tracks.map((track) => {
@@ -125,6 +132,8 @@ export default async function AprenderPage({
             ).length;
             const isCompleted =
               totalCourses > 0 && completedCourses === totalCourses;
+            const isRecommended =
+              !activeArea && recommendedSet.has(track.macroArea.slug);
 
             return (
               <div key={track.id} data-filter-card className="flex">
@@ -134,46 +143,73 @@ export default async function AprenderPage({
                   padding="sm"
                   className="flex w-full flex-col justify-between gap-4 p-5"
                 >
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Badge variant="neutral">{track.macroArea.name}</Badge>
-                    {isCompleted ? (
-                      <Badge variant="success">
-                        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                        Concluída
-                      </Badge>
-                    ) : (
-                      <span className="font-mono text-xs font-medium text-[var(--ink-muted)] tabular-nums">
-                        {completedCourses}/{totalCourses}{" "}
-                        {totalCourses === 1 ? "curso" : "cursos"}
-                      </span>
-                    )}
+                  <div className="space-y-2.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge
+                          variant="learn"
+                          icon={<BookOpen className="h-3.5 w-3.5" />}
+                        >
+                          {track.macroArea.name}
+                        </Badge>
+                        {isRecommended ? (
+                          <Badge
+                            variant="brand"
+                            icon={<Sparkles className="h-3.5 w-3.5" />}
+                          >
+                            Para você
+                          </Badge>
+                        ) : null}
+                      </div>
+                      {isCompleted ? (
+                        <Badge
+                          variant="success"
+                          icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+                        >
+                          Concluída
+                        </Badge>
+                      ) : (
+                        <Badge variant="neutral" mono>
+                          {completedCourses}/{totalCourses}{" "}
+                          {totalCourses === 1 ? "curso" : "cursos"}
+                        </Badge>
+                      )}
+                    </div>
+
+                    <h2 className="font-display text-lg font-bold leading-snug text-[var(--ink-primary)]">
+                      {track.title}
+                    </h2>
+
+                    {track.description ? (
+                      <p className="line-clamp-2 text-sm leading-relaxed text-[var(--ink-muted)]">
+                        {track.description}
+                      </p>
+                    ) : null}
                   </div>
 
-                  <h2 className="font-display text-lg font-bold text-[var(--ink-primary)]">
-                    {track.title}
-                  </h2>
-                </div>
+                  <div className="space-y-3">
+                    <Progress
+                      value={completedCourses}
+                      max={totalCourses || 1}
+                      tone="learn"
+                      label={`Progresso em ${track.title}: ${completedCourses} de ${totalCourses} cursos concluídos`}
+                    />
 
-                <div className="space-y-3">
-                  <Progress
-                    value={completedCourses}
-                    max={totalCourses || 1}
-                    tone="learn"
-                    label={`Progresso em ${track.title}: ${completedCourses} de ${totalCourses} cursos concluídos`}
-                  />
-
-                  <div className="flex justify-end">
-                    <Link
-                      href={`/app/aprender/${track.id}`}
-                      className="inline-flex min-h-10 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-hover)]"
-                    >
-                      <span>Abrir trilha</span>
-                      <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                    </Link>
+                    <div className="flex justify-end">
+                      <Link
+                        href={`/app/aprender/${track.id}`}
+                        className="inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-[var(--brand-primary)] transition-colors hover:text-[var(--brand-primary-hover)]"
+                      >
+                        <span>
+                          {completedCourses > 0 && !isCompleted
+                            ? "Continuar trilha"
+                            : "Abrir trilha"}
+                        </span>
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      </Link>
+                    </div>
                   </div>
-                </div>
-              </Card>
+                </Card>
               </div>
             );
           })}

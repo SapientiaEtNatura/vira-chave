@@ -8,7 +8,7 @@ const VARIANT_CLASSES: Record<CardVariant, string> = {
   default:
     "bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xs",
   interactive:
-    "bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xs transition-colors hover:border-[var(--border-strong)] hover:bg-[#FCFDFE]",
+    "bg-[var(--bg-surface)] border border-[var(--border-subtle)] shadow-xs transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-surface-hover)]",
   highlight:
     "bg-[var(--brand-primary-soft)]/50 border border-[var(--brand-primary-border)] shadow-xs",
 };

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Layers, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import {
+  Alert,
   Badge,
   Button,
   Card,
@@ -21,6 +22,7 @@ import type {
 interface MacroAreasTabProps {
   macroAreas: AdminMacroArea[];
   busy: boolean;
+  serverError?: string | null;
   sendContentRequest: SendContentRequestFn;
   onMacroAreaCreated: (item: AdminMacroArea) => void;
   onMacroAreaUpdated: (item: AdminMacroArea) => void;
@@ -52,6 +54,7 @@ function parseEntryRolesInput(raw: string): string[] {
 export function MacroAreasTab({
   macroAreas,
   busy,
+  serverError,
   sendContentRequest,
   onMacroAreaCreated,
   onMacroAreaUpdated,
@@ -306,7 +309,7 @@ export function MacroAreasTab({
       <Drawer
         open={drawerOpen}
         onClose={closeDrawer}
-        title={editingId ? "Editar MacroÁrea" : "Nova MacroÁrea"}
+        title={editingId ? "Editar macroárea" : "Nova macroárea"}
         subtitle="Defina o nome, identificador (slug) e descrição da área temática."
         isDirty={isDirty}
         footer={
@@ -327,12 +330,13 @@ export function MacroAreasTab({
               loading={busy}
               className="min-h-11"
             >
-              {editingId ? "Salvar alterações" : "Criar MacroÁrea"}
+              {editingId ? "Salvar alterações" : "Criar macroárea"}
             </Button>
           </div>
         }
       >
         <form id={formId} onSubmit={handleSubmit} className="space-y-4">
+          {serverError ? <Alert variant="danger">{serverError}</Alert> : null}
           <FormField id="macro-name" label="Nome" required>
             <Input
               type="text"

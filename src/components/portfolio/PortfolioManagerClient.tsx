@@ -8,6 +8,7 @@ import {
   Eye,
   EyeOff,
   FileText,
+  FlaskConical,
   FolderKanban,
   Link2,
   Pencil,
@@ -108,11 +109,14 @@ export function PortfolioManagerClient({
   const [editBusy, setEditBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Confirmação de exclusão
+  // Confirmação de exclusão e ações no link compartilhável
   const [deleteTarget, setDeleteTarget] = useState<PortfolioProjectItem | null>(
     null,
   );
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [confirmShareAction, setConfirmShareAction] = useState<
+    "revoke" | "regenerate" | null
+  >(null);
 
   const shareUrl =
     generatedToken && typeof window !== "undefined"
@@ -355,9 +359,12 @@ export function PortfolioManagerClient({
       <Card as="section" className="space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-1.5">
-            <Badge variant="success">
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>Privado por padrão · Seus dados pessoais nunca aparecem</span>
+            <Badge
+              variant="success"
+              size="md"
+              icon={<ShieldCheck className="h-3.5 w-3.5" />}
+            >
+              Privado por padrão · Seus dados pessoais nunca aparecem
             </Badge>
             <p className="text-sm text-[var(--ink-secondary)]">
               {sharedCount} de {projects.length}{" "}
@@ -367,24 +374,32 @@ export function PortfolioManagerClient({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleGenerateShareLink}
-              loading={shareBusy}
-              disabled={readinessBusy}
-              leftIcon={<Link2 className="h-4 w-4" aria-hidden="true" />}
-            >
-              {hasActiveLink
-                ? "Gerar novo link"
-                : "Gerar link compartilhável"}
-            </Button>
+            {(projects.length > 0 || hasActiveLink) && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (hasActiveLink) {
+                    setConfirmShareAction("regenerate");
+                  } else {
+                    void handleGenerateShareLink();
+                  }
+                }}
+                loading={shareBusy}
+                disabled={readinessBusy}
+                leftIcon={<Link2 className="h-4 w-4" aria-hidden="true" />}
+              >
+                {hasActiveLink
+                  ? "Gerar novo link"
+                  : "Gerar link compartilhável"}
+              </Button>
+            )}
 
             {hasActiveLink && (
               <Button
                 type="button"
                 variant="danger"
-                onClick={handleRevokeShareLink}
+                onClick={() => setConfirmShareAction("revoke")}
                 disabled={shareBusy || readinessBusy}
                 leftIcon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
               >
@@ -395,6 +410,7 @@ export function PortfolioManagerClient({
             <Button
               type="button"
               variant={showCreateForm ? "outline" : "primary"}
+              aria-expanded={showCreateForm}
               onClick={() => setShowCreateForm((prev) => !prev)}
               leftIcon={<Plus className="h-4 w-4" aria-hidden="true" />}
             >
@@ -403,27 +419,29 @@ export function PortfolioManagerClient({
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/70 px-3.5 py-2.5">
-          <div className="space-y-0.5">
-            <label
-              htmlFor="share-include-readiness"
-              className="block cursor-pointer text-sm font-medium text-[var(--ink-primary)]"
-            >
-              Exibir Cartão de Prontidão no link compartilhado
-            </label>
-            <p className="text-xs text-[var(--ink-muted)]">
-              Opcional: mostra áreas de interesse, cursos e desafios concluídos e
-              funções de entrada, sem dados pessoais ou autodeclaração.
-            </p>
+        {(projects.length > 0 || hasActiveLink) && (
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/70 px-3.5 py-2.5">
+            <div className="space-y-0.5">
+              <label
+                htmlFor="share-include-readiness"
+                className="block cursor-pointer text-sm font-medium text-[var(--ink-primary)]"
+              >
+                Exibir Cartão de Prontidão no link compartilhado
+              </label>
+              <p className="text-xs text-[var(--ink-muted)]">
+                Opcional: mostra áreas de destaque, cursos e desafios concluídos
+                e funções de entrada, mantendo seus dados pessoais protegidos.
+              </p>
+            </div>
+            <Switch
+              id="share-include-readiness"
+              checked={includeReadiness}
+              onCheckedChange={handleToggleIncludeReadiness}
+              disabled={shareBusy || readinessBusy}
+              label="Exibir Cartão de Prontidão no link compartilhado"
+            />
           </div>
-          <Switch
-            id="share-include-readiness"
-            checked={includeReadiness}
-            onCheckedChange={handleToggleIncludeReadiness}
-            disabled={shareBusy || readinessBusy}
-            label="Exibir Cartão de Prontidão no link compartilhado"
-          />
-        </div>
+        )}
 
         {shareError && <Alert variant="danger">{shareError}</Alert>}
 
@@ -589,7 +607,13 @@ export function PortfolioManagerClient({
             return (
               <Card key={project.id} as="article" padding="sm" className="p-5">
                 {isEditing ? (
-                  <div className="space-y-4">
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      void handleSaveEdit(project.id);
+                    }}
+                    className="space-y-4"
+                  >
                     <FormField
                       id={`edit-project-title-${project.id}`}
                       label="Título do projeto"
@@ -654,16 +678,15 @@ export function PortfolioManagerClient({
                         Cancelar
                       </Button>
                       <Button
-                        type="button"
+                        type="submit"
                         variant="primary"
                         size="sm"
-                        onClick={() => handleSaveEdit(project.id)}
                         loading={editBusy}
                       >
                         {editBusy ? "Salvando..." : "Salvar"}
                       </Button>
                     </div>
-                  </div>
+                  </form>
                 ) : (
                   <>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -673,7 +696,10 @@ export function PortfolioManagerClient({
                             {project.title}
                           </h3>
                           {project.challengeTitle && (
-                            <Badge variant="brand">
+                            <Badge
+                              variant="experiment"
+                              icon={<FlaskConical className="h-3.5 w-3.5" />}
+                            >
                               {project.challengeTitle}
                             </Badge>
                           )}
@@ -689,27 +715,24 @@ export function PortfolioManagerClient({
                       <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                         <button
                           type="button"
+                          aria-pressed={project.isIncludedInShare}
                           onClick={() => handleToggleShare(project)}
-                          className={`inline-flex min-h-11 sm:min-h-9 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors ${
+                          className={`inline-flex min-h-11 sm:min-h-9 cursor-pointer items-center gap-1.5 rounded-full border-[1.5px] px-3 py-1 text-xs font-semibold transition-colors ${
                             project.isIncludedInShare
-                              ? "border-[var(--status-success-border)] bg-[var(--status-success-bg)] text-[var(--status-success-ink)] hover:opacity-90"
-                              : "border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] text-[var(--ink-secondary)] hover:bg-[var(--border-subtle)]/60"
+                              ? "border-[color-mix(in_srgb,var(--status-success-ink)_26%,var(--status-success-border))] bg-[var(--status-success-bg)] text-[var(--status-success-ink)] hover:opacity-90"
+                              : "border-[color-mix(in_srgb,var(--ink-muted)_20%,var(--border-subtle))] bg-[var(--bg-surface-subtle)] text-[var(--ink-secondary)] hover:bg-[var(--border-subtle)]/60"
                           }`}
                         >
                           {project.isIncludedInShare ? (
-                            <>
-                              <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                              <span>No link público</span>
-                            </>
+                            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                           ) : (
-                            <>
-                              <EyeOff
-                                className="h-3.5 w-3.5"
-                                aria-hidden="true"
-                              />
-                              <span>Apenas privado</span>
-                            </>
+                            <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
                           )}
+                          <span>
+                            {project.isIncludedInShare
+                              ? "No link compartilhado"
+                              : "Apenas privado"}
+                          </span>
                         </button>
 
                         <button
@@ -796,6 +819,38 @@ export function PortfolioManagerClient({
         onConfirm={handleConfirmDeleteProject}
         onCancel={() => {
           if (!deleteBusy) setDeleteTarget(null);
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmShareAction !== null}
+        title={
+          confirmShareAction === "revoke"
+            ? "Revogar link compartilhável?"
+            : "Gerar novo link compartilhável?"
+        }
+        description={
+          confirmShareAction === "revoke"
+            ? "Quem tiver o endereço atual deixará de conseguir abrir seu portfólio imediatamente."
+            : "O link anterior será desativado e substituído por um novo endereço. Quem recebeu o link antigo precisará do novo."
+        }
+        confirmLabel={
+          confirmShareAction === "revoke" ? "Revogar link" : "Gerar novo link"
+        }
+        cancelLabel="Cancelar"
+        variant={confirmShareAction === "revoke" ? "danger" : "default"}
+        loading={shareBusy}
+        onConfirm={async () => {
+          const action = confirmShareAction;
+          setConfirmShareAction(null);
+          if (action === "revoke") {
+            await handleRevokeShareLink();
+          } else if (action === "regenerate") {
+            await handleGenerateShareLink();
+          }
+        }}
+        onCancel={() => {
+          if (!shareBusy) setConfirmShareAction(null);
         }}
       />
     </div>

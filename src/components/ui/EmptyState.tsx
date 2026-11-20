@@ -4,6 +4,7 @@ import { cn } from "@/lib/cn";
 export interface EmptyStateProps {
   icon?: React.ReactNode;
   title: string;
+  as?: "h2" | "h3";
   description?: string;
   action?: React.ReactNode;
   className?: string;
@@ -12,6 +13,7 @@ export interface EmptyStateProps {
 export function EmptyState({
   icon,
   title,
+  as: Heading = "h3",
   description,
   action,
   className,
@@ -31,9 +33,9 @@ export function EmptyState({
           {icon}
         </div>
       ) : null}
-      <h3 className="font-display text-base font-semibold text-[var(--ink-primary)]">
+      <Heading className="font-display text-base font-semibold text-[var(--ink-primary)]">
         {title}
-      </h3>
+      </Heading>
       {description ? (
         <p className="mt-1.5 max-w-[52ch] text-sm text-[var(--ink-muted)]">
           {description}

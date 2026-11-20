@@ -1,20 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import {
   ChevronLeft,
   ChevronRight,
   Eye,
   FileText,
   Search,
-  X,
 } from "lucide-react";
 import {
   Alert,
   Badge,
   Button,
   Card,
+  Drawer,
   EmptyState,
   FormField,
   Input,
@@ -76,12 +75,21 @@ const ACTION_META: Record<string, { label: string; variant: BadgeVariant }> = {
   AUTH_LOGIN_FAILED: { label: "Falha de login", variant: "danger" },
 };
 
-const ACTION_DOT_CLASS: Record<BadgeVariant, string> = {
-  success: "bg-emerald-500",
-  warning: "bg-amber-500",
-  danger: "bg-rose-500",
-  brand: "bg-[var(--brand-primary)]",
-  neutral: "bg-[var(--ink-muted)]",
+const ROLE_LABELS: Record<string, string> = {
+  ADMIN: "Administrador",
+  EDUCADOR: "Educador",
+  ESTUDANTE: "Estudante",
+};
+
+const TARGET_LABELS: Record<string, string> = {
+  User: "Usuário",
+  Institution: "Instituição",
+  Classroom: "Turma",
+  MacroArea: "Macroárea",
+  Track: "Trilha",
+  CourseItem: "Curso",
+  Challenge: "Desafio",
+  DiscoveryQuestion: "Pergunta",
 };
 
 function getActionBadge(action: string): {
@@ -89,6 +97,15 @@ function getActionBadge(action: string): {
   variant: BadgeVariant;
 } {
   return ACTION_META[action] ?? { label: action, variant: "neutral" };
+}
+
+function getRoleLabel(role: string | null): string {
+  if (!role) return "—";
+  return ROLE_LABELS[role] ?? role;
+}
+
+function getTargetLabel(targetType: string): string {
+  return TARGET_LABELS[targetType] ?? targetType;
 }
 
 function formatDateTime(iso: string): string {
@@ -112,44 +129,21 @@ export function AdminAuditClient({
   const [searchInput, setSearchInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [selectedLog, setSelectedLog] = useState<AdminAuditLogItem | null>(
     null,
   );
-  const [mounted, setMounted] = useState(false);
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const isFirstRender = useRef(true);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!selectedLog) return;
-    const prevFocused = document.activeElement as HTMLElement | null;
-    closeButtonRef.current?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setSelectedLog(null);
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      if (prevFocused && typeof prevFocused.focus === "function") {
-        prevFocused.focus();
-      }
-    };
-  }, [selectedLog]);
+  const abortRef = useRef<AbortController | null>(null);
 
   async function fetchLogs(params: {
     action: string;
     q: string;
     page: number;
   }) {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoading(true);
     setError(null);
 
@@ -162,6 +156,7 @@ export function AdminAuditClient({
 
       const response = await fetch(`/api/admin/audit?${sp.toString()}`, {
         cache: "no-store",
+        signal: controller.signal,
       });
       const payload = (await response.json()) as {
         logs?: AdminAuditLogItem[];
@@ -171,17 +166,23 @@ export function AdminAuditClient({
 
       if (!response.ok || !payload.logs || !payload.pagination) {
         setError(
-          payload.error ?? "Não foi possível carregar os registros de auditoria.",
+          payload.error ??
+            "Não foi possível carregar os registros de auditoria.",
         );
         return;
       }
 
       setLogs(payload.logs);
       setPagination(payload.pagination);
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return;
+      }
       setError("Erro de conexão ao consultar auditoria.");
     } finally {
-      setLoading(false);
+      if (abortRef.current === controller) {
+        setLoading(false);
+      }
     }
   }
 
@@ -203,6 +204,12 @@ export function AdminAuditClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actionFilter, searchInput]);
 
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
+
   function handlePageChange(nextPage: number) {
     if (nextPage < 1 || nextPage > pagination.totalPages || loading) return;
     void fetchLogs({
@@ -211,6 +218,8 @@ export function AdminAuditClient({
       page: nextPage,
     });
   }
+
+  const hasFilters = Boolean(actionFilter || searchInput.trim());
 
   return (
     <div className="space-y-6">
@@ -223,20 +232,22 @@ export function AdminAuditClient({
             label="Buscar por ator, alvo ou ação"
             className="md:col-span-2"
           >
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]"
-                aria-hidden="true"
-              />
-              <Input
-                id="audit-search"
-                type="search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="Nome do ator, tipo ou ID do alvo..."
-                className="pl-9"
-              />
-            </div>
+            {(controlProps) => (
+              <div className="relative">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]"
+                  aria-hidden="true"
+                />
+                <Input
+                  {...controlProps}
+                  type="search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  placeholder="Nome do ator, tipo ou ID do alvo..."
+                  className="pl-9"
+                />
+              </div>
+            )}
           </FormField>
 
           <FormField id="audit-action-filter" label="Tipo de ação">
@@ -271,13 +282,27 @@ export function AdminAuditClient({
           icon={<FileText className="h-6 w-6" />}
           title="Nenhum registro de auditoria"
           description="Ainda não há eventos registrados para os filtros selecionados."
+          action={
+            hasFilters ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setActionFilter("");
+                  setSearchInput("");
+                }}
+              >
+                Limpar filtros
+              </Button>
+            ) : undefined
+          }
         />
       ) : (
         <>
-          {/* Tabela Desktop (md+) */}
           <Card
             padding="sm"
-            className="hidden overflow-hidden rounded-2xl p-0 md:block sm:p-0"
+            className="hidden overflow-hidden rounded-2xl p-0 sm:p-0 md:block"
           >
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-sm">
@@ -308,7 +333,7 @@ export function AdminAuditClient({
                         key={log.id}
                         className="transition-colors hover:bg-[var(--bg-canvas)]/60"
                       >
-                        <td className="whitespace-nowrap px-4 py-3 text-xs text-[var(--ink-secondary)] tabular-nums">
+                        <td className="px-4 py-3 text-xs whitespace-nowrap tabular-nums text-[var(--ink-secondary)]">
                           {formatDateTime(log.createdAt)}
                         </td>
                         <td className="px-4 py-3">
@@ -317,22 +342,18 @@ export function AdminAuditClient({
                           </div>
                           {log.actorRole ? (
                             <div className="text-xs text-[var(--ink-muted)]">
-                              {log.actorRole}
+                              {getRoleLabel(log.actorRole)}
                             </div>
                           ) : null}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={badge.variant}>
-                            <span
-                              className={`h-1.5 w-1.5 rounded-full ${ACTION_DOT_CLASS[badge.variant]}`}
-                              aria-hidden="true"
-                            />
+                          <Badge dot variant={badge.variant}>
                             {badge.label}
                           </Badge>
                         </td>
                         <td className="px-4 py-3 text-xs text-[var(--ink-secondary)]">
                           <span className="font-semibold text-[var(--ink-primary)]">
-                            {log.targetType}
+                            {getTargetLabel(log.targetType)}
                           </span>
                           {log.targetId ? (
                             <span className="ml-1.5 font-mono text-[var(--ink-muted)]">
@@ -345,6 +366,7 @@ export function AdminAuditClient({
                             type="button"
                             variant="ghost"
                             size="sm"
+                            aria-label={`Ver detalhes do evento ${badge.label}`}
                             onClick={() => setSelectedLog(log)}
                             leftIcon={<Eye className="h-3.5 w-3.5" />}
                           >
@@ -359,21 +381,20 @@ export function AdminAuditClient({
             </div>
           </Card>
 
-          {/* Cards Mobile (< md) */}
           <div className="space-y-3 md:hidden">
             {logs.map((log) => {
               const badge = getActionBadge(log.action);
               return (
-                <Card key={log.id} padding="md" className="space-y-3 rounded-2xl">
+                <Card
+                  key={log.id}
+                  padding="md"
+                  className="space-y-3 rounded-2xl"
+                >
                   <div className="flex items-start justify-between gap-2">
-                    <Badge variant={badge.variant}>
-                      <span
-                        className={`h-1.5 w-1.5 rounded-full ${ACTION_DOT_CLASS[badge.variant]}`}
-                        aria-hidden="true"
-                      />
+                    <Badge dot variant={badge.variant}>
                       {badge.label}
                     </Badge>
-                    <span className="text-xs text-[var(--ink-muted)] tabular-nums">
+                    <span className="text-xs tabular-nums text-[var(--ink-muted)]">
                       {formatDateTime(log.createdAt)}
                     </span>
                   </div>
@@ -384,12 +405,12 @@ export function AdminAuditClient({
                       <strong className="font-semibold text-[var(--ink-primary)]">
                         {log.actor?.name ?? "Sistema"}
                       </strong>
-                      {log.actorRole ? ` (${log.actorRole})` : ""}
+                      {log.actorRole ? ` (${getRoleLabel(log.actorRole)})` : ""}
                     </p>
                     <p className="text-[var(--ink-secondary)]">
                       Alvo:{" "}
                       <strong className="font-semibold text-[var(--ink-primary)]">
-                        {log.targetType}
+                        {getTargetLabel(log.targetType)}
                       </strong>
                       {log.targetId ? (
                         <span className="ml-1.5 break-all font-mono text-[var(--ink-muted)]">
@@ -416,7 +437,6 @@ export function AdminAuditClient({
             })}
           </div>
 
-          {/* Paginação */}
           {pagination.totalPages > 1 ? (
             <div className="flex items-center justify-between gap-3">
               <Button
@@ -429,7 +449,7 @@ export function AdminAuditClient({
               >
                 Anterior
               </Button>
-              <span className="text-xs font-medium text-[var(--ink-secondary)] tabular-nums">
+              <span className="text-xs font-medium tabular-nums text-[var(--ink-secondary)]">
                 Página {pagination.page} de {pagination.totalPages}
               </span>
               <Button
@@ -447,100 +467,70 @@ export function AdminAuditClient({
         </>
       )}
 
-      {/* Modal de detalhes do log (sob demanda) */}
-      {mounted && selectedLog
-        ? createPortal(
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--ink-primary)]/50 p-4 backdrop-blur-xs"
-              onMouseDown={(event) => {
-                if (event.target === event.currentTarget) {
-                  setSelectedLog(null);
-                }
-              }}
+      <Drawer
+        open={selectedLog !== null}
+        onClose={() => setSelectedLog(null)}
+        title="Detalhes do registro"
+        subtitle={
+          selectedLog
+            ? `${formatDateTime(selectedLog.createdAt)} · ${getActionBadge(selectedLog.action).label}`
+            : undefined
+        }
+        footer={
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setSelectedLog(null)}
             >
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="audit-detail-title"
-                className="w-full max-w-lg rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface)] p-6 shadow-xl"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <h2
-                      id="audit-detail-title"
-                      className="font-display text-lg font-bold text-[var(--ink-primary)]"
-                    >
-                      Detalhes do registro
-                    </h2>
-                    <p className="text-xs text-[var(--ink-muted)] tabular-nums">
-                      {formatDateTime(selectedLog.createdAt)} ·{" "}
-                      {selectedLog.action}
-                    </p>
-                  </div>
-                  <button
-                    ref={closeButtonRef}
-                    type="button"
-                    aria-label="Fechar detalhes"
-                    onClick={() => setSelectedLog(null)}
-                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-[var(--ink-muted)] transition-colors hover:bg-[var(--bg-surface-subtle)] hover:text-[var(--ink-primary)] cursor-pointer"
-                  >
-                    <X className="h-4 w-4" aria-hidden="true" />
-                  </button>
-                </div>
-
-                <dl className="mt-4 grid grid-cols-2 gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 text-xs">
-                  <div>
-                    <dt className="text-[var(--ink-muted)]">Ator</dt>
-                    <dd className="mt-0.5 font-semibold text-[var(--ink-primary)]">
-                      {selectedLog.actor?.name ?? "Sistema"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--ink-muted)]">Papel do ator</dt>
-                    <dd className="mt-0.5 font-semibold text-[var(--ink-primary)]">
-                      {selectedLog.actorRole ?? "—"}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--ink-muted)]">Tipo de alvo</dt>
-                    <dd className="mt-0.5 font-semibold text-[var(--ink-primary)]">
-                      {selectedLog.targetType}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-[var(--ink-muted)]">ID do alvo</dt>
-                    <dd className="mt-0.5 break-all font-mono text-[var(--ink-primary)]">
-                      {selectedLog.targetId ?? "—"}
-                    </dd>
-                  </div>
-                </dl>
-
-                <div className="mt-4 space-y-1.5">
-                  <p className="text-xs font-semibold text-[var(--ink-secondary)]">
-                    Metadados (JSON)
-                  </p>
-                  <pre className="max-h-72 overflow-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3 font-mono text-xs text-[var(--ink-primary)]">
-                    {selectedLog.metadata !== null &&
-                    selectedLog.metadata !== undefined
-                      ? JSON.stringify(selectedLog.metadata, null, 2)
-                      : "Sem metadados adicionais."}
-                  </pre>
-                </div>
-
-                <div className="mt-5 flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setSelectedLog(null)}
-                  >
-                    Fechar
-                  </Button>
-                </div>
+              Fechar
+            </Button>
+          </div>
+        }
+      >
+        {selectedLog ? (
+          <div className="space-y-4">
+            <dl className="grid grid-cols-2 gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3.5 text-xs">
+              <div>
+                <dt className="text-[var(--ink-muted)]">Ator</dt>
+                <dd className="mt-0.5 font-semibold text-[var(--ink-primary)]">
+                  {selectedLog.actor?.name ?? "Sistema"}
+                </dd>
               </div>
-            </div>,
-            document.body,
-          )
-        : null}
+              <div>
+                <dt className="text-[var(--ink-muted)]">Papel do ator</dt>
+                <dd className="mt-0.5 font-semibold text-[var(--ink-primary)]">
+                  {getRoleLabel(selectedLog.actorRole)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--ink-muted)]">Tipo de alvo</dt>
+                <dd className="mt-0.5 font-semibold text-[var(--ink-primary)]">
+                  {getTargetLabel(selectedLog.targetType)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--ink-muted)]">ID do alvo</dt>
+                <dd className="mt-0.5 break-all font-mono text-[var(--ink-primary)]">
+                  {selectedLog.targetId ?? "—"}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold text-[var(--ink-secondary)]">
+                Metadados (JSON)
+              </p>
+              <pre className="max-h-80 overflow-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)] p-3.5 font-mono text-xs text-[var(--ink-primary)]">
+                {selectedLog.metadata !== null &&
+                selectedLog.metadata !== undefined
+                  ? JSON.stringify(selectedLog.metadata, null, 2)
+                  : "Sem metadados adicionais."}
+              </pre>
+            </div>
+          </div>
+        ) : null}
+      </Drawer>
     </div>
   );
 }
