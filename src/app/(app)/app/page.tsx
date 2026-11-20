@@ -16,6 +16,10 @@ import {
   PageHeader,
   StagePill,
 } from "@/components/ui";
+import {
+  getCachedMacroAreas,
+  getCachedPublishedCourseCount,
+} from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 import {
@@ -44,11 +48,9 @@ export default async function StudentDashboardPage() {
     latestDiscovery,
     macroAreas,
     totalCourses,
-    inProgressCourses,
-    completedCourses,
+    courseProgressGroups,
     latestInProgressCourse,
-    challengeSubmissionsCount,
-    standalonePortfolioCount,
+    portfolioProjects,
     activeShareLink,
   ] = await Promise.all([
     prisma.discoveryResult.findFirst({
@@ -56,18 +58,15 @@ export default async function StudentDashboardPage() {
       orderBy: { completedAt: "desc" },
       select: { id: true, topAreas: true },
     }),
-    prisma.macroArea.findMany({
-      select: { slug: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.courseItem.count({
-      where: { track: { published: true } },
-    }),
-    prisma.courseProgress.count({
-      where: { studentId: authUser.userId, status: "EM_ANDAMENTO" },
-    }),
-    prisma.courseProgress.count({
-      where: { studentId: authUser.userId, status: "CONCLUIDO" },
+    getCachedMacroAreas(),
+    getCachedPublishedCourseCount(),
+    prisma.courseProgress.groupBy({
+      by: ["status"],
+      where: {
+        studentId: authUser.userId,
+        status: { in: ["EM_ANDAMENTO", "CONCLUIDO"] },
+      },
+      _count: { _all: true },
     }),
     prisma.courseProgress.findFirst({
       where: { studentId: authUser.userId, status: "EM_ANDAMENTO" },
@@ -81,17 +80,35 @@ export default async function StudentDashboardPage() {
         },
       },
     }),
-    prisma.portfolioProject.count({
-      where: { studentId: authUser.userId, challengeId: { not: null } },
-    }),
-    prisma.portfolioProject.count({
-      where: { studentId: authUser.userId, challengeId: null },
+    prisma.portfolioProject.findMany({
+      where: { studentId: authUser.userId },
+      select: { challengeId: true },
     }),
     prisma.portfolioShareLink.findFirst({
       where: { studentId: authUser.userId, active: true, revokedAt: null },
       select: { id: true },
     }),
   ]);
+
+  let inProgressCourses = 0;
+  let completedCourses = 0;
+  for (const group of courseProgressGroups) {
+    if (group.status === "EM_ANDAMENTO") {
+      inProgressCourses = group._count._all;
+    } else if (group.status === "CONCLUIDO") {
+      completedCourses = group._count._all;
+    }
+  }
+
+  let challengeSubmissionsCount = 0;
+  let standalonePortfolioCount = 0;
+  for (const project of portfolioProjects) {
+    if (project.challengeId !== null) {
+      challengeSubmissionsCount += 1;
+    } else {
+      standalonePortfolioCount += 1;
+    }
+  }
 
   const totalPortfolioProjectsCount =
     standalonePortfolioCount + challengeSubmissionsCount;

@@ -54,6 +54,7 @@ export async function GET() {
     const [institutions, educators] = await Promise.all([
       prisma.institution.findMany({
         orderBy: { createdAt: "desc" },
+        take: 200,
         select: {
           id: true,
           name: true,
@@ -71,6 +72,7 @@ export async function GET() {
       prisma.user.findMany({
         where: { role: Role.EDUCADOR },
         orderBy: { createdAt: "desc" },
+        take: 200,
         select: {
           id: true,
           name: true,

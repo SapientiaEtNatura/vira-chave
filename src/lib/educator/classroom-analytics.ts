@@ -1,5 +1,6 @@
 import { randomInt } from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
+import { getCachedMacroAreas } from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import {
   resolveStageFromMilestones,
@@ -82,64 +83,66 @@ export async function getClassroomEducationalView(
   educatorId: string,
   prismaClient: EducationalViewPrisma = prisma,
 ): Promise<ClassroomEducationalView | null> {
-  const classroom = await prismaClient.classroom.findUnique({
-    where: { id: classroomId },
-    select: {
-      id: true,
-      name: true,
-      inviteCode: true,
-      active: true,
-      educatorId: true,
-      institution: {
-        select: { name: true },
-      },
-      enrollments: {
-        where: {
-          student: {
-            status: "ACTIVE",
-          },
+  const [classroom, macroAreas] = await Promise.all([
+    prismaClient.classroom.findUnique({
+      where: { id: classroomId },
+      select: {
+        id: true,
+        name: true,
+        inviteCode: true,
+        active: true,
+        educatorId: true,
+        institution: {
+          select: { name: true },
         },
-        orderBy: { enrolledAt: "asc" },
-        select: {
-          student: {
-            select: {
-              id: true,
-              name: true,
-              status: true,
-              discoveryResults: {
-                orderBy: { completedAt: "desc" },
-                take: 1,
-                select: {
-                  topAreas: true,
+        enrollments: {
+          where: {
+            student: {
+              status: "ACTIVE",
+            },
+          },
+          orderBy: { enrolledAt: "asc" },
+          select: {
+            student: {
+              select: {
+                id: true,
+                name: true,
+                status: true,
+                discoveryResults: {
+                  orderBy: { completedAt: "desc" },
+                  take: 1,
+                  select: {
+                    topAreas: true,
+                  },
                 },
-              },
-              portfolioProjects: {
-                select: {
-                  challengeId: true,
-                  challenge: {
-                    select: {
-                      macroArea: {
-                        select: {
-                          slug: true,
+                portfolioProjects: {
+                  select: {
+                    challengeId: true,
+                    challenge: {
+                      select: {
+                        macroArea: {
+                          select: {
+                            slug: true,
+                          },
                         },
                       },
                     },
                   },
                 },
-              },
-              courseProgress: {
-                where: {
-                  status: { in: ["EM_ANDAMENTO", "CONCLUIDO"] },
-                },
-                select: {
-                  status: true,
-                  courseItem: {
-                    select: {
-                      track: {
-                        select: {
-                          macroArea: {
-                            select: {
-                              slug: true,
+                courseProgress: {
+                  where: {
+                    status: { in: ["EM_ANDAMENTO", "CONCLUIDO"] },
+                  },
+                  select: {
+                    status: true,
+                    courseItem: {
+                      select: {
+                        track: {
+                          select: {
+                            macroArea: {
+                              select: {
+                                slug: true,
+                              },
                             },
                           },
                         },
@@ -152,22 +155,23 @@ export async function getClassroomEducationalView(
           },
         },
       },
-    },
-  });
+    }),
+    prismaClient === prisma
+      ? getCachedMacroAreas()
+      : prismaClient.macroArea?.findMany
+        ? prismaClient.macroArea.findMany({
+            select: { slug: true, name: true },
+          })
+        : Promise.resolve([]),
+  ]);
 
   if (!classroom || classroom.educatorId !== educatorId) {
     return null;
   }
 
-  const macroAreaMap = new Map<string, string>();
-  if (prismaClient.macroArea?.findMany) {
-    const macroAreas = await prismaClient.macroArea.findMany({
-      select: { slug: true, name: true },
-    });
-    for (const area of macroAreas) {
-      macroAreaMap.set(area.slug, area.name);
-    }
-  }
+  const macroAreaMap = new Map<string, string>(
+    macroAreas.map((area) => [area.slug, area.name]),
+  );
 
   const stageCounts: Record<StudentStage, number> = {
     DESCOBRIR: 0,

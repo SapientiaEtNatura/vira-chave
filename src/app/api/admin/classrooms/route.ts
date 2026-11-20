@@ -91,6 +91,7 @@ export async function GET(request: Request) {
       },
       select: classroomSelect,
       orderBy: { createdAt: "desc" },
+      take: 200,
     });
 
     return NextResponse.json({

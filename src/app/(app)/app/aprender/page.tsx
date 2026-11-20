@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { ArrowRight, BookOpen, CheckCircle2, Sparkles } from "lucide-react";
 import { FilterGridReveal } from "@/components/motion/FilterGridReveal";
 import {
@@ -10,6 +11,7 @@ import {
   Progress,
   StageBanner,
 } from "@/components/ui";
+import { getCachedMacroAreas } from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
@@ -23,63 +25,120 @@ export default async function AprenderPage({
   const user = await requireRole(STUDENT_PORTAL_ROLES);
   const { area } = await searchParams;
   const activeArea = area?.trim() || "";
+  const isRecommendedFilter = activeArea === "recomendadas";
 
-  const [macroAreas, latestDiscovery] = await Promise.all([
-    prisma.macroArea.findMany({
-      orderBy: { name: "asc" },
+  const trackSelect = {
+    id: true,
+    title: true,
+    description: true,
+    macroArea: {
       select: {
-        id: true,
         slug: true,
         name: true,
-        _count: {
-          select: {
-            tracks: { where: { published: true } },
-          },
+      },
+    },
+    courses: {
+      select: {
+        id: true,
+        progress: {
+          where: { studentId: user.userId },
+          select: { status: true },
         },
       },
-    }),
+    },
+  } satisfies Prisma.TrackSelect;
+
+  const findLatestDiscovery = () =>
     prisma.discoveryResult.findFirst({
       where: { studentId: user.userId },
       orderBy: { completedAt: "desc" },
       select: { topAreas: true },
-    }),
-  ]);
+    });
+
+  let macroAreas: Awaited<ReturnType<typeof getCachedMacroAreas>>;
+  let latestDiscovery: Awaited<ReturnType<typeof findLatestDiscovery>>;
+  let tracks: Prisma.TrackGetPayload<{ select: typeof trackSelect }>[];
+  let countByMacroAreaId: Map<string, number> | null = null;
+
+  if (isRecommendedFilter) {
+    const [cachedAreas, discovery, groupedCounts] = await Promise.all([
+      getCachedMacroAreas(),
+      findLatestDiscovery(),
+      prisma.track.groupBy({
+        by: ["macroAreaId"],
+        where: { published: true },
+        _count: { _all: true },
+      }),
+    ]);
+    macroAreas = cachedAreas;
+    latestDiscovery = discovery;
+    countByMacroAreaId = new Map(
+      groupedCounts.map((row) => [row.macroAreaId, row._count._all]),
+    );
+    const topAreas = latestDiscovery?.topAreas ?? [];
+    tracks =
+      topAreas.length > 0
+        ? await prisma.track.findMany({
+            where: {
+              published: true,
+              macroArea: { slug: { in: topAreas } },
+            },
+            orderBy: { title: "asc" },
+            select: trackSelect,
+          })
+        : [];
+  } else if (activeArea) {
+    const [cachedAreas, discovery, filteredTracks, groupedCounts] =
+      await Promise.all([
+        getCachedMacroAreas(),
+        findLatestDiscovery(),
+        prisma.track.findMany({
+          where: {
+            published: true,
+            macroArea: { slug: activeArea },
+          },
+          orderBy: { title: "asc" },
+          select: trackSelect,
+        }),
+        prisma.track.groupBy({
+          by: ["macroAreaId"],
+          where: { published: true },
+          _count: { _all: true },
+        }),
+      ]);
+    macroAreas = cachedAreas;
+    latestDiscovery = discovery;
+    tracks = filteredTracks;
+    countByMacroAreaId = new Map(
+      groupedCounts.map((row) => [row.macroAreaId, row._count._all]),
+    );
+  } else {
+    const [cachedAreas, discovery, allTracks] = await Promise.all([
+      getCachedMacroAreas(),
+      findLatestDiscovery(),
+      prisma.track.findMany({
+        where: { published: true },
+        orderBy: { title: "asc" },
+        select: trackSelect,
+      }),
+    ]);
+    macroAreas = cachedAreas;
+    latestDiscovery = discovery;
+    tracks = allTracks;
+  }
+
+  const countBySlug = new Map<string, number>();
+  if (!countByMacroAreaId) {
+    for (const track of tracks) {
+      countBySlug.set(
+        track.macroArea.slug,
+        (countBySlug.get(track.macroArea.slug) ?? 0) + 1,
+      );
+    }
+  }
 
   const recommendedSlugs = latestDiscovery?.topAreas ?? [];
   const recommendedSet = new Set(recommendedSlugs);
-  const isRecommendedFilter = activeArea === "recomendadas";
-
-  const tracks = await prisma.track.findMany({
-    where: {
-      published: true,
-      ...(isRecommendedFilter
-        ? { macroArea: { slug: { in: recommendedSlugs } } }
-        : activeArea
-          ? { macroArea: { slug: activeArea } }
-          : {}),
-    },
-    orderBy: { title: "asc" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      macroArea: {
-        select: {
-          slug: true,
-          name: true,
-        },
-      },
-      courses: {
-        select: {
-          id: true,
-          progress: {
-            where: { studentId: user.userId },
-            select: { status: true },
-          },
-        },
-      },
-    },
-  });
 
   return (
     <div className="space-y-6">
@@ -99,7 +158,9 @@ export default async function AprenderPage({
           id: m.id,
           slug: m.slug,
           name: m.name,
-          count: m._count.tracks,
+          count: countByMacroAreaId
+            ? (countByMacroAreaId.get(m.id) ?? 0)
+            : (countBySlug.get(m.slug) ?? 0),
         }))}
       />
 
