@@ -4,7 +4,6 @@ import https from "node:https";
 import { isIP, type LookupFunction } from "node:net";
 
 const REQUEST_TIMEOUT_MS = 5000;
-const NATIVE_FETCH = globalThis.fetch;
 
 function isPrivateOrReservedIpv4(ip: string): boolean {
   const parts = ip.split(".");
@@ -17,7 +16,7 @@ function isPrivateOrReservedIpv4(ip: string): boolean {
     return true;
   }
 
-  const [a, b] = octets;
+  const [a, b, c] = octets;
 
   if (a === 0) return true; // 0.0.0.0/8
   if (a === 10) return true; // 10.0.0.0/8
@@ -25,30 +24,157 @@ function isPrivateOrReservedIpv4(ip: string): boolean {
   if (a === 127) return true; // 127.0.0.0/8 (loopback)
   if (a === 169 && b === 254) return true; // 169.254.0.0/16 (link-local)
   if (a === 172 && b >= 16 && b <= 31) return true; // 172.16.0.0/12
+  if (a === 192 && b === 0 && (c === 0 || c === 2)) return true; // 192.0.0.0/24 & 192.0.2.0/24
   if (a === 192 && b === 168) return true; // 192.168.0.0/16
+  if (a === 198 && (b === 18 || b === 19)) return true; // 198.18.0.0/15 (Benchmarking)
+  if (a === 198 && b === 51 && c === 100) return true; // 198.51.100.0/24 (TEST-NET-2)
+  if (a === 203 && b === 0 && c === 113) return true; // 203.0.113.0/24 (TEST-NET-3)
   if (a >= 224) return true; // Multicast & reserved (224.0.0.0/4+)
 
   return false;
 }
 
-function extractMappedIpv4FromIpv6(normalizedIpv6: string): string | null {
-  // Dotted-quad form e.g. ::ffff:127.0.0.1
-  const dottedMatch = normalizedIpv6.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-  if (dottedMatch) {
-    return dottedMatch[1];
+function parseIpv4EmbeddedHextets(ipv4: string): [number, number] | null {
+  const parts = ipv4.split(".");
+  if (parts.length !== 4) {
+    return null;
+  }
+  const octets = parts.map((part) => Number(part));
+  if (octets.some((octet) => !Number.isInteger(octet) || octet < 0 || octet > 255)) {
+    return null;
+  }
+  return [(octets[0] << 8) | octets[1], (octets[2] << 8) | octets[3]];
+}
+
+function parseIpv6SegmentList(segments: string[]): number[] | null {
+  const result: number[] = [];
+  for (const seg of segments) {
+    if (!/^[0-9a-f]{1,4}$/.test(seg)) {
+      return null;
+    }
+    result.push(Number.parseInt(seg, 16));
+  }
+  return result;
+}
+
+function parseIpv6Hextets(ip: string): number[] | null {
+  const hasCompression = ip.includes("::");
+  const halves = hasCompression ? ip.split("::") : [ip];
+  if (halves.length > 2) {
+    return null;
   }
 
-  // Compressed hex form e.g. ::ffff:7f00:1 or 0:0:0:0:0:ffff:7f00:0001
-  const hexMatch = normalizedIpv6.match(
-    /^(?:::ffff:|(?:0+:){5}ffff:)([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i,
-  );
-  if (hexMatch) {
-    const high = Number.parseInt(hexMatch[1], 16);
-    const low = Number.parseInt(hexMatch[2], 16);
-    return `${(high >> 8) & 0xff}.${high & 0xff}.${(low >> 8) & 0xff}.${low & 0xff}`;
+  const leftRaw = halves[0] ? halves[0].split(":") : [];
+  const rightRaw = hasCompression && halves[1] ? halves[1].split(":") : [];
+
+  let trailingHextets: [number, number] | null = null;
+  const targetRaw = rightRaw.length > 0 ? rightRaw : leftRaw;
+  const lastSeg = targetRaw[targetRaw.length - 1];
+  if (lastSeg && lastSeg.includes(".")) {
+    targetRaw.pop();
+    trailingHextets = parseIpv4EmbeddedHextets(lastSeg);
+    if (!trailingHextets) {
+      return null;
+    }
   }
 
-  return null;
+  const leftNums = parseIpv6SegmentList(leftRaw);
+  const rightNums = parseIpv6SegmentList(rightRaw);
+  if (!leftNums || !rightNums) {
+    return null;
+  }
+
+  if (trailingHextets) {
+    if (hasCompression && halves[1] === "" && rightNums.length === 0) {
+      return null;
+    }
+    if (hasCompression) {
+      rightNums.push(...trailingHextets);
+    } else {
+      leftNums.push(...trailingHextets);
+    }
+  }
+
+  if (hasCompression) {
+    const missing = 8 - (leftNums.length + rightNums.length);
+    if (missing < 1) {
+      return null;
+    }
+    return [...leftNums, ...Array<number>(missing).fill(0), ...rightNums];
+  }
+
+  return leftNums.length === 8 ? leftNums : null;
+}
+
+function isPrivateOrReservedIpv6(ip: string): boolean {
+  const hextets = parseIpv6Hextets(ip);
+  if (!hextets) {
+    return true;
+  }
+
+  const [h0, h1, h2, h3, h4, h5] = hextets;
+
+  // ::/96 (unspecified ::, loopback ::1, IPv4-compatible ::x.x.x.x)
+  if (h0 === 0 && h1 === 0 && h2 === 0 && h3 === 0 && h4 === 0 && h5 === 0) {
+    return true;
+  }
+
+  // ::ffff:0:0/96 (IPv4-mapped)
+  if (h0 === 0 && h1 === 0 && h2 === 0 && h3 === 0 && h4 === 0 && h5 === 0xffff) {
+    return true;
+  }
+
+  // ::ffff:0:0:0/96 (IPv4-translated SIIT: 0:0:0:0:ffff:0:x:x)
+  if (h0 === 0 && h1 === 0 && h2 === 0 && h3 === 0 && h4 === 0xffff && h5 === 0) {
+    return true;
+  }
+
+  // 64:ff9b::/96 e 64:ff9b:1::/48 (NAT64)
+  if (h0 === 0x0064 && h1 === 0xff9b) {
+    if (h2 === 0 && h3 === 0 && h4 === 0 && h5 === 0) {
+      return true;
+    }
+    if (h2 === 0x0001) {
+      return true;
+    }
+  }
+
+  // 100::/64 (discard-only)
+  if (h0 === 0x0100 && h1 === 0 && h2 === 0 && h3 === 0) {
+    return true;
+  }
+
+  // 2001:db8::/32 (documentation)
+  if (h0 === 0x2001 && h1 === 0x0db8) {
+    return true;
+  }
+
+  // 2002::/16 (6to4)
+  if (h0 === 0x2002) {
+    return true;
+  }
+
+  // fc00::/7 (Unique Local Address: fc00..fdff)
+  if ((h0 & 0xfe00) === 0xfc00) {
+    return true;
+  }
+
+  // fe80::/10 (Link-Local: fe80..febf)
+  if ((h0 & 0xffc0) === 0xfe80) {
+    return true;
+  }
+
+  // fec0::/10 (deprecated site-local: fec0..feff)
+  if ((h0 & 0xffc0) === 0xfec0) {
+    return true;
+  }
+
+  // ff00::/8 (Multicast)
+  if ((h0 & 0xff00) === 0xff00) {
+    return true;
+  }
+
+  return false;
 }
 
 export function isPrivateOrReservedIp(rawIp: string): boolean {
@@ -60,41 +186,7 @@ export function isPrivateOrReservedIp(rawIp: string): boolean {
   }
 
   if (version === 6) {
-    if (ip === "::" || ip === "::1") {
-      return true;
-    }
-
-    const mappedIpv4 = extractMappedIpv4FromIpv6(ip);
-    if (mappedIpv4) {
-      return isPrivateOrReservedIpv4(mappedIpv4);
-    }
-
-    // fc00::/7 (Unique Local Address: fc00..fdff)
-    if (ip.startsWith("fc") || ip.startsWith("fd")) {
-      return true;
-    }
-
-    // fe80::/10 (Link-Local: fe80..febf)
-    if (/^fe[89ab]/.test(ip)) {
-      return true;
-    }
-
-    // ff00::/8 (Multicast)
-    if (ip.startsWith("ff")) {
-      return true;
-    }
-
-    // 0:0:0:0:0:0:0:0 or 0:0:0:0:0:0:0:1 expanded forms
-    const expanded = ip.split(":");
-    if (
-      expanded.length === 8 &&
-      expanded.slice(0, 7).every((seg) => /^0+$/.test(seg)) &&
-      (/^0+$/.test(expanded[7]) || /^0*1$/.test(expanded[7]))
-    ) {
-      return true;
-    }
-
-    return false;
+    return isPrivateOrReservedIpv6(ip);
   }
 
   // Fail closed for unrecognized IP strings
@@ -102,8 +194,15 @@ export function isPrivateOrReservedIp(rawIp: string): boolean {
 }
 
 function isBlockedHostname(hostname: string): boolean {
-  const normalized = hostname.toLowerCase().replace(/\.$/, "");
+  const normalized = hostname.toLowerCase().replace(/\.+$/, "");
+  if (!normalized) {
+    return true;
+  }
+  if (isIP(normalized) !== 0) {
+    return false;
+  }
   return (
+    !normalized.includes(".") ||
     normalized === "localhost" ||
     normalized.endsWith(".localhost") ||
     normalized.endsWith(".local") ||
@@ -142,10 +241,6 @@ export function validateExternalUrlStructure(
     return { safe: false, reason: "Hostname ausente." };
   }
 
-  if (isBlockedHostname(hostname)) {
-    return { safe: false, reason: "Hostname local ou interno não é permitido." };
-  }
-
   if (isIP(hostname) !== 0) {
     if (isPrivateOrReservedIp(hostname)) {
       return {
@@ -154,6 +249,10 @@ export function validateExternalUrlStructure(
       };
     }
     return { safe: true, parsed, hostname, isIpLiteral: true };
+  }
+
+  if (isBlockedHostname(hostname)) {
+    return { safe: false, reason: "Hostname local ou interno não é permitido." };
   }
 
   return { safe: true, parsed, hostname, isIpLiteral: false };
@@ -171,7 +270,15 @@ export async function isSafeExternalUrl(rawUrl: string): Promise<{
   }
 
   if (structure.isIpLiteral) {
-    return { safe: true };
+    const family = isIP(structure.hostname);
+    if (family !== 4 && family !== 6) {
+      return { safe: false, reason: "Endereço IP inválido." };
+    }
+    return {
+      safe: true,
+      resolvedAddress: structure.hostname,
+      resolvedFamily: family,
+    };
   }
 
   try {
@@ -199,32 +306,23 @@ export async function isSafeExternalUrl(rawUrl: string): Promise<{
 
 const MAX_REDIRECTS = 3;
 
-interface CheckedResponse {
+export type CheckedResponse = {
   status: number;
   ok: boolean;
   location: string | null;
-}
+};
+
+export type CheckedRequestFn = (
+  urlStr: string,
+  method: "HEAD" | "GET",
+  pinned: { address: string; family: 4 | 6 },
+) => Promise<CheckedResponse>;
 
 async function sendCheckedRequest(
   urlStr: string,
   method: "HEAD" | "GET",
-  pinned?: { address: string; family: 4 | 6 },
+  pinned: { address: string; family: 4 | 6 },
 ): Promise<CheckedResponse> {
-  if (!pinned || globalThis.fetch !== NATIVE_FETCH) {
-    const response = await globalThis.fetch(urlStr, {
-      method,
-      redirect: "manual",
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    });
-    const location = response.headers.get("location");
-    await response.body?.cancel().catch(() => undefined);
-    return {
-      status: response.status,
-      ok: response.ok,
-      location,
-    };
-  }
-
   const parsed = new URL(urlStr);
   const pinnedLookup: LookupFunction = (_host, opts, callback) => {
     if (typeof opts === "object" && opts !== null && opts.all) {
@@ -257,40 +355,31 @@ async function sendCheckedRequest(
       lookup: pinnedLookup,
     };
 
+    const handleResponse = (res: http.IncomingMessage) => {
+      const status = res.statusCode ?? 0;
+      const rawLocation = res.headers.location;
+      const location = Array.isArray(rawLocation)
+        ? (rawLocation[0] ?? null)
+        : (rawLocation ?? null);
+      finishResolve({
+        status,
+        ok: status >= 200 && status < 300,
+        location,
+      });
+      res.resume();
+      res.destroy();
+    };
+
+    const parsedHostname = parsed.hostname.replace(/^\[|\]$/g, "");
+    const httpsOptions =
+      isIP(parsedHostname) === 0
+        ? { ...requestOptions, servername: parsed.hostname }
+        : requestOptions;
+
     const req =
       parsed.protocol === "https:"
-        ? https.request(
-            parsed,
-            { ...requestOptions, servername: parsed.hostname },
-            (res) => {
-              const status = res.statusCode ?? 0;
-              const rawLocation = res.headers.location;
-              const location = Array.isArray(rawLocation)
-                ? (rawLocation[0] ?? null)
-                : (rawLocation ?? null);
-              res.resume();
-              res.destroy();
-              finishResolve({
-                status,
-                ok: status >= 200 && status < 300,
-                location,
-              });
-            },
-          )
-        : http.request(parsed, requestOptions, (res) => {
-            const status = res.statusCode ?? 0;
-            const rawLocation = res.headers.location;
-            const location = Array.isArray(rawLocation)
-              ? (rawLocation[0] ?? null)
-              : (rawLocation ?? null);
-            res.resume();
-            res.destroy();
-            finishResolve({
-              status,
-              ok: status >= 200 && status < 300,
-              location,
-            });
-          });
+        ? https.request(parsed, httpsOptions, handleResponse)
+        : http.request(parsed, requestOptions, handleResponse);
 
     req.on("timeout", () => {
       const timeoutErr = new Error("Tempo limite excedido ao verificar o link externo.");
@@ -309,15 +398,21 @@ async function sendCheckedRequest(
 async function fetchWithValidatedRedirects(
   initialUrl: string,
   method: "HEAD" | "GET",
+  requestFn: CheckedRequestFn,
 ): Promise<
-  | { response: CheckedResponse; error?: undefined }
+  | {
+      response: CheckedResponse;
+      finalUrl: string;
+      finalPinned: { address: string; family: 4 | 6 };
+      error?: undefined;
+    }
   | { response?: undefined; error: { ok: false; status: number | null; reason: string } }
 > {
   let currentUrl = initialUrl;
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
     const safety = await isSafeExternalUrl(currentUrl);
-    if (!safety.safe) {
+    if (!safety.safe || !safety.resolvedAddress || !safety.resolvedFamily) {
       return {
         error: {
           ok: false,
@@ -327,11 +422,12 @@ async function fetchWithValidatedRedirects(
       };
     }
 
-    const pinned = safety.resolvedAddress
-      ? { address: safety.resolvedAddress, family: safety.resolvedFamily ?? 4 }
-      : undefined;
+    const pinned = {
+      address: safety.resolvedAddress,
+      family: safety.resolvedFamily,
+    };
 
-    const response = await sendCheckedRequest(currentUrl, method, pinned);
+    const response = await requestFn(currentUrl, method, pinned);
 
     if (response.status >= 300 && response.status < 400) {
       const location = response.location;
@@ -371,7 +467,7 @@ async function fetchWithValidatedRedirects(
       continue;
     }
 
-    return { response };
+    return { response, finalUrl: currentUrl, finalPinned: pinned };
   }
 
   return {
@@ -385,9 +481,11 @@ async function fetchWithValidatedRedirects(
 
 export async function checkExternalLink(
   rawUrl: string,
+  options?: { requestFn?: CheckedRequestFn },
 ): Promise<{ ok: boolean; status: number | null; reason?: string }> {
+  const requestFn = options?.requestFn ?? sendCheckedRequest;
   try {
-    let result = await fetchWithValidatedRedirects(rawUrl, "HEAD");
+    const result = await fetchWithValidatedRedirects(rawUrl, "HEAD", requestFn);
     if (result.error) {
       return result.error;
     }
@@ -395,11 +493,7 @@ export async function checkExternalLink(
     let response = result.response;
 
     if (response.status === 405 || response.status === 501) {
-      result = await fetchWithValidatedRedirects(rawUrl, "GET");
-      if (result.error) {
-        return result.error;
-      }
-      response = result.response;
+      response = await requestFn(result.finalUrl, "GET", result.finalPinned);
     }
 
     return {

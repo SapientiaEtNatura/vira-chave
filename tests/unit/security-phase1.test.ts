@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { checkExternalLink } from "@/lib/link-checker";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { checkExternalLink, type CheckedRequestFn } from "@/lib/link-checker";
 import {
   createPortfolioProject,
   MAX_PROJECT_REFLECTION_LENGTH,
@@ -9,49 +9,47 @@ import {
 } from "@/lib/portfolio/portfolio-service";
 
 describe("Fase 1 — Correções de Segurança e Validação", () => {
-  const originalFetch = globalThis.fetch;
-
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  afterEach(() => {
-    globalThis.fetch = originalFetch;
-  });
-
   it("SEC-02: bloqueia redirecionamento HTTP 302 para IP privado/loopback no checkExternalLink", async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(
-      new Response(null, {
-        status: 302,
-        headers: { location: "http://127.0.0.1:5432/internal" },
-      }),
-    );
-    globalThis.fetch = fetchMock as typeof fetch;
+    const requestFn = vi.fn<CheckedRequestFn>().mockResolvedValueOnce({
+      status: 302,
+      ok: false,
+      location: "http://127.0.0.1:5432/internal",
+    });
 
     // 93.184.216.34 é IP público (não dispara DNS lookup, passa na checagem inicial)
-    const result = await checkExternalLink("https://93.184.216.34/curso");
+    const result = await checkExternalLink("https://93.184.216.34/curso", {
+      requestFn,
+    });
 
     expect(result.ok).toBe(false);
     expect(result.status).toBeNull();
     expect(result.reason).toMatch(/privado|reservado|local/i);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ redirect: "manual" });
+    expect(requestFn).toHaveBeenCalledTimes(1);
+    expect(requestFn).toHaveBeenCalledWith(
+      "https://93.184.216.34/curso",
+      "HEAD",
+      { address: "93.184.216.34", family: 4 },
+    );
   });
 
   it("SEC-02: bloqueia cadeia excessiva de redirecionamentos (> 3 saltos)", async () => {
-    const fetchMock = vi.fn().mockImplementation(async () =>
-      new Response(null, {
-        status: 302,
-        headers: { location: "https://93.184.216.34/next" },
-      }),
-    );
-    globalThis.fetch = fetchMock as typeof fetch;
+    const requestFn = vi.fn<CheckedRequestFn>().mockResolvedValue({
+      status: 302,
+      ok: false,
+      location: "https://93.184.216.34/next",
+    });
 
-    const result = await checkExternalLink("https://93.184.216.34/start");
+    const result = await checkExternalLink("https://93.184.216.34/start", {
+      requestFn,
+    });
 
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/limite de redirecionamentos/i);
-    expect(fetchMock).toHaveBeenCalledTimes(4);
+    expect(requestFn).toHaveBeenCalledTimes(4);
   });
 
   it("QA-02: rejeita criação de projeto no portfólio acima dos limites máximos", async () => {

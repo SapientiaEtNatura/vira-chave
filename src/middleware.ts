@@ -20,28 +20,67 @@ function hasSessionCookie(request: NextRequest): boolean {
   );
 }
 
+function matchesExpectedOrigin(
+  rawUrl: string,
+  expectedHost: string,
+  forwardedProto: "http" | "https" | null,
+): boolean {
+  try {
+    const parsed = new URL(rawUrl);
+    if (parsed.host !== expectedHost) {
+      return false;
+    }
+    if (forwardedProto && parsed.protocol !== `${forwardedProto}:`) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function isValidMutationOrigin(request: NextRequest): boolean {
   if (!MUTATING_METHODS.has(request.method.toUpperCase())) {
     return true;
   }
 
-  const origin = request.headers.get("origin");
-  const expectedHost =
+  const expectedHost = (
     request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() ||
-    request.headers.get("host") ||
-    request.nextUrl.host;
+    request.headers.get("host")?.trim() ||
+    request.nextUrl.host
+  ).toLowerCase();
 
-  if (origin) {
-    try {
-      const originHost = new URL(origin).host;
-      return originHost === expectedHost;
-    } catch {
-      return false;
-    }
+  const rawForwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",")[0]
+    ?.trim()
+    .toLowerCase();
+  const forwardedProto =
+    rawForwardedProto === "http" || rawForwardedProto === "https"
+      ? rawForwardedProto
+      : null;
+
+  const origin = request.headers.get("origin");
+  if (origin !== null) {
+    return matchesExpectedOrigin(origin, expectedHost, forwardedProto);
   }
 
-  if (request.headers.get("sec-fetch-site") === "cross-site") {
+  const referer = request.headers.get("referer");
+  if (referer !== null) {
+    return matchesExpectedOrigin(referer, expectedHost, forwardedProto);
+  }
+
+  const secFetchSite = request.headers.get("sec-fetch-site")?.trim().toLowerCase();
+  if (secFetchSite === "cross-site") {
     return false;
+  }
+
+  if (hasSessionCookie(request)) {
+    return (
+      secFetchSite === "same-origin" ||
+      secFetchSite === "same-site" ||
+      secFetchSite === "none"
+    );
   }
 
   return true;
