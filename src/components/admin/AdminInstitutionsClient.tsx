@@ -117,6 +117,7 @@ export function AdminInstitutionsClient({
   const [pendingEducatorToggle, setPendingEducatorToggle] =
     useState<AdminEducatorItem | null>(null);
   const classroomsFirstFilter = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   async function handleCreateInstitution(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -247,6 +248,10 @@ export function AdminInstitutionsClient({
     q: string;
     institutionId: string;
   }) {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoadingClassrooms(true);
     setError(null);
 
@@ -258,7 +263,7 @@ export function AdminInstitutionsClient({
       const query = sp.toString();
       const response = await fetch(
         `/api/admin/classrooms${query ? `?${query}` : ""}`,
-        { cache: "no-store" },
+        { cache: "no-store", signal: controller.signal },
       );
       const payload = (await response.json()) as {
         classrooms?: AdminClassroomItem[];
@@ -272,10 +277,19 @@ export function AdminInstitutionsClient({
 
       setClassrooms(payload.classrooms);
       setClassroomsLoaded(true);
-    } catch {
+    } catch (err) {
+      if (
+        controller.signal.aborted ||
+        ((err instanceof DOMException || err instanceof Error) &&
+          err.name === "AbortError")
+      ) {
+        return;
+      }
       setError("Erro de conexão ao carregar turmas.");
     } finally {
-      setLoadingClassrooms(false);
+      if (abortRef.current === controller) {
+        setLoadingClassrooms(false);
+      }
     }
   }
 
@@ -307,6 +321,12 @@ export function AdminInstitutionsClient({
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [classroomSearch, classroomInstitutionId]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   async function handleConfirmClassroomAction() {
     if (!pendingClassroomAction) return;

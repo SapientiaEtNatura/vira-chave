@@ -8,9 +8,9 @@ import {
   Users,
 } from "lucide-react";
 import {
-  AdminFunnelChart,
-  AdminRegistrationsChart,
-} from "@/components/admin/AdminCharts";
+  MonthlyRegistrationsChartDynamic,
+  StageFunnelChartDynamic,
+} from "@/components/admin/AdminChartsDynamic";
 import { Badge, Card, type BadgeVariant } from "@/components/ui";
 import { getAdminOverviewData } from "@/lib/admin/overview";
 import { requireRole } from "@/lib/rbac";
@@ -268,7 +268,7 @@ export default async function AdminOverviewPage() {
               Novos estudantes e educadores por mês
             </p>
           </div>
-          <AdminRegistrationsChart data={data.monthlyRegistrations} />
+          <MonthlyRegistrationsChartDynamic data={data.monthlyRegistrations} />
         </Card>
       </section>
 
@@ -288,7 +288,7 @@ export default async function AdminOverviewPage() {
               Estudantes com atividade registrada por etapa
             </p>
           </div>
-          <AdminFunnelChart data={data.stageFunnel} />
+          <StageFunnelChartDynamic data={data.stageFunnel} />
         </Card>
 
         <Card
