@@ -8,12 +8,11 @@ import {
   Users,
 } from "lucide-react";
 import {
-  AdminFunnelChart,
-  AdminRegistrationsChart,
-} from "@/components/admin/AdminCharts";
+  MonthlyRegistrationsChartDynamic,
+  StageFunnelChartDynamic,
+} from "@/components/admin/AdminChartsDynamic";
 import { Badge, Card, type BadgeVariant } from "@/components/ui";
 import { getAdminOverviewData } from "@/lib/admin/overview";
-import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
@@ -58,17 +57,10 @@ const ACTION_META: Record<string, { label: string; variant: BadgeVariant }> = {
 
 export default async function AdminOverviewPage() {
   const authUser = await requireRole([Role.ADMIN]);
-
-  const [data, currentUser] = await Promise.all([
-    getAdminOverviewData(),
-    prisma.user.findUnique({
-      where: { id: authUser.userId },
-      select: { name: true },
-    }),
-  ]);
+  const data = await getAdminOverviewData();
 
   const { kpis, recentAuditLogs } = data;
-  const firstName = currentUser?.name?.trim().split(/\s+/)[0] || "Admin";
+  const firstName = authUser.name?.trim().split(/\s+/)[0] || "Admin";
   const hasBrokenLinks = kpis.brokenCourseLinks > 0;
 
   return (
@@ -276,7 +268,7 @@ export default async function AdminOverviewPage() {
               Novos estudantes e educadores por mês
             </p>
           </div>
-          <AdminRegistrationsChart data={data.monthlyRegistrations} />
+          <MonthlyRegistrationsChartDynamic data={data.monthlyRegistrations} />
         </Card>
       </section>
 
@@ -296,7 +288,7 @@ export default async function AdminOverviewPage() {
               Estudantes com atividade registrada por etapa
             </p>
           </div>
-          <AdminFunnelChart data={data.stageFunnel} />
+          <StageFunnelChartDynamic data={data.stageFunnel} />
         </Card>
 
         <Card

@@ -8,11 +8,11 @@ import {
   Alert,
   Button,
   Card,
-  FileUploadField,
   FormField,
   Input,
   Textarea,
 } from "@/components/ui";
+import { FileUploadField } from "@/components/ui/FileUploadField";
 
 interface ChallengeSubmitClientProps {
   challengeId: string;

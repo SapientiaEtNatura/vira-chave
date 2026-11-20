@@ -50,61 +50,70 @@ export async function GET() {
     return authResult;
   }
 
-  const [institutions, educators] = await Promise.all([
-    prisma.institution.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        institutionCode: true,
-        active: true,
-        createdAt: true,
-        _count: {
-          select: {
-            users: true,
-            classrooms: true,
+  try {
+    const [institutions, educators] = await Promise.all([
+      prisma.institution.findMany({
+        orderBy: { createdAt: "desc" },
+        take: 200,
+        select: {
+          id: true,
+          name: true,
+          institutionCode: true,
+          active: true,
+          createdAt: true,
+          _count: {
+            select: {
+              users: true,
+              classrooms: true,
+            },
           },
         },
-      },
-    }),
-    prisma.user.findMany({
-      where: { role: Role.EDUCADOR },
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        status: true,
-        institutionId: true,
-        createdAt: true,
-        institution: {
-          select: { id: true, name: true, active: true },
+      }),
+      prisma.user.findMany({
+        where: { role: Role.EDUCADOR },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          status: true,
+          institutionId: true,
+          createdAt: true,
+          institution: {
+            select: { id: true, name: true, active: true },
+          },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  return NextResponse.json({
-    institutions: institutions.map((inst) => ({
-      id: inst.id,
-      name: inst.name,
-      institutionCode: inst.institutionCode,
-      active: inst.active,
-      createdAt: inst.createdAt.toISOString(),
-      userCount: inst._count.users,
-      classroomCount: inst._count.classrooms,
-    })),
-    educators: educators.map((edu) => ({
-      id: edu.id,
-      name: edu.name,
-      email: edu.email,
-      status: edu.status,
-      institutionId: edu.institutionId,
-      institutionName: edu.institution?.name ?? null,
-      institutionActive: edu.institution?.active ?? null,
-      createdAt: edu.createdAt.toISOString(),
-    })),
-  });
+    return NextResponse.json({
+      institutions: institutions.map((inst) => ({
+        id: inst.id,
+        name: inst.name,
+        institutionCode: inst.institutionCode,
+        active: inst.active,
+        createdAt: inst.createdAt.toISOString(),
+        userCount: inst._count.users,
+        classroomCount: inst._count.classrooms,
+      })),
+      educators: educators.map((edu) => ({
+        id: edu.id,
+        name: edu.name,
+        email: edu.email,
+        status: edu.status,
+        institutionId: edu.institutionId,
+        institutionName: edu.institution?.name ?? null,
+        institutionActive: edu.institution?.active ?? null,
+        createdAt: edu.createdAt.toISOString(),
+      })),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao carregar instituições." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -194,7 +203,10 @@ export async function POST(request: Request) {
         }
         continue;
       }
-      throw error;
+      return NextResponse.json(
+        { error: "Erro interno ao criar instituição." },
+        { status: 500 },
+      );
     }
   }
 
@@ -333,6 +345,9 @@ export async function PATCH(request: Request) {
         { status: 404 },
       );
     }
-    throw error;
+    return NextResponse.json(
+      { error: "Erro interno ao atualizar registro." },
+      { status: 500 },
+    );
   }
 }

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { PrismaClient } from "@prisma/client";
 import { z } from "zod";
+import { getCachedMacroAreas } from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import {
   calculateProvenPractice,
@@ -215,56 +216,41 @@ function parseScoresRecord(raw: unknown): Record<string, number> {
   return parsed;
 }
 
-async function buildSharedReadinessSummary(
-  studentId: string,
-  sharedChallengeSlugs: string[],
-  sharedProjectsCount: number,
-  prismaClient: ShareReadPrismaClient,
-): Promise<SharedPortfolioReadinessSummary | null> {
-  const [latestDiscovery, completedCourses, macroAreas] = await Promise.all([
-    prismaClient.discoveryResult
-      ? prismaClient.discoveryResult.findFirst({
-          where: { studentId },
-          orderBy: { completedAt: "desc" },
-          select: {
-            scoresJson: true,
-            topAreas: true,
-          },
-        })
-      : Promise.resolve(null),
-    prismaClient.courseProgress
-      ? prismaClient.courseProgress.findMany({
-          where: {
-            studentId,
-            status: "CONCLUIDO",
-          },
-          select: {
-            courseItem: {
-              select: {
-                track: {
-                  select: {
-                    macroArea: {
-                      select: {
-                        slug: true,
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        })
-      : Promise.resolve([]),
-    prismaClient.macroArea
-      ? prismaClient.macroArea.findMany({
-          select: {
-            slug: true,
-            name: true,
-            entryRoles: true,
-          },
-        })
-      : Promise.resolve([]),
-  ]);
+interface SharedReadinessDiscoveryRow {
+  scoresJson: unknown;
+  topAreas: string[];
+}
+
+interface SharedReadinessCourseRow {
+  courseItem: {
+    track: {
+      macroArea: {
+        slug: string;
+      };
+    };
+  };
+}
+
+interface SharedReadinessMacroAreaRow {
+  slug: string;
+  name: string;
+  entryRoles: string[];
+}
+
+function computeSharedReadinessSummary(input: {
+  latestDiscovery: SharedReadinessDiscoveryRow | null;
+  completedCourses: SharedReadinessCourseRow[];
+  macroAreas: SharedReadinessMacroAreaRow[];
+  sharedChallengeSlugs: string[];
+  sharedProjectsCount: number;
+}): SharedPortfolioReadinessSummary | null {
+  const {
+    latestDiscovery,
+    completedCourses,
+    macroAreas,
+    sharedChallengeSlugs,
+    sharedProjectsCount,
+  } = input;
 
   const completedCourseSlugs = completedCourses
     .map((item) => item.courseItem?.track?.macroArea?.slug)
@@ -503,77 +489,132 @@ export async function getSharedPortfolioByToken(
     return null;
   }
 
-  const projects = await prismaClient.portfolioProject.findMany({
-    where: {
-      studentId: shareLink.studentId,
-      isIncludedInShare: true,
-    },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      summary: true,
-      reflection: true,
-      externalUrl: true,
-      challenge: {
-        select: {
-          title: true,
-          macroArea: {
-            select: {
-              slug: true,
+  const fetchProjects = () =>
+    prismaClient.portfolioProject.findMany({
+      where: {
+        studentId: shareLink.studentId,
+        isIncludedInShare: true,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        summary: true,
+        reflection: true,
+        externalUrl: true,
+        challenge: {
+          select: {
+            title: true,
+            macroArea: {
+              select: {
+                slug: true,
+              },
             },
           },
         },
-      },
-      evidenceFiles: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          originalName: true,
-          mimeType: true,
-          sizeBytes: true,
+        evidenceFiles: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            originalName: true,
+            mimeType: true,
+            sizeBytes: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  const mappedProjects: SharedPortfolioProject[] = projects.map((project) => ({
-    id: project.id,
-    title: project.title,
-    summary: project.summary,
-    reflection: project.reflection,
-    externalUrl: project.externalUrl,
-    challengeTitle: project.challenge?.title ?? null,
-    evidenceFiles: project.evidenceFiles.map((file) => ({
-      id: file.id,
-      originalName: file.originalName,
-      mimeType: file.mimeType,
-      sizeBytes: file.sizeBytes,
-    })),
-  }));
+  const mapProjects = (
+    projects: Awaited<ReturnType<typeof fetchProjects>>,
+  ): SharedPortfolioProject[] =>
+    projects.map((project) => ({
+      id: project.id,
+      title: project.title,
+      summary: project.summary,
+      reflection: project.reflection,
+      externalUrl: project.externalUrl,
+      challengeTitle: project.challenge?.title ?? null,
+      evidenceFiles: project.evidenceFiles.map((file) => ({
+        id: file.id,
+        originalName: file.originalName,
+        mimeType: file.mimeType,
+        sizeBytes: file.sizeBytes,
+      })),
+    }));
 
   if (shareLink.includeReadiness !== true) {
+    const projects = await fetchProjects();
     return {
       studentDisplayName: shareLink.student.name,
-      projects: mappedProjects,
+      projects: mapProjects(projects),
       readinessSummary: null,
     };
   }
+
+  const [projects, latestDiscovery, completedCourses, macroAreas] =
+    await Promise.all([
+      fetchProjects(),
+      prismaClient.discoveryResult
+        ? prismaClient.discoveryResult.findFirst({
+            where: { studentId: shareLink.studentId },
+            orderBy: { completedAt: "desc" },
+            select: {
+              scoresJson: true,
+              topAreas: true,
+            },
+          })
+        : Promise.resolve(null),
+      prismaClient.courseProgress
+        ? prismaClient.courseProgress.findMany({
+            where: {
+              studentId: shareLink.studentId,
+              status: "CONCLUIDO",
+            },
+            select: {
+              courseItem: {
+                select: {
+                  track: {
+                    select: {
+                      macroArea: {
+                        select: {
+                          slug: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      prismaClient === prisma
+        ? getCachedMacroAreas()
+        : prismaClient.macroArea
+          ? prismaClient.macroArea.findMany({
+              select: {
+                slug: true,
+                name: true,
+                entryRoles: true,
+              },
+            })
+          : Promise.resolve([]),
+    ]);
 
   const sharedChallengeSlugs = projects
     .map((project) => project.challenge?.macroArea?.slug)
     .filter((slug): slug is string => typeof slug === "string" && slug.length > 0);
 
-  const readinessSummary = await buildSharedReadinessSummary(
-    shareLink.studentId,
+  const readinessSummary = computeSharedReadinessSummary({
+    latestDiscovery,
+    completedCourses,
+    macroAreas,
     sharedChallengeSlugs,
-    projects.length,
-    prismaClient,
-  );
+    sharedProjectsCount: projects.length,
+  });
 
   return {
     studentDisplayName: shareLink.student.name,
-    projects: mappedProjects,
+    projects: mapProjects(projects),
     readinessSummary,
   };
 }

@@ -12,40 +12,47 @@ export async function GET() {
     return authResult;
   }
 
-  const projects = await prisma.portfolioProject.findMany({
-    where: { studentId: authResult.userId },
-    orderBy: { createdAt: "desc" },
-    include: {
-      challenge: {
-        select: { title: true },
-      },
-      evidenceFiles: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          originalName: true,
-          mimeType: true,
-          sizeBytes: true,
+  try {
+    const projects = await prisma.portfolioProject.findMany({
+      where: { studentId: authResult.userId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        challenge: {
+          select: { title: true },
+        },
+        evidenceFiles: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            originalName: true,
+            mimeType: true,
+            sizeBytes: true,
+          },
         },
       },
-    },
-  });
+    });
 
-  return NextResponse.json({
-    projects: projects.map((project) => ({
-      id: project.id,
-      challengeId: project.challengeId,
-      challengeTitle: project.challenge?.title ?? null,
-      title: project.title,
-      summary: project.summary,
-      reflection: project.reflection,
-      externalUrl: project.externalUrl,
-      isIncludedInShare: project.isIncludedInShare,
-      createdAt: project.createdAt.toISOString(),
-      updatedAt: project.updatedAt.toISOString(),
-      evidenceFiles: project.evidenceFiles,
-    })),
-  });
+    return NextResponse.json({
+      projects: projects.map((project) => ({
+        id: project.id,
+        challengeId: project.challengeId,
+        challengeTitle: project.challenge?.title ?? null,
+        title: project.title,
+        summary: project.summary,
+        reflection: project.reflection,
+        externalUrl: project.externalUrl,
+        isIncludedInShare: project.isIncludedInShare,
+        createdAt: project.createdAt.toISOString(),
+        updatedAt: project.updatedAt.toISOString(),
+        evidenceFiles: project.evidenceFiles,
+      })),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao carregar projetos do portfólio." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {

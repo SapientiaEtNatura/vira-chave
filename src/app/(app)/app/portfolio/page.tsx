@@ -1,5 +1,5 @@
 import { PortfolioManagerClient } from "@/components/portfolio/PortfolioManagerClient";
-import { StageBanner } from "@/components/ui";
+import { StageBanner } from "@/components/ui/StageBanner";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 

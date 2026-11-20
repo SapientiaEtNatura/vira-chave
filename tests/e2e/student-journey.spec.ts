@@ -71,7 +71,7 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
     await expect(page).toHaveURL(/\/app\/aprender\/.+/);
 
     const startButton = page
-      .getByRole("button", { name: "Acessar curso" })
+      .getByRole("link", { name: /Acessar curso/i })
       .first();
     await expect(startButton).toBeVisible();
 
@@ -87,7 +87,7 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
 
     await page.getByRole("button", { name: "Concluir" }).first().click();
     await page
-      .getByLabel(/Mini-resumo do que você aprendeu/i)
+      .getByLabel(/Resumo curto do que você aprendeu/i)
       .fill(
         "Aprendi os conceitos principais da trilha e como aplicá-los em projetos reais.",
       );
@@ -168,6 +168,7 @@ test.describe("Jornada completa do estudante (Descobrir -> Aprender -> Experimen
 
       // Revogar link no contexto autenticado do estudante
       await page.getByRole("button", { name: /^Revogar$/i }).click();
+      await page.getByRole("button", { name: "Revogar link" }).click();
       await expect(
         page.getByRole("button", { name: /Gerar link compartilhável/i }),
       ).toBeVisible();

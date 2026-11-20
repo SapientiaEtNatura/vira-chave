@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import type { Session } from "next-auth";
 import { Role } from "@prisma/client";
-import { auth } from "@/lib/auth";
+import * as authModule from "@/lib/auth";
 
 export interface AuthenticatedUserContext {
   userId: string;
+  name?: string | null;
   role: Role;
   institutionId: string | null;
 }
@@ -59,6 +60,7 @@ export function checkRoleAccess(
     authorized: true,
     user: {
       userId: session.user.id,
+      name: session.user.name ?? null,
       role: session.user.role,
       institutionId: session.user.institutionId ?? null,
     },
@@ -68,7 +70,10 @@ export function checkRoleAccess(
 export async function requireRole(
   allowedRoles: Role[],
 ): Promise<AuthenticatedUserContext> {
-  const session = await auth();
+  const session =
+    "getSession" in authModule && typeof authModule.getSession === "function"
+      ? await authModule.getSession()
+      : await authModule.auth();
   const access = checkRoleAccess(session, allowedRoles);
 
   if (!access.authorized) {
@@ -84,7 +89,7 @@ export async function requireRole(
 export async function requireApiRole(
   allowedRoles: Role[],
 ): Promise<AuthenticatedUserContext | NextResponse> {
-  const session = await auth();
+  const session = await authModule.auth();
   const access = checkRoleAccess(session, allowedRoles);
 
   if (!access.authorized) {

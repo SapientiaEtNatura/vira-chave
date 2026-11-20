@@ -48,11 +48,19 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  poweredByHeader: false,
+  experimental: {
+    optimizePackageImports: ["lucide-react", "recharts", "radix-ui"],
+  },
   async headers() {
     return [
       {
         source: "/(.*)",
         headers: securityHeaders,
+      },
+      {
+        source: "/api/files/:path*",
+        headers: [{ key: "Content-Security-Policy", value: "sandbox" }],
       },
     ];
   },

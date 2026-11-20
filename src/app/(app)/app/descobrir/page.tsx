@@ -1,10 +1,15 @@
 import { DiscoveryQuizClient } from "@/components/discovery/DiscoveryQuizClient";
-import { StageBanner } from "@/components/ui";
+import { StageBanner } from "@/components/ui/StageBanner";
+import {
+  getCachedDiscoveryQuestions,
+  getCachedMacroAreas,
+} from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import {
   buildDiscoveryComparison,
-  getStudentProvenPractice,
+  type ProvenPracticeSummary,
 } from "@/lib/discovery/readiness";
+import { getStudentProvenPractice } from "@/lib/discovery/readiness-server";
 import {
   isSafeAreaSlug,
   parseQuestionOptions,
@@ -36,70 +41,75 @@ function parseScoresJson(raw: unknown): Record<string, number> {
 export default async function DescobrirPage() {
   const user = await requireRole(STUDENT_PORTAL_ROLES);
 
-  const [questions, macroAreas, tracks, challenges, recentResults] =
-    await Promise.all([
-      prisma.discoveryQuestion.findMany({
-        orderBy: { order: "asc" },
-        select: {
-          id: true,
-          order: true,
-          prompt: true,
-          optionsJson: true,
-        },
-      }),
-      prisma.macroArea.findMany({
-        orderBy: { name: "asc" },
-        select: {
-          id: true,
-          slug: true,
-          name: true,
-          description: true,
-          entryRoles: true,
-        },
-      }),
-      prisma.track.findMany({
-        where: { published: true },
-        orderBy: { title: "asc" },
-        include: {
-          macroArea: {
-            select: {
-              slug: true,
-              name: true,
-            },
-          },
-          _count: {
-            select: {
-              courses: true,
-            },
+  const [
+    questions,
+    macroAreas,
+    tracks,
+    challenges,
+    recentResults,
+    rawProvenPractice,
+  ] = await Promise.all([
+    getCachedDiscoveryQuestions(),
+    getCachedMacroAreas(),
+    prisma.track.findMany({
+      where: { published: true },
+      orderBy: { title: "asc" },
+      include: {
+        macroArea: {
+          select: {
+            slug: true,
+            name: true,
           },
         },
-      }),
-      prisma.challenge.findMany({
-        where: { published: true },
-        orderBy: { title: "asc" },
-        select: {
-          id: true,
-          title: true,
-          description: true,
-          macroArea: {
-            select: {
-              slug: true,
-              name: true,
-            },
+        _count: {
+          select: {
+            courses: true,
           },
         },
-      }),
-      prisma.discoveryResult.findMany({
-        where: { studentId: user.userId },
-        orderBy: { completedAt: "desc" },
-        take: 2,
-      }),
-    ]);
+      },
+    }),
+    prisma.challenge.findMany({
+      where: { published: true },
+      orderBy: { title: "asc" },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        macroArea: {
+          select: {
+            slug: true,
+            name: true,
+          },
+        },
+      },
+    }),
+    prisma.discoveryResult.findMany({
+      where: { studentId: user.userId },
+      orderBy: { completedAt: "desc" },
+      take: 2,
+    }),
+    getStudentProvenPractice(user.userId),
+  ]);
 
-  const knownAreaSlugs = macroAreas.map((area) => area.slug);
-  const provenPractice = await getStudentProvenPractice(user.userId, {
-    knownAreaSlugs,
-  });
+  const normalizedByArea: ProvenPracticeSummary["byArea"] = {
+    ...rawProvenPractice.byArea,
+  };
+  for (const area of macroAreas) {
+    if (
+      isSafeAreaSlug(area.slug) &&
+      !Object.hasOwn(normalizedByArea, area.slug)
+    ) {
+      normalizedByArea[area.slug] = {
+        completedCourses: 0,
+        challengeProjects: 0,
+        score: 0,
+      };
+    }
+  }
+  const provenPractice: ProvenPracticeSummary = {
+    ...rawProvenPractice,
+    byArea: normalizedByArea,
+  };
 
   // LGPD Privacy by Design: never expose option weightsByArea to the browser.
   const formattedQuestions = questions.map((question) => ({

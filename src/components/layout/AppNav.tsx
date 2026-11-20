@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -8,35 +9,19 @@ import {
   Building2,
   ClipboardList,
   Compass,
-  EllipsisVertical,
   FolderKanban,
   GraduationCap,
   Home,
   LayoutDashboard,
   LogOut,
-  Pin,
-  PinOff,
   Rocket,
   Shield,
   ShieldCheck,
   UserCircle,
-  UserRound,
   Users,
   type LucideIcon,
 } from "lucide-react";
-import {
-  Avatar,
-  AvatarFallback,
-  BrandLogo,
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui";
+import { BrandLogo } from "@/components/ui";
 import { cn } from "@/lib/cn";
 import { useSlidingIndicator } from "@/lib/use-sliding-indicator";
 import {
@@ -46,6 +31,19 @@ import {
 } from "./MobileAccountMenu";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { PreviewBanner, type PreviewMode } from "./PreviewBanner";
+
+const DockAccountMenu = dynamic(
+  () => import("./DockAccountMenu").then((mod) => mod.DockAccountMenu),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        aria-hidden="true"
+        className="h-12 w-full rounded-full bg-white/10"
+      />
+    ),
+  },
+);
 
 export type NavIconKey =
   | "home"
@@ -434,7 +432,7 @@ export function AppNav({
             </div>
 
             <div className="mb-1.5 px-1">
-              <DropdownMenu
+              <DockAccountMenu
                 open={menuOpen}
                 onOpenChange={(open) => {
                   setMenuOpen(open);
@@ -442,98 +440,16 @@ export function AppNav({
                     setHovered(false);
                   }
                 }}
-              >
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    aria-label="Opções da conta"
-                    className={cn(
-                      "flex w-full cursor-pointer items-center rounded-full py-2 transition-colors duration-150 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
-                      isExpanded
-                        ? "justify-between gap-2.5 px-2.5"
-                        : " justify-center px-1",
-                    )}
-                  >
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <Avatar>
-                        <AvatarFallback>{initials}</AvatarFallback>
-                      </Avatar>
-                      {isExpanded ? (
-                        <span className="min-w-0 text-left">
-                          <span className="block truncate text-xs font-semibold text-white">
-                            {userName || subtitle}
-                          </span>
-                          <span className="block truncate text-[11px] text-white/75">
-                            {subtitle}
-                          </span>
-                        </span>
-                      ) : null}
-                    </span>
-                    {isExpanded ? (
-                      <EllipsisVertical
-                        size={18}
-                        className="shrink-0 text-white/80"
-                        aria-hidden="true"
-                      />
-                    ) : null}
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" side="right">
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>Opções</DropdownMenuLabel>
-
-                    {homeHref === "/app" ? (
-                      <DropdownMenuItem asChild>
-                        <Link href="/app/conta">
-                          <UserRound />
-                          Minha conta
-                        </Link>
-                      </DropdownMenuItem>
-                    ) : null}
-                    <DropdownMenuCheckboxItem
-                      checked={pinned}
-                      onCheckedChange={(checked) =>
-                        handlePinnedChange(Boolean(checked))
-                      }
-                    >
-                      {pinned ? (
-                        <PinOff
-                          className="h-[18px] w-[18px] shrink-0"
-                          aria-hidden="true"
-                        />
-                      ) : (
-                        <Pin
-                          className="h-[18px] w-[18px] shrink-0"
-                          aria-hidden="true"
-                        />
-                      )}
-                      {pinned ? "Desafixar menu" : "Fixar menu"}
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-
-                  {isAdmin && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" aria-label="Ir para o painel Admin">
-                        <Shield />
-                        <span>Painel Admin</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onSelect={async () => {
-                        await signOutAction();
-                      }}
-                    >
-                      <LogOut />
-                      Sair da conta
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                isExpanded={isExpanded}
+                initials={initials}
+                userName={userName}
+                subtitle={subtitle}
+                homeHref={homeHref}
+                pinned={pinned}
+                onPinnedChange={handlePinnedChange}
+                isAdmin={isAdmin}
+                signOutAction={signOutAction}
+              />
             </div>
           </aside>
         </>

@@ -199,8 +199,18 @@ export async function seedDatabase(client: PrismaClient): Promise<void> {
     });
   }
 
-  // Semeia instituição, turma e usuários locais apenas fora de produção
-  if (process.env.NODE_ENV !== "production") {
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.SEED_DEV_USERS === "true"
+  ) {
+    throw new Error("SEED_DEV_USERS não pode ser executado em produção.");
+  }
+
+  // Semeia instituição, turma e usuários locais apenas em desenvolvimento com opt-in explícito
+  if (
+    process.env.NODE_ENV === "development" &&
+    process.env.SEED_DEV_USERS === "true"
+  ) {
     await seedDevFixtures(client);
   }
 }

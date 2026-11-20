@@ -6,6 +6,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -19,8 +20,6 @@ import {
   Sparkles,
   TrendingUp,
 } from "lucide-react";
-import { AffinityChart } from "@/components/discovery/AffinityChart";
-import { ScenarioFlashcardDeck } from "@/components/discovery/ScenarioFlashcardDeck";
 import {
   Alert,
   Badge,
@@ -38,6 +37,38 @@ import {
   type ProvenPracticeSummary,
 } from "@/lib/discovery/readiness";
 import type { SelfPracticeLevel } from "@/lib/discovery/types";
+
+const AffinityChart = dynamic(
+  () =>
+    import("@/components/discovery/AffinityChart").then(
+      (mod) => mod.AffinityChart,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        aria-hidden="true"
+        className="h-72 w-full animate-pulse rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/70 sm:h-[22rem]"
+      />
+    ),
+  },
+);
+
+const ScenarioFlashcardDeck = dynamic(
+  () =>
+    import("@/components/discovery/ScenarioFlashcardDeck").then(
+      (mod) => mod.ScenarioFlashcardDeck,
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div
+        aria-hidden="true"
+        className="mx-auto h-[420px] w-full max-w-lg animate-pulse rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-surface-subtle)]/70"
+      />
+    ),
+  },
+);
 
 export interface QuizQuestionOptionItem {
   id: string;

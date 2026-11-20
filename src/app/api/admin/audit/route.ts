@@ -10,7 +10,7 @@ const MAX_PAGE_SIZE = 100;
 const querySchema = z.object({
   action: z.string().trim().max(80).optional(),
   q: z.string().trim().max(120).optional(),
-  page: z.coerce.number().int().min(1).default(1),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
   pageSize: z.coerce.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
 });
 
@@ -50,43 +50,50 @@ export async function GET(request: Request) {
       : {}),
   };
 
-  const [total, logs] = await Promise.all([
-    prisma.auditLog.count({ where }),
-    prisma.auditLog.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      select: {
-        id: true,
-        actorId: true,
-        actorRole: true,
-        action: true,
-        targetType: true,
-        targetId: true,
-        metadata: true,
-        createdAt: true,
-        actor: {
-          select: {
-            id: true,
-            name: true,
-            role: true,
+  try {
+    const [total, logs] = await Promise.all([
+      prisma.auditLog.count({ where }),
+      prisma.auditLog.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        select: {
+          id: true,
+          actorId: true,
+          actorRole: true,
+          action: true,
+          targetType: true,
+          targetId: true,
+          metadata: true,
+          createdAt: true,
+          actor: {
+            select: {
+              id: true,
+              name: true,
+              role: true,
+            },
           },
         },
-      },
-    }),
-  ]);
+      }),
+    ]);
 
-  return NextResponse.json({
-    logs: logs.map((log) => ({
-      ...log,
-      createdAt: log.createdAt.toISOString(),
-    })),
-    pagination: {
-      page,
-      pageSize,
-      total,
-      totalPages: Math.max(1, Math.ceil(total / pageSize)),
-    },
-  });
+    return NextResponse.json({
+      logs: logs.map((log) => ({
+        ...log,
+        createdAt: log.createdAt.toISOString(),
+      })),
+      pagination: {
+        page,
+        pageSize,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao carregar logs de auditoria." },
+      { status: 500 },
+    );
+  }
 }

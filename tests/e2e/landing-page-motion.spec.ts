@@ -14,7 +14,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
         }),
       ).toBeVisible();
       await expect(
-        page.getByRole("link", { name: /Começar gratuitamente/i }),
+        page.getByRole("link", { name: /Criar conta gratuita/i }),
       ).toBeVisible();
 
       const firstJourneyLine = page.locator("[data-journey-line]").first();
@@ -42,7 +42,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
       await expect(
         practiceSection.getByRole("heading", { name: "Mapa de afinidades" }),
       ).toBeVisible();
-      await expect(page.getByText("Portfólio público do estudante")).toBeVisible();
+      await expect(page.getByText("Portfólio compartilhável do estudante")).toBeVisible();
       await expect(
         practiceSection.locator("[data-motion-item]").first(),
       ).toHaveCSS("opacity", "1");
@@ -66,7 +66,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
 
       const finalHeading = page.getByRole("heading", {
         level: 2,
-        name: /Pronto para começar seu percurso\?/i,
+        name: /Comece pelo seu mapa de afinidades/i,
       });
       const finalCta = page.getByRole("link", {
         name: /Criar minha conta/i,

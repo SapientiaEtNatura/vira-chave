@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Users } from "lucide-react";
-import { ClassroomCharts } from "@/components/educator/ClassroomCharts";
+import { ClassroomChartsDynamic } from "@/components/educator/ClassroomChartsDynamic";
 import { ClassroomStudentsTable } from "@/components/educator/ClassroomStudentsTable";
 import { CopyInviteCodeButton } from "@/components/educator/CopyInviteCodeButton";
 import { Alert, Badge, Card, PageHeader } from "@/components/ui";
@@ -67,7 +67,7 @@ export default async function EducatorClassroomDetailPage({
         protegidos.
       </Alert>
 
-      <ClassroomCharts
+      <ClassroomChartsDynamic
         stageDistribution={view.stageDistribution}
         macroAreaDistribution={view.macroAreaDistribution}
         topGapArea={view.topGapArea}

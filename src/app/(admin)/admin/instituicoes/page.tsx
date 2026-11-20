@@ -11,6 +11,7 @@ export default async function AdminInstitutionsPage() {
   const [institutions, educators] = await Promise.all([
     prisma.institution.findMany({
       orderBy: { createdAt: "desc" },
+      take: 200,
       select: {
         id: true,
         name: true,
@@ -28,6 +29,7 @@ export default async function AdminInstitutionsPage() {
     prisma.user.findMany({
       where: { role: Role.EDUCADOR },
       orderBy: { createdAt: "desc" },
+      take: 200,
       select: {
         id: true,
         name: true,

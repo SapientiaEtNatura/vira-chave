@@ -126,7 +126,7 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
         page.getByText(/Visão Educacional com Privacidade por Padrão/i),
       ).toBeVisible();
 
-      await expect(page.getByText(studentName)).toBeVisible();
+      await expect(page.getByRole("cell", { name: studentName })).toBeVisible();
 
       const educatorBodyText = await page.locator("body").innerText();
       expect(educatorBodyText).not.toContain(studentEmail);
@@ -153,7 +153,7 @@ test.describe("Isolamento de privacidade do educador e exclusão de conta LGPD",
 
       await expect(
         studentPage.locator("main").getByRole("alert"),
-      ).toContainText("E-mail ou senha inválidos, ou conta inativa.");
+      ).toContainText("E-mail ou senha incorretos, ou conta desativada.");
       await expect(studentPage).toHaveURL(/\/login$/);
     } finally {
       await studentContext.close();

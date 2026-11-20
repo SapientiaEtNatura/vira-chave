@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:16.8-alpine
     container_name: virachave-local-db
     restart: unless-stopped
     environment:
@@ -8,11 +8,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-virachave2026}
       POSTGRES_DB: ${POSTGRES_DB:-virachave}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata_local:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-virachave} -d ${POSTGRES_DB:-virachave}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-virachave} -d $${POSTGRES_DB:-virachave}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,12 +25,15 @@ services:
     restart: unless-stopped
     working_dir: /app
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-virachave}:${POSTGRES_PASSWORD:-virachave2026}@db:5432/${POSTGRES_DB:-virachave}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-virachave}:${POSTGRES_PASSWORD:-virachave2026}@db:5432/${POSTGRES_DB:-virachave}?schema=public&connection_limit=15&pool_timeout=10
       AUTH_SECRET: ${AUTH_SECRET:-dev-secret-troque-em-producao}
-      NEXTAUTH_URL: http://localhost:3000
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      UPLOAD_DIR: /app/uploads
+      SEED_DEV_USERS: "true"
       NODE_ENV: development
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     volumes:
       - .:/app
       - node_modules_cache:/app/node_modules
@@ -40,16 +43,13 @@ services:
         condition: service_healthy
     command: >
       sh -c "
-        if [ -f package.json ]; then
-          npm install && npm run dev -- -H 0.0.0.0 -p 3000;
-        else
-          echo 'Container pronto! Nenhum package.json encontrado ainda. Aguardando inicializacao do Next.js...';
-          tail -f /dev/null;
-        fi
+        if [ ! -d node_modules/next ]; then npm ci; fi &&
+        if [ ! -d node_modules/.prisma ]; then npx prisma generate; fi &&
+        npm run dev -- -H 0.0.0.0 -p 3000
       "
 
   k6:
-    image: grafana/k6:latest
+    image: grafana/k6:0.56.0
     container_name: virachave-local-k6
     profiles: ["loadtest"]
     working_dir: /scripts

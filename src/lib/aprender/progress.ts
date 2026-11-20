@@ -25,26 +25,27 @@ export async function startCourseProgress(
   input: { studentId: string; courseItemId: string },
   prismaClient: Pick<PrismaClient, "courseItem" | "courseProgress"> = prisma,
 ) {
-  const courseItem = await prismaClient.courseItem.findFirst({
-    where: {
-      id: input.courseItemId,
-      track: { published: true },
-    },
-    select: { id: true },
-  });
+  const [courseItem, existing] = await Promise.all([
+    prismaClient.courseItem.findFirst({
+      where: {
+        id: input.courseItemId,
+        track: { published: true },
+      },
+      select: { id: true },
+    }),
+    prismaClient.courseProgress.findUnique({
+      where: {
+        studentId_courseItemId: {
+          studentId: input.studentId,
+          courseItemId: input.courseItemId,
+        },
+      },
+    }),
+  ]);
 
   if (!courseItem) {
     throw new CourseProgressError("Curso não encontrado.", 404);
   }
-
-  const existing = await prismaClient.courseProgress.findUnique({
-    where: {
-      studentId_courseItemId: {
-        studentId: input.studentId,
-        courseItemId: input.courseItemId,
-      },
-    },
-  });
 
   if (
     existing &&
@@ -136,10 +137,27 @@ export async function completeCourseProgress(
   let savedFile: SavedEvidenceFile | null = null;
   if (input.file && input.file.size > 0) {
     if (typeof prismaClient.evidenceFile?.count === "function") {
-      const existingFileCount = await prismaClient.evidenceFile.count({
-        where: { project: { studentId: input.studentId } },
-      });
-      if (existingFileCount >= MAX_STUDENT_EVIDENCE_FILES) {
+      const [existingFileCount, existing] = await Promise.all([
+        prismaClient.evidenceFile.count({
+          where: { project: { studentId: input.studentId } },
+        }),
+        typeof prismaClient.courseProgress?.findUnique === "function"
+          ? prismaClient.courseProgress.findUnique({
+              where: {
+                studentId_courseItemId: {
+                  studentId: input.studentId,
+                  courseItemId: input.courseItemId,
+                },
+              },
+              select: { certificateFileId: true },
+            })
+          : Promise.resolve(null),
+      ]);
+
+      if (
+        !existing?.certificateFileId &&
+        existingFileCount >= MAX_STUDENT_EVIDENCE_FILES
+      ) {
         throw new CourseProgressError(
           "Limite máximo de arquivos atingido na conta.",
           400,

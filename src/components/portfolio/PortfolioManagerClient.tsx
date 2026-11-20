@@ -22,14 +22,14 @@ import {
   Button,
   ButtonLink,
   Card,
-  ConfirmDialog,
   EmptyState,
-  FileUploadField,
   FormField,
   Input,
-  Switch,
   Textarea,
 } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { FileUploadField } from "@/components/ui/FileUploadField";
+import { Switch } from "@/components/ui/Switch";
 
 export interface PortfolioEvidenceItem {
   id: string;

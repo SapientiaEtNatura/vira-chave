@@ -291,4 +291,83 @@ describe("Schema & Seed Integrity", () => {
       SEED_CHALLENGES.length * 2,
     );
   });
+
+  it("DELTA-05: seedDatabase e fail-closed para usuarios de desenvolvimento", async () => {
+    const createMockPrisma = () => ({
+      macroArea: { upsert: vi.fn().mockResolvedValue({}) },
+      discoveryQuestion: {
+        upsert: vi.fn().mockResolvedValue({}),
+        deleteMany: vi.fn().mockResolvedValue({ count: 0 }),
+      },
+      track: { upsert: vi.fn().mockResolvedValue({}) },
+      courseItem: { upsert: vi.fn().mockResolvedValue({}) },
+      challenge: { upsert: vi.fn().mockResolvedValue({}) },
+      institution: { upsert: vi.fn().mockResolvedValue({ id: "inst-1" }) },
+      user: { upsert: vi.fn().mockResolvedValue({ id: "user-1" }) },
+      classroom: { upsert: vi.fn().mockResolvedValue({ id: "class-1" }) },
+      classroomEnrollment: { upsert: vi.fn().mockResolvedValue({}) },
+    });
+
+    const env = process.env as Record<string, string | undefined>;
+    const originalNodeEnv = env.NODE_ENV;
+    const originalSeedDevUsers = env.SEED_DEV_USERS;
+
+    try {
+      // 1. NODE_ENV undefined -> nao cria usuarios dev
+      delete env.NODE_ENV;
+      delete env.SEED_DEV_USERS;
+      const prismaUndefined = createMockPrisma();
+      await seedDatabase(prismaUndefined as never);
+      expect(prismaUndefined.user.upsert).not.toHaveBeenCalled();
+
+      // 2. NODE_ENV=test -> nao cria usuarios dev
+      env.NODE_ENV = "test";
+      env.SEED_DEV_USERS = "true";
+      const prismaTest = createMockPrisma();
+      await seedDatabase(prismaTest as never);
+      expect(prismaTest.user.upsert).not.toHaveBeenCalled();
+
+      // 3. NODE_ENV=production sem SEED_DEV_USERS -> nao cria usuarios dev
+      env.NODE_ENV = "production";
+      delete env.SEED_DEV_USERS;
+      const prismaProdSafe = createMockPrisma();
+      await seedDatabase(prismaProdSafe as never);
+      expect(prismaProdSafe.user.upsert).not.toHaveBeenCalled();
+
+      // 4. NODE_ENV=production + SEED_DEV_USERS=true -> lanca erro
+      env.NODE_ENV = "production";
+      env.SEED_DEV_USERS = "true";
+      const prismaProdBlocked = createMockPrisma();
+      await expect(seedDatabase(prismaProdBlocked as never)).rejects.toThrow(
+        "SEED_DEV_USERS não pode ser executado em produção.",
+      );
+      expect(prismaProdBlocked.user.upsert).not.toHaveBeenCalled();
+
+      // 5. NODE_ENV=development sem SEED_DEV_USERS=true -> nao cria usuarios dev
+      env.NODE_ENV = "development";
+      delete env.SEED_DEV_USERS;
+      const prismaDevNoOptIn = createMockPrisma();
+      await seedDatabase(prismaDevNoOptIn as never);
+      expect(prismaDevNoOptIn.user.upsert).not.toHaveBeenCalled();
+
+      // 6. NODE_ENV=development + SEED_DEV_USERS=true -> semeia usuarios dev
+      env.NODE_ENV = "development";
+      env.SEED_DEV_USERS = "true";
+      const prismaDevOptIn = createMockPrisma();
+      await seedDatabase(prismaDevOptIn as never);
+      expect(prismaDevOptIn.user.upsert).toHaveBeenCalledTimes(3);
+    } finally {
+      if (originalNodeEnv === undefined) {
+        delete env.NODE_ENV;
+      } else {
+        env.NODE_ENV = originalNodeEnv;
+      }
+
+      if (originalSeedDevUsers === undefined) {
+        delete env.SEED_DEV_USERS;
+      } else {
+        env.SEED_DEV_USERS = originalSeedDevUsers;
+      }
+    }
+  });
 });

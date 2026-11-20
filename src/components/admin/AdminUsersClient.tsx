@@ -14,13 +14,13 @@ import {
   Badge,
   Button,
   Card,
-  ConfirmDialog,
   EmptyState,
   FormField,
   Input,
   Select,
   type BadgeVariant,
 } from "@/components/ui";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export type UserRoleValue = "ESTUDANTE" | "EDUCADOR" | "ADMIN";
 export type UserStatusValue = "ACTIVE" | "SUSPENDED";
@@ -115,6 +115,7 @@ export function AdminUsersClient({
   const [togglingStatus, setTogglingStatus] = useState(false);
 
   const isFirstRender = useRef(true);
+  const abortRef = useRef<AbortController | null>(null);
 
   async function fetchUsers(params: {
     q: string;
@@ -122,6 +123,10 @@ export function AdminUsersClient({
     status: "" | UserStatusValue;
     page: number;
   }) {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setLoadingList(true);
     setError(null);
 
@@ -135,6 +140,7 @@ export function AdminUsersClient({
 
       const response = await fetch(`/api/admin/users?${sp.toString()}`, {
         cache: "no-store",
+        signal: controller.signal,
       });
       const payload = (await response.json()) as {
         users?: AdminUserItem[];
@@ -149,10 +155,19 @@ export function AdminUsersClient({
 
       setUsers(payload.users);
       setPagination(payload.pagination);
-    } catch {
+    } catch (err) {
+      if (
+        controller.signal.aborted ||
+        ((err instanceof DOMException || err instanceof Error) &&
+          err.name === "AbortError")
+      ) {
+        return;
+      }
       setError("Erro de conexão ao buscar usuários.");
     } finally {
-      setLoadingList(false);
+      if (abortRef.current === controller) {
+        setLoadingList(false);
+      }
     }
   }
 
@@ -174,6 +189,12 @@ export function AdminUsersClient({
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+    };
+  }, []);
 
   function openEditModal(user: AdminUserItem) {
     setError(null);

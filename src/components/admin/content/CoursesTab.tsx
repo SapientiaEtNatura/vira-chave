@@ -16,12 +16,12 @@ import {
   Badge,
   Button,
   Card,
-  Drawer,
   EmptyState,
   FormField,
   Input,
   Select,
 } from "@/components/ui";
+import { Drawer } from "@/components/ui/Drawer";
 import type {
   AdminCourseItem,
   AdminTrack,

@@ -52,6 +52,8 @@ model User {
 
   @@index([createdAt])
   @@index([role, createdAt])
+  @@index([institutionId])
+  @@index([role, status])
 }
 
 model ConsentRecord {
@@ -138,7 +140,7 @@ model DiscoveryResult {
 
   student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@index([studentId])
+  @@index([studentId, completedAt(sort: Desc)])
 }
 
 model Track {
@@ -152,6 +154,7 @@ model Track {
   courses   CourseItem[]
 
   @@index([macroAreaId])
+  @@index([published, macroAreaId])
 }
 
 model CourseItem {
@@ -186,7 +189,7 @@ model CourseProgress {
   courseItem CourseItem @relation(fields: [courseItemId], references: [id], onDelete: Cascade)
 
   @@unique([studentId, courseItemId])
-  @@index([studentId])
+  @@index([studentId, status])
 }
 
 model Challenge {
@@ -200,6 +203,7 @@ model Challenge {
   projects  PortfolioProject[]
 
   @@index([macroAreaId])
+  @@index([published, macroAreaId])
 }
 
 model PortfolioProject {
@@ -218,7 +222,9 @@ model PortfolioProject {
   challenge     Challenge?     @relation(fields: [challengeId], references: [id], onDelete: SetNull)
   evidenceFiles EvidenceFile[]
 
-  @@index([studentId])
+  @@index([studentId, createdAt(sort: Desc)])
+  @@index([studentId, isIncludedInShare])
+  @@index([challengeId, studentId])
 }
 
 model EvidenceFile {
@@ -246,7 +252,7 @@ model PortfolioShareLink {
 
   student User @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
-  @@index([studentId])
+  @@index([studentId, active])
 }
 
 model PasswordResetToken {

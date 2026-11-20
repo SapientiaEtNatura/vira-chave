@@ -64,7 +64,10 @@ export type RegisterInput = z.infer<typeof registerSchema>;
 
 export const loginSchema = z.object({
   email: emailField,
-  password: z.string().min(1, "Informe sua senha."),
+  password: z
+    .string()
+    .min(1, "Informe sua senha.")
+    .max(128, "Senha muito longa."),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
@@ -76,7 +79,11 @@ export const resetRequestSchema = z.object({
 export type ResetRequestInput = z.infer<typeof resetRequestSchema>;
 
 export const resetConfirmSchema = z.object({
-  token: z.string().trim().min(16, "Token de recuperação inválido."),
+  token: z
+    .string()
+    .trim()
+    .min(16, "Token de recuperação inválido.")
+    .max(256, "Token de recuperação inválido."),
   newPassword: strongPasswordSchema,
 });
 

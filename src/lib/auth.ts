@@ -1,3 +1,4 @@
+import { cache } from "react";
 import NextAuth, { type DefaultSession } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import "next-auth/jwt";
@@ -106,6 +107,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.name = user.name ?? null;
         token.role = user.role;
         token.institutionId = user.institutionId ?? null;
         token.tokenVersion = user.tokenVersion ?? 1;
@@ -119,6 +121,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
       const dbUser = await prisma.user.findUnique({
         where: { id: token.id },
         select: {
+          name: true,
           status: true,
           tokenVersion: true,
           role: true,
@@ -134,6 +137,7 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
         return null;
       }
 
+      token.name = dbUser.name;
       token.role = dbUser.role;
       token.institutionId = dbUser.institutionId ?? null;
       return token;
@@ -141,6 +145,10 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id;
+        session.user.name =
+          typeof token.name === "string"
+            ? token.name
+            : (session.user.name ?? null);
         session.user.role = token.role;
         session.user.institutionId = token.institutionId ?? null;
       }
@@ -148,3 +156,6 @@ export const { auth, signIn, signOut, handlers } = NextAuth({
     },
   },
 });
+
+/** Memoriza a leitura da sessão por requisição HTTP, preservando validação ativa no banco. */
+export const getSession = cache(() => auth());

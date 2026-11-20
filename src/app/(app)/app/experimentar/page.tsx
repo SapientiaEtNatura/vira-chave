@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Prisma } from "@prisma/client";
 import { ArrowRight, CheckCircle2, FlaskConical, Rocket, Sparkles } from "lucide-react";
 import { FilterGridReveal } from "@/components/motion/FilterGridReveal";
 import {
@@ -7,8 +8,9 @@ import {
   Card,
   EmptyState,
   MacroAreaFilterBar,
-  StageBanner,
 } from "@/components/ui";
+import { StageBanner } from "@/components/ui/StageBanner";
+import { getCachedMacroAreas } from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import { requireRole, STUDENT_PORTAL_ROLES } from "@/lib/rbac";
 
@@ -22,58 +24,115 @@ export default async function ExperimentarPage({
   const user = await requireRole(STUDENT_PORTAL_ROLES);
   const { area } = await searchParams;
   const activeArea = area?.trim() || "";
+  const isRecommendedFilter = activeArea === "recomendadas";
 
-  const [macroAreas, latestDiscovery] = await Promise.all([
-    prisma.macroArea.findMany({
-      orderBy: { name: "asc" },
+  const challengeSelect = {
+    id: true,
+    title: true,
+    description: true,
+    macroArea: {
       select: {
-        id: true,
         slug: true,
         name: true,
-        _count: {
-          select: {
-            challenges: { where: { published: true } },
-          },
-        },
       },
-    }),
+    },
+    projects: {
+      where: { studentId: user.userId },
+      select: { id: true },
+    },
+  } satisfies Prisma.ChallengeSelect;
+
+  const findLatestDiscovery = () =>
     prisma.discoveryResult.findFirst({
       where: { studentId: user.userId },
       orderBy: { completedAt: "desc" },
       select: { topAreas: true },
-    }),
-  ]);
+    });
+
+  let macroAreas: Awaited<ReturnType<typeof getCachedMacroAreas>>;
+  let latestDiscovery: Awaited<ReturnType<typeof findLatestDiscovery>>;
+  let challenges: Prisma.ChallengeGetPayload<{ select: typeof challengeSelect }>[];
+  let countByMacroAreaId: Map<string, number> | null = null;
+
+  if (isRecommendedFilter) {
+    const [cachedAreas, discovery, groupedCounts] = await Promise.all([
+      getCachedMacroAreas(),
+      findLatestDiscovery(),
+      prisma.challenge.groupBy({
+        by: ["macroAreaId"],
+        where: { published: true },
+        _count: { _all: true },
+      }),
+    ]);
+    macroAreas = cachedAreas;
+    latestDiscovery = discovery;
+    countByMacroAreaId = new Map(
+      groupedCounts.map((row) => [row.macroAreaId, row._count._all]),
+    );
+    const topAreas = latestDiscovery?.topAreas ?? [];
+    challenges =
+      topAreas.length > 0
+        ? await prisma.challenge.findMany({
+            where: {
+              published: true,
+              macroArea: { slug: { in: topAreas } },
+            },
+            orderBy: { title: "asc" },
+            select: challengeSelect,
+          })
+        : [];
+  } else if (activeArea) {
+    const [cachedAreas, discovery, filteredChallenges, groupedCounts] =
+      await Promise.all([
+        getCachedMacroAreas(),
+        findLatestDiscovery(),
+        prisma.challenge.findMany({
+          where: {
+            published: true,
+            macroArea: { slug: activeArea },
+          },
+          orderBy: { title: "asc" },
+          select: challengeSelect,
+        }),
+        prisma.challenge.groupBy({
+          by: ["macroAreaId"],
+          where: { published: true },
+          _count: { _all: true },
+        }),
+      ]);
+    macroAreas = cachedAreas;
+    latestDiscovery = discovery;
+    challenges = filteredChallenges;
+    countByMacroAreaId = new Map(
+      groupedCounts.map((row) => [row.macroAreaId, row._count._all]),
+    );
+  } else {
+    const [cachedAreas, discovery, allChallenges] = await Promise.all([
+      getCachedMacroAreas(),
+      findLatestDiscovery(),
+      prisma.challenge.findMany({
+        where: { published: true },
+        orderBy: { title: "asc" },
+        select: challengeSelect,
+      }),
+    ]);
+    macroAreas = cachedAreas;
+    latestDiscovery = discovery;
+    challenges = allChallenges;
+  }
+
+  const countBySlug = new Map<string, number>();
+  if (!countByMacroAreaId) {
+    for (const challenge of challenges) {
+      countBySlug.set(
+        challenge.macroArea.slug,
+        (countBySlug.get(challenge.macroArea.slug) ?? 0) + 1,
+      );
+    }
+  }
 
   const recommendedSlugs = latestDiscovery?.topAreas ?? [];
   const recommendedSet = new Set(recommendedSlugs);
-  const isRecommendedFilter = activeArea === "recomendadas";
-
-  const challenges = await prisma.challenge.findMany({
-    where: {
-      published: true,
-      ...(isRecommendedFilter
-        ? { macroArea: { slug: { in: recommendedSlugs } } }
-        : activeArea
-          ? { macroArea: { slug: activeArea } }
-          : {}),
-    },
-    orderBy: { title: "asc" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      macroArea: {
-        select: {
-          slug: true,
-          name: true,
-        },
-      },
-      projects: {
-        where: { studentId: user.userId },
-        select: { id: true },
-      },
-    },
-  });
 
   return (
     <div className="space-y-6">
@@ -93,7 +152,9 @@ export default async function ExperimentarPage({
           id: m.id,
           slug: m.slug,
           name: m.name,
-          count: m._count.challenges,
+          count: countByMacroAreaId
+            ? (countByMacroAreaId.get(m.id) ?? 0)
+            : (countBySlug.get(m.slug) ?? 0),
         }))}
       />
 
