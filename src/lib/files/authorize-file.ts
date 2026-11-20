@@ -14,6 +14,23 @@ export interface AuthorizeFileInput {
   shareToken?: string | null;
 }
 
+export type AuthorizeFileAccessResult =
+  | {
+      ok: true;
+      storageKey: string;
+      file: {
+        id: string;
+        originalName: string;
+        mimeType: string;
+        sizeBytes: number;
+      };
+    }
+  | {
+      ok: false;
+      status: 401 | 403 | 404;
+      error: string;
+    };
+
 export type AuthorizeFileResult =
   | {
       ok: true;
@@ -38,13 +55,12 @@ type FilePrismaClient = Pick<
 
 /**
  * Autoriza o acesso a um arquivo de evidência (somente dono ou via shareToken ativo
- * de um projeto marcado como `isIncludedInShare: true`) e lê seu conteúdo do storage.
+ * de um projeto marcado como `isIncludedInShare: true`) sem carregar o arquivo em memória.
  */
-export async function authorizeAndReadFile(
+export async function authorizeFileAccess(
   input: AuthorizeFileInput,
   prismaClient: FilePrismaClient = prisma,
-  readFileFn: (storageKey: string) => Promise<Buffer> = readStoredFile,
-): Promise<AuthorizeFileResult> {
+): Promise<AuthorizeFileAccessResult> {
   const fileId = input.fileId?.trim();
   const sessionUserId = input.sessionUser?.id?.trim() || null;
   const rawShareToken = input.shareToken?.trim() || null;
@@ -138,17 +154,38 @@ export async function authorizeAndReadFile(
     }
   }
 
+  return {
+    ok: true,
+    storageKey: evidenceFile.storageKey,
+    file: {
+      id: evidenceFile.id,
+      originalName: evidenceFile.originalName,
+      mimeType: evidenceFile.mimeType,
+      sizeBytes: evidenceFile.sizeBytes,
+    },
+  };
+}
+
+/**
+ * Autoriza o acesso a um arquivo de evidência (somente dono ou via shareToken ativo
+ * de um projeto marcado como `isIncludedInShare: true`) e lê seu conteúdo do storage.
+ */
+export async function authorizeAndReadFile(
+  input: AuthorizeFileInput,
+  prismaClient: FilePrismaClient = prisma,
+  readFileFn: (storageKey: string) => Promise<Buffer> = readStoredFile,
+): Promise<AuthorizeFileResult> {
+  const access = await authorizeFileAccess(input, prismaClient);
+  if (!access.ok) {
+    return access;
+  }
+
   try {
-    const buffer = await readFileFn(evidenceFile.storageKey);
+    const buffer = await readFileFn(access.storageKey);
     return {
       ok: true,
       buffer,
-      file: {
-        id: evidenceFile.id,
-        originalName: evidenceFile.originalName,
-        mimeType: evidenceFile.mimeType,
-        sizeBytes: evidenceFile.sizeBytes,
-      },
+      file: access.file,
     };
   } catch (error) {
     if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {

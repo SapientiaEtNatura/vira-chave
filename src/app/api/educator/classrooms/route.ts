@@ -12,35 +12,46 @@ export async function GET() {
     return authResult;
   }
 
-  const classrooms = await prisma.classroom.findMany({
-    where: { educatorId: authResult.userId },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      name: true,
-      inviteCode: true,
-      active: true,
-      createdAt: true,
-      institution: {
-        select: { name: true },
+  try {
+    const classrooms = await prisma.classroom.findMany({
+      where: { educatorId: authResult.userId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        inviteCode: true,
+        active: true,
+        createdAt: true,
+        institution: {
+          select: { name: true },
+        },
+        _count: {
+          select: {
+            enrollments: {
+              where: { student: { status: "ACTIVE" } },
+            },
+          },
+        },
       },
-      _count: {
-        select: { enrollments: true },
-      },
-    },
-  });
+    });
 
-  return NextResponse.json({
-    classrooms: classrooms.map((classroom) => ({
-      id: classroom.id,
-      name: classroom.name,
-      inviteCode: classroom.inviteCode,
-      active: classroom.active,
-      createdAt: classroom.createdAt.toISOString(),
-      institutionName: classroom.institution.name,
-      studentCount: classroom._count.enrollments,
-    })),
-  });
+    return NextResponse.json({
+      classrooms: classrooms.map((classroom) => ({
+        id: classroom.id,
+        name: classroom.name,
+        inviteCode: classroom.inviteCode,
+        active: classroom.active,
+        createdAt: classroom.createdAt.toISOString(),
+        institutionName: classroom.institution.name,
+        studentCount: classroom._count.enrollments,
+      })),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Não foi possível carregar as turmas." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -75,79 +86,90 @@ export async function POST(request: Request) {
     );
   }
 
-  const educator = await prisma.user.findUnique({
-    where: { id: authResult.userId },
-    select: {
-      institutionId: true,
-      institution: {
-        select: { active: true },
+  try {
+    const educator = await prisma.user.findUnique({
+      where: { id: authResult.userId },
+      select: {
+        institutionId: true,
+        institution: {
+          select: { active: true },
+        },
       },
-    },
-  });
+    });
 
-  if (!educator?.institutionId || !educator.institution?.active) {
-    return NextResponse.json(
-      { error: "Educador sem instituição ativa vinculada." },
-      { status: 400 },
-    );
-  }
-
-  for (let attempt = 0; attempt < MAX_INVITE_RETRIES; attempt += 1) {
-    const inviteCode = generateClassroomInviteCode();
-    try {
-      const classroom = await prisma.classroom.create({
-        data: {
-          educatorId: authResult.userId,
-          institutionId: educator.institutionId,
-          name: rawName,
-          inviteCode,
-          active: true,
-        },
-        select: {
-          id: true,
-          name: true,
-          inviteCode: true,
-          active: true,
-          createdAt: true,
-          institution: {
-            select: { name: true },
-          },
-          _count: {
-            select: { enrollments: true },
-          },
-        },
-      });
-
+    if (!educator?.institutionId || !educator.institution?.active) {
       return NextResponse.json(
-        {
-          classroom: {
-            id: classroom.id,
-            name: classroom.name,
-            inviteCode: classroom.inviteCode,
-            active: classroom.active,
-            createdAt: classroom.createdAt.toISOString(),
-            institutionName: classroom.institution.name,
-            studentCount: classroom._count.enrollments,
-          },
-        },
-        { status: 201 },
-      );
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
-        continue;
-      }
-      return NextResponse.json(
-        { error: "Não foi possível criar a turma." },
-        { status: 500 },
+        { error: "Educador sem instituição ativa vinculada." },
+        { status: 400 },
       );
     }
-  }
 
-  return NextResponse.json(
-    { error: "Não foi possível gerar um código único para a turma. Tente novamente." },
-    { status: 500 },
-  );
+    for (let attempt = 0; attempt < MAX_INVITE_RETRIES; attempt += 1) {
+      const inviteCode = generateClassroomInviteCode();
+      try {
+        const classroom = await prisma.classroom.create({
+          data: {
+            educatorId: authResult.userId,
+            institutionId: educator.institutionId,
+            name: rawName,
+            inviteCode,
+            active: true,
+          },
+          select: {
+            id: true,
+            name: true,
+            inviteCode: true,
+            active: true,
+            createdAt: true,
+            institution: {
+              select: { name: true },
+            },
+            _count: {
+              select: {
+                enrollments: {
+                  where: { student: { status: "ACTIVE" } },
+                },
+              },
+            },
+          },
+        });
+
+        return NextResponse.json(
+          {
+            classroom: {
+              id: classroom.id,
+              name: classroom.name,
+              inviteCode: classroom.inviteCode,
+              active: classroom.active,
+              createdAt: classroom.createdAt.toISOString(),
+              institutionName: classroom.institution.name,
+              studentCount: classroom._count.enrollments,
+            },
+          },
+          { status: 201 },
+        );
+      } catch (error) {
+        if (
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === "P2002"
+        ) {
+          continue;
+        }
+        return NextResponse.json(
+          { error: "Não foi possível criar a turma." },
+          { status: 500 },
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { error: "Não foi possível gerar um código único para a turma. Tente novamente." },
+      { status: 500 },
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Não foi possível criar a turma." },
+      { status: 500 },
+    );
+  }
 }

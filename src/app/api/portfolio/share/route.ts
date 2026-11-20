@@ -27,24 +27,31 @@ export async function GET() {
     return authResult;
   }
 
-  const activeLink = await prisma.portfolioShareLink.findFirst({
-    where: {
-      studentId: authResult.userId,
-      active: true,
-      revokedAt: null,
-    },
-    orderBy: { createdAt: "desc" },
-    select: {
-      createdAt: true,
-      includeReadiness: true,
-    },
-  });
+  try {
+    const activeLink = await prisma.portfolioShareLink.findFirst({
+      where: {
+        studentId: authResult.userId,
+        active: true,
+        revokedAt: null,
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        createdAt: true,
+        includeReadiness: true,
+      },
+    });
 
-  return NextResponse.json({
-    hasActiveLink: Boolean(activeLink),
-    createdAt: activeLink ? activeLink.createdAt.toISOString() : null,
-    includeReadiness: activeLink ? activeLink.includeReadiness : false,
-  });
+    return NextResponse.json({
+      hasActiveLink: Boolean(activeLink),
+      createdAt: activeLink ? activeLink.createdAt.toISOString() : null,
+      includeReadiness: activeLink ? activeLink.includeReadiness : false,
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao carregar link de compartilhamento." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {
@@ -76,25 +83,32 @@ export async function POST(request: Request) {
     includeReadiness = parsed.data.includeReadiness ?? false;
   }
 
-  const result = await generateShareLink(authResult.userId, prisma, {
-    includeReadiness,
-  });
-  await recordAuditLog({
-    actorId: authResult.userId,
-    actorRole: authResult.role,
-    action: AUDIT_ACTIONS.PORTFOLIO_SHARE_CREATED,
-    targetType: "PortfolioShareLink",
-    metadata: { includeReadiness: result.includeReadiness },
-  });
+  try {
+    const result = await generateShareLink(authResult.userId, prisma, {
+      includeReadiness,
+    });
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.PORTFOLIO_SHARE_CREATED,
+      targetType: "PortfolioShareLink",
+      metadata: { includeReadiness: result.includeReadiness },
+    });
 
-  return NextResponse.json(
-    {
-      rawToken: result.rawToken,
-      createdAt: result.createdAt.toISOString(),
-      includeReadiness: result.includeReadiness,
-    },
-    { status: 201 },
-  );
+    return NextResponse.json(
+      {
+        rawToken: result.rawToken,
+        createdAt: result.createdAt.toISOString(),
+        includeReadiness: result.includeReadiness,
+      },
+      { status: 201 },
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao gerar link de compartilhamento." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function PATCH(request: Request) {
@@ -121,29 +135,36 @@ export async function PATCH(request: Request) {
     );
   }
 
-  const result = await updateShareLinkPreferences(
-    authResult.userId,
-    parsed.data.includeReadiness,
-  );
+  try {
+    const result = await updateShareLinkPreferences(
+      authResult.userId,
+      parsed.data.includeReadiness,
+    );
 
-  if (!result.updated) {
+    if (!result.updated) {
+      return NextResponse.json(
+        { error: "Nenhum link de compartilhamento ativo encontrado." },
+        { status: 404 },
+      );
+    }
+
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.PORTFOLIO_SHARE_UPDATED,
+      targetType: "PortfolioShareLink",
+      metadata: { includeReadiness: result.includeReadiness },
+    });
+
+    return NextResponse.json({
+      includeReadiness: result.includeReadiness,
+    });
+  } catch {
     return NextResponse.json(
-      { error: "Nenhum link de compartilhamento ativo encontrado." },
-      { status: 404 },
+      { error: "Erro interno ao atualizar preferências do link." },
+      { status: 500 },
     );
   }
-
-  await recordAuditLog({
-    actorId: authResult.userId,
-    actorRole: authResult.role,
-    action: AUDIT_ACTIONS.PORTFOLIO_SHARE_UPDATED,
-    targetType: "PortfolioShareLink",
-    metadata: { includeReadiness: result.includeReadiness },
-  });
-
-  return NextResponse.json({
-    includeReadiness: result.includeReadiness,
-  });
 }
 
 export async function DELETE() {
@@ -152,12 +173,19 @@ export async function DELETE() {
     return authResult;
   }
 
-  await revokeShareLinks(authResult.userId);
-  await recordAuditLog({
-    actorId: authResult.userId,
-    actorRole: authResult.role,
-    action: AUDIT_ACTIONS.PORTFOLIO_SHARE_REVOKED,
-    targetType: "PortfolioShareLink",
-  });
-  return NextResponse.json({ revoked: true });
+  try {
+    await revokeShareLinks(authResult.userId);
+    await recordAuditLog({
+      actorId: authResult.userId,
+      actorRole: authResult.role,
+      action: AUDIT_ACTIONS.PORTFOLIO_SHARE_REVOKED,
+      targetType: "PortfolioShareLink",
+    });
+    return NextResponse.json({ revoked: true });
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao revogar link de compartilhamento." },
+      { status: 500 },
+    );
+  }
 }

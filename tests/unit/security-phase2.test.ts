@@ -12,13 +12,29 @@ vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
 }));
 
-vi.mock("@/lib/files/authorize-file", () => ({
-  authorizeAndReadFile: vi.fn(),
-}));
+vi.mock("@/lib/files/authorize-file", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/files/authorize-file")>();
+  return {
+    ...actual,
+    authorizeFileAccess: vi.fn(),
+  };
+});
+
+vi.mock("@/lib/storage/local-files", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/storage/local-files")>();
+  return {
+    ...actual,
+    openStoredFileStream: vi.fn(),
+  };
+});
 
 import { requireApiRole } from "@/lib/rbac";
 import { auth } from "@/lib/auth";
-import { authorizeAndReadFile } from "@/lib/files/authorize-file";
+import { authorizeFileAccess } from "@/lib/files/authorize-file";
+import { openStoredFileStream } from "@/lib/storage/local-files";
+import { SHARE_TOKEN_COOKIE_NAME } from "@/lib/portfolio/share-token";
 import { getSharedPortfolioByToken } from "@/lib/portfolio/portfolio-service";
 import { POST as createPortfolioPost } from "@/app/api/portfolio/projects/route";
 import { POST as createClassroomPost } from "@/app/api/educator/classrooms/route";
@@ -87,28 +103,49 @@ describe("Fase 2 — Hardening de Aplicação e LGPD", () => {
 
   it("SEC-08: GET /api/files/[fileId] entrega PDF como attachment e com CSP sandbox", async () => {
     vi.mocked(auth).mockResolvedValue(null as never);
-    vi.mocked(authorizeAndReadFile).mockResolvedValue({
+    vi.mocked(authorizeFileAccess).mockResolvedValue({
       ok: true,
+      storageKey: "stu-1/evidencia.pdf",
       file: {
         id: "file-1",
         originalName: "evidencia.pdf",
         mimeType: "application/pdf",
         sizeBytes: 10,
       },
-      buffer: Buffer.from("%PDF-1.4\n"),
+    });
+    const pdfBytes = Buffer.from("%PDF-1.4\n");
+    vi.mocked(openStoredFileStream).mockResolvedValue({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue(new Uint8Array(pdfBytes));
+          controller.close();
+        },
+      }),
+      sizeBytes: pdfBytes.length,
     });
 
-    const req = new Request("http://localhost/api/files/file-1?shareToken=abc");
+    const req = new Request("http://localhost/api/files/file-1", {
+      headers: {
+        cookie: `${SHARE_TOKEN_COOKIE_NAME}=abc`,
+      },
+    });
     const res = await getFileRoute(req, {
       params: Promise.resolve({ fileId: "file-1" }),
     });
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Length")).toBe(String(pdfBytes.length));
     expect(res.headers.get("Content-Disposition")).toBe(
       'attachment; filename="evidencia.pdf"',
     );
     expect(res.headers.get("Content-Security-Policy")).toBe("sandbox");
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(res).toBeInstanceOf(NextResponse);
+    expect(authorizeFileAccess).toHaveBeenCalledWith({
+      fileId: "file-1",
+      sessionUser: null,
+      shareToken: "abc",
+    });
+    expect(openStoredFileStream).toHaveBeenCalledWith("stu-1/evidencia.pdf");
   });
 });

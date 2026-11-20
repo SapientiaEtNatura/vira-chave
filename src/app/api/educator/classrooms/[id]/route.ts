@@ -126,7 +126,11 @@ export async function PATCH(
           select: { name: true },
         },
         _count: {
-          select: { enrollments: true },
+          select: {
+            enrollments: {
+              where: { student: { status: "ACTIVE" } },
+            },
+          },
         },
       },
     });

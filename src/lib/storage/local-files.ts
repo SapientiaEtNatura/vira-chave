@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { Readable } from "node:stream";
 
 export const MAX_EVIDENCE_SIZE_BYTES = 5 * 1024 * 1024;
 export const MAX_STUDENT_EVIDENCE_FILES = 50;
@@ -155,6 +157,21 @@ export async function saveEvidenceFile(
 export async function readStoredFile(storageKey: string): Promise<Buffer> {
   const targetPath = resolveSafeStoragePath(storageKey);
   return readFile(targetPath);
+}
+
+export async function openStoredFileStream(
+  storageKey: string,
+): Promise<{ stream: ReadableStream<Uint8Array>; sizeBytes: number }> {
+  const targetPath = resolveSafeStoragePath(storageKey);
+  const fileStat = await stat(targetPath);
+  const stream = Readable.toWeb(
+    createReadStream(targetPath),
+  ) as ReadableStream<Uint8Array>;
+
+  return {
+    stream,
+    sizeBytes: fileStat.size,
+  };
 }
 
 export async function deleteStoredFile(storageKey: string): Promise<void> {

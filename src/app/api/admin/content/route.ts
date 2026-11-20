@@ -24,7 +24,11 @@ const entryRolesSchema = z
   .max(8, "Informe no máximo 8 atuações de entrada.");
 
 const questionOptionSchema = z.object({
-  id: z.string().trim().min(1, "Informe o identificador de cada opção."),
+  id: z
+    .string()
+    .trim()
+    .min(1, "Informe o identificador de cada opção.")
+    .max(64, "O identificador da opção deve ter no máximo 64 caracteres."),
   label: z
     .string()
     .trim()
@@ -52,6 +56,7 @@ const questionOptionSchema = z.object({
             .string()
             .trim()
             .min(1)
+            .max(80)
             .refine(isSafeAreaSlug, "Identificador de MacroÁrea inválido."),
           z
             .number({
@@ -60,6 +65,10 @@ const questionOptionSchema = z.object({
             .int("Cada peso deve ser um número inteiro entre 0 e 10.")
             .min(0)
             .max(10),
+        )
+        .refine(
+          (weights) => Object.keys(weights).length <= 30,
+          "Número máximo de macroáreas por opção excedido.",
         )
         .refine(
           (weights) => Object.values(weights).some((weight) => weight > 0),
@@ -87,6 +96,7 @@ function serializeQuestion<T extends { optionsJson: unknown }>(question: T) {
 const httpExternalUrlSchema = z
   .string()
   .trim()
+  .max(2048, "A URL externa deve ter no máximo 2048 caracteres.")
   .url("Informe uma URL externa válida.")
   .refine(
     (value) => validateExternalUrlStructure(value).safe,
@@ -110,27 +120,27 @@ const createContentSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("question"),
     prompt: z.string().trim().min(5, "Informe o enunciado da pergunta.").max(400),
-    order: z.coerce.number().int().min(1, "Ordem deve ser maior que zero."),
+    order: z.coerce.number().int().min(1, "Ordem deve ser maior que zero.").max(100000),
     options: questionOptionsArraySchema,
   }),
   z.object({
     kind: z.literal("track"),
-    macroAreaId: z.string().trim().min(1, "Selecione uma macroárea."),
+    macroAreaId: z.string().trim().min(1, "Selecione uma macroárea.").max(128),
     title: z.string().trim().min(2, "Informe o título da trilha.").max(160),
     description: z.string().trim().min(4, "Informe uma descrição.").max(600),
     published: z.boolean().optional().default(true),
   }),
   z.object({
     kind: z.literal("courseItem"),
-    trackId: z.string().trim().min(1, "Selecione uma trilha."),
+    trackId: z.string().trim().min(1, "Selecione uma trilha.").max(128),
     title: z.string().trim().min(2, "Informe o título do curso.").max(160),
     providerName: z.string().trim().min(2, "Informe o provedor.").max(100),
     externalUrl: httpExternalUrlSchema,
-    order: z.coerce.number().int().min(1, "Ordem deve ser maior que zero."),
+    order: z.coerce.number().int().min(1, "Ordem deve ser maior que zero.").max(100000),
   }),
   z.object({
     kind: z.literal("challenge"),
-    macroAreaId: z.string().trim().min(1, "Selecione uma macroárea."),
+    macroAreaId: z.string().trim().min(1, "Selecione uma macroárea.").max(128),
     title: z.string().trim().min(2, "Informe o título do desafio.").max(160),
     description: z.string().trim().min(4, "Informe uma descrição.").max(1000),
     published: z.boolean().optional().default(true),
@@ -140,7 +150,7 @@ const createContentSchema = z.discriminatedUnion("kind", [
 const updateContentSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("macroArea"),
-    id: z.string().trim().min(1),
+    id: z.string().trim().min(1).max(128),
     name: z.string().trim().min(2).max(120).optional(),
     slug: z.string().trim().toLowerCase().min(2).max(80).regex(slugRegex).optional(),
     description: z.string().trim().min(4).max(500).optional(),
@@ -148,32 +158,32 @@ const updateContentSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("question"),
-    id: z.string().trim().min(1),
+    id: z.string().trim().min(1).max(128),
     prompt: z.string().trim().min(5).max(400).optional(),
-    order: z.coerce.number().int().min(1).optional(),
+    order: z.coerce.number().int().min(1).max(100000).optional(),
     options: questionOptionsArraySchema.optional(),
   }),
   z.object({
     kind: z.literal("track"),
-    id: z.string().trim().min(1),
-    macroAreaId: z.string().trim().min(1).optional(),
+    id: z.string().trim().min(1).max(128),
+    macroAreaId: z.string().trim().min(1).max(128).optional(),
     title: z.string().trim().min(2).max(160).optional(),
     description: z.string().trim().min(4).max(600).optional(),
     published: z.boolean().optional(),
   }),
   z.object({
     kind: z.literal("courseItem"),
-    id: z.string().trim().min(1),
-    trackId: z.string().trim().min(1).optional(),
+    id: z.string().trim().min(1).max(128),
+    trackId: z.string().trim().min(1).max(128).optional(),
     title: z.string().trim().min(2).max(160).optional(),
     providerName: z.string().trim().min(2).max(100).optional(),
     externalUrl: httpExternalUrlSchema.optional(),
-    order: z.coerce.number().int().min(1).optional(),
+    order: z.coerce.number().int().min(1).max(100000).optional(),
   }),
   z.object({
     kind: z.literal("challenge"),
-    id: z.string().trim().min(1),
-    macroAreaId: z.string().trim().min(1).optional(),
+    id: z.string().trim().min(1).max(128),
+    macroAreaId: z.string().trim().min(1).max(128).optional(),
     title: z.string().trim().min(2).max(160).optional(),
     description: z.string().trim().min(4).max(1000).optional(),
     published: z.boolean().optional(),
@@ -182,7 +192,7 @@ const updateContentSchema = z.discriminatedUnion("kind", [
 
 const deleteContentSchema = z.object({
   kind: z.enum(["macroArea", "question", "track", "courseItem", "challenge"]),
-  id: z.string().trim().min(1, "ID obrigatório."),
+  id: z.string().trim().min(1, "ID obrigatório.").max(128),
 });
 
 function handlePrismaError(error: unknown): NextResponse | null {
@@ -216,31 +226,38 @@ export async function GET() {
     return authResult;
   }
 
-  const [macroAreas, questions, tracks, courseItems, challenges] =
-    await Promise.all([
-      prisma.macroArea.findMany({ orderBy: { name: "asc" } }),
-      prisma.discoveryQuestion.findMany({ orderBy: { order: "asc" } }),
-      prisma.track.findMany({
-        orderBy: { title: "asc" },
-        include: { macroArea: { select: { id: true, name: true, slug: true } } },
-      }),
-      prisma.courseItem.findMany({
-        orderBy: [{ trackId: "asc" }, { order: "asc" }],
-        include: { track: { select: { id: true, title: true } } },
-      }),
-      prisma.challenge.findMany({
-        orderBy: { title: "asc" },
-        include: { macroArea: { select: { id: true, name: true, slug: true } } },
-      }),
-    ]);
+  try {
+    const [macroAreas, questions, tracks, courseItems, challenges] =
+      await Promise.all([
+        prisma.macroArea.findMany({ orderBy: { name: "asc" } }),
+        prisma.discoveryQuestion.findMany({ orderBy: { order: "asc" } }),
+        prisma.track.findMany({
+          orderBy: { title: "asc" },
+          include: { macroArea: { select: { id: true, name: true, slug: true } } },
+        }),
+        prisma.courseItem.findMany({
+          orderBy: [{ trackId: "asc" }, { order: "asc" }],
+          include: { track: { select: { id: true, title: true } } },
+        }),
+        prisma.challenge.findMany({
+          orderBy: { title: "asc" },
+          include: { macroArea: { select: { id: true, name: true, slug: true } } },
+        }),
+      ]);
 
-  return NextResponse.json({
-    macroAreas,
-    questions: questions.map(serializeQuestion),
-    tracks,
-    courseItems,
-    challenges,
-  });
+    return NextResponse.json({
+      macroAreas,
+      questions: questions.map(serializeQuestion),
+      tracks,
+      courseItems,
+      challenges,
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao carregar conteúdo." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function POST(request: Request) {

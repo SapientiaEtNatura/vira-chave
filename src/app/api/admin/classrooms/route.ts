@@ -76,28 +76,35 @@ export async function GET(request: Request) {
 
   const { q, institutionId } = parsed.data;
 
-  const classrooms = await prisma.classroom.findMany({
-    where: {
-      ...(institutionId ? { institutionId } : {}),
-      ...(q
-        ? {
-            OR: [
-              { name: { contains: q, mode: "insensitive" } },
-              { inviteCode: { contains: q, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    select: classroomSelect,
-    orderBy: { createdAt: "desc" },
-  });
+  try {
+    const classrooms = await prisma.classroom.findMany({
+      where: {
+        ...(institutionId ? { institutionId } : {}),
+        ...(q
+          ? {
+              OR: [
+                { name: { contains: q, mode: "insensitive" } },
+                { inviteCode: { contains: q, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      select: classroomSelect,
+      orderBy: { createdAt: "desc" },
+    });
 
-  return NextResponse.json({
-    classrooms: classrooms.map((classroom) => ({
-      ...classroom,
-      createdAt: classroom.createdAt.toISOString(),
-    })),
-  });
+    return NextResponse.json({
+      classrooms: classrooms.map((classroom) => ({
+        ...classroom,
+        createdAt: classroom.createdAt.toISOString(),
+      })),
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Erro interno ao carregar turmas." },
+      { status: 500 },
+    );
+  }
 }
 
 export async function PATCH(request: Request) {
@@ -166,7 +173,10 @@ export async function PATCH(request: Request) {
           continue;
         }
       }
-      throw error;
+      return NextResponse.json(
+        { error: "Erro interno ao atualizar turma." },
+        { status: 500 },
+      );
     }
   }
 

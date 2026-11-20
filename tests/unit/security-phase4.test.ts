@@ -7,7 +7,8 @@ import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({
   requireApiRole: vi.fn(),
   auth: vi.fn(),
-  authorizeAndReadFile: vi.fn(),
+  authorizeFileAccess: vi.fn(),
+  openStoredFileStream: vi.fn(),
   findManyQuestions: vi.fn(),
   createDiscoveryResult: vi.fn(),
   dnsLookup: vi.fn(),
@@ -26,9 +27,23 @@ vi.mock("@/lib/auth", () => ({
   auth: mocks.auth,
 }));
 
-vi.mock("@/lib/files/authorize-file", () => ({
-  authorizeAndReadFile: mocks.authorizeAndReadFile,
-}));
+vi.mock("@/lib/files/authorize-file", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/files/authorize-file")>();
+  return {
+    ...actual,
+    authorizeFileAccess: mocks.authorizeFileAccess,
+  };
+});
+
+vi.mock("@/lib/storage/local-files", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/lib/storage/local-files")>();
+  return {
+    ...actual,
+    openStoredFileStream: mocks.openStoredFileStream,
+  };
+});
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -115,15 +130,25 @@ describe("Fase 4 — Hardening CSRF, Share Token Cookie, SSRF, Limites e Políti
 
   it("autoriza GET /api/files/[fileId] via cookie __vc_share_token sem expor token na URL", async () => {
     mocks.auth.mockResolvedValue(null);
-    mocks.authorizeAndReadFile.mockResolvedValue({
+    mocks.authorizeFileAccess.mockResolvedValue({
       ok: true,
+      storageKey: "stu-99/evidencia.png",
       file: {
         id: "file-99",
         originalName: "evidencia.png",
         mimeType: "image/png",
-        sizeBytes: 12,
+        sizeBytes: 4,
       },
-      buffer: Buffer.from([0x89, 0x50, 0x4e, 0x47]),
+    });
+    const pngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    mocks.openStoredFileStream.mockResolvedValue({
+      stream: new ReadableStream({
+        start(controller) {
+          controller.enqueue(pngBytes);
+          controller.close();
+        },
+      }),
+      sizeBytes: pngBytes.length,
     });
 
     const token = "ShareCookieToken_9876543210";
@@ -137,11 +162,15 @@ describe("Fase 4 — Hardening CSRF, Share Token Cookie, SSRF, Limites e Políti
     });
 
     expect(res.status).toBe(200);
-    expect(mocks.authorizeAndReadFile).toHaveBeenCalledWith({
+    expect(res.headers.get("Content-Length")).toBe(String(pngBytes.length));
+    expect(mocks.authorizeFileAccess).toHaveBeenCalledWith({
       fileId: "file-99",
       sessionUser: null,
       shareToken: token,
     });
+    expect(mocks.openStoredFileStream).toHaveBeenCalledWith(
+      "stu-99/evidencia.png",
+    );
   });
 
   it("validateExternalUrlStructure bloqueia IPs privados, hostnames internos e credenciais na URL", () => {
