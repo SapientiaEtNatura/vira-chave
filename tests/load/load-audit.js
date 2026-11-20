@@ -9,6 +9,7 @@ const SIMULATE_SHARED_NAT = __ENV.SIMULATE_SHARED_NAT === "true";
 export const options = {
   vus: Number(__ENV.VUS || 40),
   duration: __ENV.DURATION || "30s",
+  noCookiesReset: true,
   thresholds: {
     http_req_failed: ["rate<0.01"],
     http_req_duration: ["p(95)<800"],
