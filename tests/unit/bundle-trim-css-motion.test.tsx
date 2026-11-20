@@ -240,7 +240,7 @@ describe("Task 7 — Client Bundle Trim, Pure CSS Motion & UI Barrel Cleanup", (
 
     const layoutSource = readRepoFile("src/app/layout.tsx");
     expect(layoutSource).toMatch(
-      /jetbrainsMono\s*=\s*JetBrains_Mono\([\s\S]*?preload:\s*false[\s\S]*?\)/,
+      /jetbrainsMono\s*=\s*(?:JetBrains_Mono|localFont)\([\s\S]*?preload:\s*false[\s\S]*?\)/,
     );
   });
 });
