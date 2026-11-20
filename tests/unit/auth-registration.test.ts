@@ -256,6 +256,7 @@ describe("Auth registration & RBAC", () => {
       authorized: true,
       user: {
         userId: "u-2",
+        name: "Carlos",
         role: Role.EDUCADOR,
         institutionId: "inst-1",
       },

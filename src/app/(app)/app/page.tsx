@@ -41,7 +41,6 @@ export default async function StudentDashboardPage() {
   const authUser = await requireRole(STUDENT_PORTAL_ROLES);
 
   const [
-    user,
     latestDiscovery,
     macroAreas,
     totalCourses,
@@ -52,10 +51,6 @@ export default async function StudentDashboardPage() {
     standalonePortfolioCount,
     activeShareLink,
   ] = await Promise.all([
-    prisma.user.findUnique({
-      where: { id: authUser.userId },
-      select: { name: true },
-    }),
     prisma.discoveryResult.findFirst({
       where: { studentId: authUser.userId },
       orderBy: { completedAt: "desc" },
@@ -184,7 +179,7 @@ export default async function StudentDashboardPage() {
       : []),
   ];
 
-  const firstName = user?.name?.split(" ")[0];
+  const firstName = authUser.name?.trim().split(/\s+/)[0];
 
   return (
     <div className="space-y-6 sm:space-y-8">

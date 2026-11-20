@@ -127,6 +127,7 @@ describe("Helpers do Painel Admin", () => {
         authorized: true,
         user: {
           userId: "admin-1",
+          name: "Usuário Teste",
           role: Role.ADMIN,
           institutionId: null,
         },
@@ -135,6 +136,7 @@ describe("Helpers do Painel Admin", () => {
         authorized: true,
         user: {
           userId: "admin-1",
+          name: "Usuário Teste",
           role: Role.ADMIN,
           institutionId: null,
         },

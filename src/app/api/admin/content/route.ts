@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma, Role } from "@prisma/client";
 import { z } from "zod";
 import { AUDIT_ACTIONS, recordAuditLog } from "@/lib/audit";
+import { revalidateCatalogCache } from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import {
   deriveQuestionAreaWeights,
@@ -355,6 +356,7 @@ export async function POST(request: Request) {
       targetId: item.id,
       metadata: { kind: data.kind },
     });
+    revalidateCatalogCache();
 
     return NextResponse.json({ item }, { status: 201 });
   } catch (error) {
@@ -487,6 +489,7 @@ export async function PATCH(request: Request) {
       targetId: item.id,
       metadata: { kind: data.kind },
     });
+    revalidateCatalogCache();
 
     return NextResponse.json({ item });
   } catch (error) {
@@ -547,6 +550,7 @@ export async function DELETE(request: Request) {
       targetId: id,
       metadata: { kind },
     });
+    revalidateCatalogCache();
 
     return NextResponse.json({ deleted: true, kind, id });
   } catch (error) {

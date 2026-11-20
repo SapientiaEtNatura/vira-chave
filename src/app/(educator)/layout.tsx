@@ -2,7 +2,6 @@ import { Role } from "@prisma/client";
 import { AppNav, type AppNavItem } from "@/components/layout/AppNav";
 import { signOut } from "@/lib/auth";
 import { cn } from "@/lib/cn";
-import { prisma } from "@/lib/db";
 import { requireRole, EDUCATOR_PORTAL_ROLES } from "@/lib/rbac";
 
 const navItems: AppNavItem[] = [
@@ -15,10 +14,6 @@ export default async function EducatorLayout({
   children: React.ReactNode;
 }>) {
   const authUser = await requireRole(EDUCATOR_PORTAL_ROLES);
-  const user = await prisma.user.findUnique({
-    where: { id: authUser.userId },
-    select: { name: true },
-  });
 
   async function handleSignOut() {
     "use server";
@@ -37,7 +32,7 @@ export default async function EducatorLayout({
       <AppNav
         homeHref="/educador"
         subtitle="Educador"
-        userName={user?.name ?? undefined}
+        userName={authUser.name ?? undefined}
         isAdmin={isAdmin}
         previewMode={isAdmin ? "EDUCADOR" : null}
         items={navItems}

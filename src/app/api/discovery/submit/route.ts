@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import {
+  getCachedDiscoveryQuestions,
+  getCachedMacroAreas,
+} from "@/lib/catalog-cache";
 import { prisma } from "@/lib/db";
 import { calculateSituationalAffinityScores } from "@/lib/discovery/scoring";
 import { parseQuestionOptions } from "@/lib/discovery/types";
@@ -58,12 +62,8 @@ export async function POST(request: Request) {
 
   try {
     const [questions, macroAreas] = await Promise.all([
-      prisma.discoveryQuestion.findMany({
-        orderBy: { order: "asc" },
-      }),
-      prisma.macroArea.findMany({
-        select: { slug: true },
-      }),
+      getCachedDiscoveryQuestions(),
+      getCachedMacroAreas(),
     ]);
 
     if (questions.length === 0 || macroAreas.length === 0) {
