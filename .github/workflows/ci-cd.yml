@@ -12,13 +12,26 @@ permissions:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: "22"
           cache: "npm"
       - run: npm ci
+      - name: Validate Infra Config
+        run: |
+          bash -n infra/server/deploy.sh infra/server/init-env.sh infra/server/backup.sh
+          cleanup() { rm -f infra/server/.env; }
+          trap cleanup EXIT
+          cp .env.example infra/server/.env
+          docker compose -f infra/server/docker-compose.yml config --quiet
+          CLOUDFLARE_TUNNEL_TOKEN=ci-dummy-token docker compose -f infra/server/docker-compose.yml -f infra/server/docker-compose.named-tunnel.yml config --quiet
+          docker compose -f docker-compose.yml config --quiet
       - run: npx prisma generate
       - run: npm run lint
       - run: npx tsc --noEmit
@@ -34,12 +47,13 @@ jobs:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push' && github.repository_owner == 'SapientiaEtNatura'
     runs-on: self-hosted
+    timeout-minutes: 20
     # Configure required reviewers on the "production" GitHub Environment (self-hosted runner in public repo)
     environment: production
     concurrency:
       group: production-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Deploy via Docker Compose
         run: bash infra/server/deploy.sh
